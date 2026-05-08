@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_services.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -20,22 +21,56 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   bool isLoading = false;
 
-  void addExpense() {
+  void addExpense() async {
     String title = titleController.text.trim();
+
     String amount = amountController.text.trim();
+
     String category = categoryController.text.trim();
+
     String description = descriptionController.text.trim();
+
     String expenseDate = dateController.text.trim();
 
-    print(title);
-    print(amount);
-    print(category);
-    print(description);
-    print(expenseDate);
+    setState(() {
+      isLoading = true;
+    });
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Expense Added')));
+    try {
+      final response = await ApiService.addExpense(
+        title,
+        amount,
+        category,
+        expenseDate,
+        description,
+      );
+
+      setState(() {
+        isLoading = false;
+      });
+
+      if (response.containsKey('id')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Expense added successfully')),
+        );
+
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Failed to add expense'),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   @override
