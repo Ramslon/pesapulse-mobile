@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'add_expense_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -48,7 +49,14 @@ class DashboardScreen extends StatelessWidget {
               height: 50,
 
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddExpenseScreen(),
+                    ),
+                  );
+                },
                 child: const Text('Add Expense'),
               ),
             ),
