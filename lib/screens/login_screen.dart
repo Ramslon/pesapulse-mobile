@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
+import '../services/api_services.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,16 +15,41 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool isLoading = false;
 
-  void loginUser() {
+  void loginUser() async {
     String email = emailController.text.trim();
     String password = passwordController.text.trim();
 
-    print(email);
-    print(password);
+    setState(() {
+      isLoading = true;
+    });
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Login button clicked')));
+    try {
+      final response = await ApiService.loginUser(email, password);
+
+      setState(() {
+        isLoading = false;
+      });
+
+      if (response.containsKey('token')) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Login successful')));
+
+        print(response['token']);
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(response['message'])));
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   @override
@@ -69,7 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   child: ElevatedButton(
                     onPressed: loginUser,
-                    child: const Text('Login'),
+                    child: isLoading
+                        ? const CircularProgressIndicator()
+                        : const Text('Login'),
                   ),
                 ),
 
