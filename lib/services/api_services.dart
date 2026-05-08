@@ -74,4 +74,18 @@ class ApiService {
 
     return jsonDecode(response.body);
   }
+
+  static Future<List<dynamic>> getExpenses() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? token = prefs.getString('token');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/expenses'),
+
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    return jsonDecode(response.body);
+  }
 }
