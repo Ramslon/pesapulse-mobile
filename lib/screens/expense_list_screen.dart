@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/api_services.dart';
+import 'edit_expense_screen.dart';
 
 class ExpenseListScreen extends StatefulWidget {
   const ExpenseListScreen({super.key});
@@ -71,9 +72,43 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                       ],
                     ),
 
-                    trailing: Text(
-                      'KES ${expense['amount']}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EditExpenseScreen(expense: expense),
+                              ),
+                            );
+
+                            if (result == true) {
+                              fetchExpenses();
+                            }
+                          },
+                        ),
+
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+
+                          onPressed: () async {
+                            await ApiService.deleteExpense(expense['id']);
+
+                            fetchExpenses();
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Expense deleted')),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 );

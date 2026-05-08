@@ -88,4 +88,49 @@ class ApiService {
 
     return jsonDecode(response.body);
   }
+
+  static Future<Map<String, dynamic>> updateExpense(
+    int id,
+    String title,
+    String amount,
+    String category,
+    String expenseDate,
+    String description,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? token = prefs.getString('token');
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/expenses/$id'),
+
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+
+      body: jsonEncode({
+        'title': title,
+        'amount': amount,
+        'category': category,
+        'expense_date': expenseDate,
+        'description': description,
+      }),
+    );
+
+    return jsonDecode(response.body);
+  }
+
+  static Future<void> deleteExpense(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? token = prefs.getString('token');
+
+    await http.delete(
+      Uri.parse('$baseUrl/expenses/$id'),
+
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+  }
 }
