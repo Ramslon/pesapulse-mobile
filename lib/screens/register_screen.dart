@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_services.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,19 +12,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool isLoading = false;
 
-  void registerUser() {
+  void registerUser() async {
     String name = nameController.text.trim();
     String email = emailController.text.trim();
     String password = passwordController.text.trim();
 
-    print(name);
-    print(email);
-    print(password);
+    setState(() {
+      isLoading = true;
+    });
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Register button clicked')));
+    try {
+      final response = await ApiService.registerUser(name, email, password);
+
+      setState(() {
+        isLoading = false;
+      });
+
+      if (response.containsKey('token')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful')),
+        );
+
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'] ?? 'Registration failed')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   @override
@@ -79,7 +105,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                   child: ElevatedButton(
                     onPressed: registerUser,
-                    child: const Text('Register'),
+                    child: isLoading
+                        ? const CircularProgressIndicator()
+                        : const Text('Register'),
                   ),
                 ),
               ],
