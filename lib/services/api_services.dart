@@ -24,6 +24,20 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<void> logoutUser() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? token = prefs.getString('token');
+
+    await http.post(
+      Uri.parse('$baseUrl/logout'),
+
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    await prefs.remove('token');
+  }
+
   static Future<Map<String, dynamic>> registerUser(
     String name,
     String email,
