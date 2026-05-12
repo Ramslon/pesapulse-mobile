@@ -13,9 +13,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+
       title: 'PesaPulse',
 
-      theme: ThemeData(primarySwatch: Colors.green),
+      theme: ThemeData.light(),
+
+      darkTheme: ThemeData.dark(),
+
+      themeMode: ThemeMode.system,
 
       home: const SplashScreen(),
     );

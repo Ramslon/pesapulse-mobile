@@ -19,6 +19,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   final TextEditingController dateController = TextEditingController();
 
+  List<String> categories = [
+    'Food',
+    'Transport',
+    'Shopping',
+    'Bills',
+    'Entertainment',
+    'Health',
+    'Education',
+    'Other',
+  ];
+
+  String selectedCategory = 'Food';
+
   bool isLoading = false;
 
   void addExpense() async {
@@ -26,7 +39,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
     String amount = amountController.text.trim();
 
-    String category = categoryController.text.trim();
+    String category = selectedCategory;
 
     String description = descriptionController.text.trim();
 
@@ -105,12 +118,26 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
               const SizedBox(height: 20),
 
-              TextField(
-                controller: categoryController,
+              DropdownButtonFormField<String>(
+                value: selectedCategory,
+
                 decoration: const InputDecoration(
                   labelText: 'Category',
                   border: OutlineInputBorder(),
                 ),
+
+                items: categories.map((category) {
+                  return DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+
+                onChanged: (value) {
+                  setState(() {
+                    selectedCategory = value!;
+                  });
+                },
               ),
 
               const SizedBox(height: 20),
