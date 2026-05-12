@@ -36,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Login successful')));
+        
         final prefs = await SharedPreferences.getInstance();
 
         await prefs.setString('token', response['token']);
