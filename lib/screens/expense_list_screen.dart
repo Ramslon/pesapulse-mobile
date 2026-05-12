@@ -17,27 +17,59 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   TextEditingController searchController = TextEditingController();
 
+  final ScrollController scrollController = ScrollController();
+
   bool isLoading = true;
+
+  int currentPage = 1;
+
+  bool hasMore = true;
+
+  bool isFetchingMore = false;
 
   @override
   void initState() {
     super.initState();
 
     fetchExpenses();
+
+    scrollController.addListener(() {
+      if (scrollController.position.pixels ==
+          scrollController.position.maxScrollExtent) {
+        fetchExpenses();
+      }
+    });
   }
 
   Future<void> fetchExpenses() async {
+    if (isFetchingMore || !hasMore) return;
+
+    setState(() {
+      isFetchingMore = true;
+    });
+
     try {
-      final data = await ApiService.getExpenses();
+      final response = await ApiService.getExpenses(page: currentPage);
+
+      final List newExpenses = response['data'];
 
       setState(() {
-        expenses = data;
-        filteredExpenses = data;
+        expenses.addAll(newExpenses);
+
+        filteredExpenses = expenses;
+
+        currentPage++;
+
+        hasMore = response['next_page_url'] != null;
+
         isLoading = false;
+
+        isFetchingMore = false;
       });
     } catch (e) {
       setState(() {
         isLoading = false;
+        isFetchingMore = false;
       });
 
       ScaffoldMessenger.of(
@@ -56,6 +88,15 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     setState(() {
       filteredExpenses = results;
     });
+  }
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+
+    searchController.dispose();
+
+    super.dispose();
   }
 
   @override
@@ -89,9 +130,19 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
                 Expanded(
                   child: ListView.builder(
-                    itemCount: filteredExpenses.length,
+                    controller: scrollController,
+
+                    itemCount: filteredExpenses.length + (hasMore ? 1 : 0),
 
                     itemBuilder: (context, index) {
+                      if (index == filteredExpenses.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(20),
+
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+
                       final expense = filteredExpenses[index];
 
                       return Card(
@@ -128,6 +179,14 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                   );
 
                                   if (result == true) {
+                                    expenses.clear();
+
+                                    filteredExpenses.clear();
+
+                                    currentPage = 1;
+
+                                    hasMore = true;
+
                                     fetchExpenses();
                                   }
                                 },
@@ -139,7 +198,11 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                 onPressed: () async {
                                   await ApiService.deleteExpense(expense['id']);
 
-                                  fetchExpenses();
+                                  expenses.removeAt(index);
+
+                                  filteredExpenses = expenses;
+
+                                  setState(() {});
 
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

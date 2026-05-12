@@ -89,13 +89,13 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<List<dynamic>> getExpenses() async {
+  static Future<dynamic> getExpenses({int page = 1}) async {
     final prefs = await SharedPreferences.getInstance();
 
     String? token = prefs.getString('token');
 
     final response = await http.get(
-      Uri.parse('$baseUrl/expenses'),
+      Uri.parse('$baseUrl/expenses?page=$page'),
 
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
@@ -146,5 +146,24 @@ class ApiService {
 
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+  }
+
+  static Future<Map<String, dynamic>> updateProfile(
+    String name,
+    String email,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? token = prefs.getString('token');
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/profile'),
+
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+
+      body: {'name': name, 'email': email},
+    );
+
+    return jsonDecode(response.body);
   }
 }

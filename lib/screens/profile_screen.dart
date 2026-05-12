@@ -1,7 +1,39 @@
 import 'package:flutter/material.dart';
 
-class ProfileScreen extends StatelessWidget {
+import '../services/api_service.dart';
+
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final TextEditingController nameController = TextEditingController();
+
+  final TextEditingController emailController = TextEditingController();
+
+  bool isLoading = false;
+
+  void updateProfile() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    final response = await ApiService.updateProfile(
+      nameController.text.trim(),
+      emailController.text.trim(),
+    );
+
+    setState(() {
+      isLoading = false;
+    });
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(response['message'])));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,21 +44,45 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
 
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
 
-          children: const [
-            CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
+            const SizedBox(height: 30),
 
-            SizedBox(height: 20),
+            TextField(
+              controller: nameController,
 
-            Text(
-              'User Profile',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                border: OutlineInputBorder(),
+              ),
             ),
 
-            SizedBox(height: 10),
+            const SizedBox(height: 20),
 
-            Text('Email: user@example.com'),
+            TextField(
+              controller: emailController,
+
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+
+              child: ElevatedButton(
+                onPressed: isLoading ? null : updateProfile,
+
+                child: isLoading
+                    ? const CircularProgressIndicator()
+                    : const Text('Update Profile'),
+              ),
+            ),
           ],
         ),
       ),
