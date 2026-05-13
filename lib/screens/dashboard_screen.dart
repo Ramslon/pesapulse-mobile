@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:pesapulse_mobile/screens/home_screen.dart';
-import 'add_expense_screen.dart';
-import 'expense_list_screen.dart';
+
 import 'login_screen.dart';
+
 import '../services/api_services.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -12,8 +11,19 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PesaPulse Dashboard'),
         centerTitle: true,
+
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+
+          children: [
+            const Icon(Icons.account_balance_wallet),
+
+            const SizedBox(width: 10),
+
+            const Text('PesaPulse'),
+          ],
+        ),
 
         actions: [
           IconButton(
@@ -33,62 +43,147 @@ class DashboardScreen extends StatelessWidget {
       ),
 
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20),
 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+
           children: [
             const Text(
-              'Welcome to PesaPulse',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              'Welcome Back 👋',
+
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
 
             const Text(
-              'Manage your expenses efficiently.',
-              style: TextStyle(fontSize: 16),
+              'Manage your expenses easily',
+
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+
+            const SizedBox(height: 30),
+
+            Row(
+              children: [
+                Expanded(
+                  child: dashboardCard(
+                    title: 'Expenses',
+
+                    value: '120',
+
+                    icon: Icons.account_balance_wallet,
+                  ),
+                ),
+
+                const SizedBox(width: 15),
+
+                Expanded(
+                  child: dashboardCard(
+                    title: 'Budget',
+
+                    value: 'KES 50K',
+
+                    icon: Icons.savings,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+                Expanded(
+                  child: dashboardCard(
+                    title: 'Categories',
+
+                    value: '8',
+
+                    icon: Icons.category,
+                  ),
+                ),
+
+                const SizedBox(width: 15),
+
+                Expanded(
+                  child: dashboardCard(
+                    title: 'Reports',
+
+                    value: '12',
+
+                    icon: Icons.bar_chart,
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 30),
 
             SizedBox(
               width: double.infinity,
-              height: 50,
 
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ExpenseListScreen(),
-                    ),
-                  );
+                  Navigator.pushNamed(context, '/add-expense');
                 },
-                child: const Text('View Expenses'),
-              ),
-            ),
 
-            const SizedBox(height: 20),
+                icon: const Icon(Icons.add),
 
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddExpenseScreen(),
-                    ),
-                  );
-                },
-                child: const Text('Add Expense'),
+                label: const Text('Add Expense'),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget dashboardCard({
+    required String title,
+
+    required String value,
+
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+
+      decoration: BoxDecoration(
+        color: Colors.white,
+
+        borderRadius: BorderRadius.circular(20),
+
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+
+            blurRadius: 10,
+
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+
+        children: [
+          Icon(icon, size: 35, color: Colors.green),
+
+          const SizedBox(height: 20),
+
+          Text(
+            value,
+
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 5),
+
+          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 16)),
+        ],
       ),
     );
   }

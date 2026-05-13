@@ -90,7 +90,17 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Expense')),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            const Icon(Icons.edit),
+
+            const SizedBox(width: 10),
+
+            const Text('Edit Expenses'),
+          ],
+        ),
+      ),
 
       body: SingleChildScrollView(
         child: Padding(

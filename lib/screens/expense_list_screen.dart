@@ -102,7 +102,17 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Expenses')),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            const Icon(Icons.receipt_long),
+
+            const SizedBox(width: 10),
+
+            const Text('My Expenses'),
+          ],
+        ),
+      ),
 
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -146,72 +156,83 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                       final expense = filteredExpenses[index];
 
                       return Card(
+                        elevation: 3,
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
                         margin: const EdgeInsets.all(10),
 
-                        child: ListTile(
-                          title: Text(expense['title']),
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
 
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: ListTile(
+                            title: Text(expense['title']),
 
-                            children: [
-                              Text('Category: ${expense['category']}'),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
 
-                              Text('Date: ${expense['expense_date']}'),
-                            ],
-                          ),
+                              children: [
+                                Text('Category: ${expense['category']}'),
 
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
+                                Text('Date: ${expense['expense_date']}'),
+                              ],
+                            ),
 
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
 
-                                onPressed: () async {
-                                  final result = await Navigator.push(
-                                    context,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
 
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          EditExpenseScreen(expense: expense),
-                                    ),
-                                  );
+                                  onPressed: () async {
+                                    final result = await Navigator.push(
+                                      context,
 
-                                  if (result == true) {
-                                    expenses.clear();
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            EditExpenseScreen(expense: expense),
+                                      ),
+                                    );
 
-                                    filteredExpenses.clear();
+                                    if (result == true) {
+                                      expenses.clear();
 
-                                    currentPage = 1;
+                                      filteredExpenses.clear();
 
-                                    hasMore = true;
+                                      currentPage = 1;
 
-                                    fetchExpenses();
-                                  }
-                                },
-                              ),
+                                      hasMore = true;
 
-                              IconButton(
-                                icon: const Icon(Icons.delete),
+                                      fetchExpenses();
+                                    }
+                                  },
+                                ),
 
-                                onPressed: () async {
-                                  await ApiService.deleteExpense(expense['id']);
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
 
-                                  expenses.removeAt(index);
+                                  onPressed: () async {
+                                    await ApiService.deleteExpense(
+                                      expense['id'],
+                                    );
 
-                                  filteredExpenses = expenses;
+                                    expenses.removeAt(index);
 
-                                  setState(() {});
+                                    filteredExpenses = expenses;
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Expense deleted'),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                                    setState(() {});
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Expense deleted'),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../services/api_service.dart';
+import '../services/api_services.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -38,52 +38,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-
-        child: Column(
+      appBar: AppBar(
+        title: Row(
           children: [
-            const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
+            const Icon(Icons.person),
 
-            const SizedBox(height: 30),
+            const SizedBox(width: 10),
 
-            TextField(
-              controller: nameController,
-
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            TextField(
-              controller: emailController,
-
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-
-              child: ElevatedButton(
-                onPressed: isLoading ? null : updateProfile,
-
-                child: isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('Update Profile'),
-              ),
-            ),
+            const Text('Profile'),
           ],
+        ),
+      ),
+
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+
+          child: Column(
+            children: [
+              const CircleAvatar(
+                radius: 40,
+                child: Icon(Icons.person, size: 40),
+              ),
+
+              const SizedBox(height: 30),
+
+              TextField(
+                controller: nameController,
+
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              TextField(
+                controller: emailController,
+
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : updateProfile,
+
+                  child: isLoading
+                      ? const CircularProgressIndicator()
+                      : const Text('Update Profile'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
