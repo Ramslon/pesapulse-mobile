@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 import 'expense_list_screen.dart';
 import 'profile_screen.dart';
+import 'analytics_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List screens = [
     const DashboardScreen(),
     const ExpenseListScreen(),
+    const AnalyticsScreen(),
     const ProfileScreen(),
   ];
 
@@ -41,6 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Expenses'),
+
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Analytics',
+          ),
 
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
