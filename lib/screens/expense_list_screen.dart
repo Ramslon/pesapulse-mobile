@@ -51,7 +51,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     try {
       final response = await ApiService.getExpenses(page: currentPage);
 
-      final List newExpenses = response['data'];
+      final List newExpenses = response['data'] ?? [];
 
       setState(() {
         expenses.addAll(newExpenses);
