@@ -102,122 +102,76 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            const Icon(Icons.bar_chart),
+    return isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
 
-            const SizedBox(width: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
 
-            const Text('Analytics'),
-          ],
-        ),
-      ),
+              children: [
+                Container(
+                  width: double.infinity,
 
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.green,
 
-                    padding: const EdgeInsets.all(20),
-
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-
-                      children: [
-                        const Text(
-                          'Total Spending',
-
-                          style: TextStyle(color: Colors.white70, fontSize: 16),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        Text(
-                          'KES ${totalSpending.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                    borderRadius: BorderRadius.circular(20),
                   ),
 
-                  const SizedBox(height: 30),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
-                  const Text(
-                    'Category Breakdown',
+                    children: [
+                      const Text(
+                        'Total Spending',
 
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  SizedBox(
-                    height: 300,
-
-                    child: PieChart(
-                      PieChartData(
-                        sections: getSections(),
-
-                        centerSpaceRadius: 40,
-
-                        sectionsSpace: 3,
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
                       ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 30),
+                      const SizedBox(height: 10),
 
-                  const Text(
-                    'Spending by Category',
+                      Text(
+                        'KES ${totalSpending.toStringAsFixed(2)}',
 
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  ...categoryTotals.entries.map((entry) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.category,
-                          color: Colors.green,
-                        ),
-
-                        title: Text(entry.key),
-
-                        trailing: Text(
-                          'KES ${entry.value.toStringAsFixed(0)}',
-
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    );
-                  }),
-                ],
-              ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                const Text(
+                  'Category Breakdown',
+
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  height: 300,
+
+                  child: PieChart(
+                    PieChartData(
+                      sections: getSections(),
+
+                      centerSpaceRadius: 40,
+
+                      sectionsSpace: 3,
+                    ),
+                  ),
+                ),
+              ],
             ),
-    );
+          );
   }
 }

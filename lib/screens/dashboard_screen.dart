@@ -9,133 +9,99 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
+    return Padding(
+      padding: const EdgeInsets.all(20),
 
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
 
-          children: [
-            const Icon(Icons.account_balance_wallet),
+        children: [
+          const Text(
+            'Welcome Back 👋',
 
-            const SizedBox(width: 10),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          ),
 
-            const Text('PesaPulse'),
-          ],
-        ),
+          const SizedBox(height: 10),
 
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
+          const Text(
+            'Manage your expenses easily',
 
-            onPressed: () async {
-              await ApiService.logoutUser();
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
 
-              Navigator.pushReplacement(
-                context,
+          const SizedBox(height: 30),
 
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
-            },
+          Row(
+            children: [
+              Expanded(
+                child: dashboardCard(
+                  title: 'Expenses',
+
+                  value: '120',
+
+                  icon: Icons.account_balance_wallet,
+                ),
+              ),
+
+              const SizedBox(width: 15),
+
+              Expanded(
+                child: dashboardCard(
+                  title: 'Budget',
+
+                  value: 'KES 50K',
+
+                  icon: Icons.savings,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          Row(
+            children: [
+              Expanded(
+                child: dashboardCard(
+                  title: 'Categories',
+
+                  value: '8',
+
+                  icon: Icons.category,
+                ),
+              ),
+
+              const SizedBox(width: 15),
+
+              Expanded(
+                child: dashboardCard(
+                  title: 'Reports',
+
+                  value: '12',
+
+                  icon: Icons.bar_chart,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 30),
+
+          SizedBox(
+            width: double.infinity,
+
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pushNamed(context, '/add-expense');
+              },
+
+              icon: const Icon(Icons.add),
+
+              label: const Text('Add Expense'),
+            ),
           ),
         ],
-      ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-
-          children: [
-            const Text(
-              'Welcome Back 👋',
-
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 10),
-
-            const Text(
-              'Manage your expenses easily',
-
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-
-            const SizedBox(height: 30),
-
-            Row(
-              children: [
-                Expanded(
-                  child: dashboardCard(
-                    title: 'Expenses',
-
-                    value: '120',
-
-                    icon: Icons.account_balance_wallet,
-                  ),
-                ),
-
-                const SizedBox(width: 15),
-
-                Expanded(
-                  child: dashboardCard(
-                    title: 'Budget',
-
-                    value: 'KES 50K',
-
-                    icon: Icons.savings,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            Row(
-              children: [
-                Expanded(
-                  child: dashboardCard(
-                    title: 'Categories',
-
-                    value: '8',
-
-                    icon: Icons.category,
-                  ),
-                ),
-
-                const SizedBox(width: 15),
-
-                Expanded(
-                  child: dashboardCard(
-                    title: 'Reports',
-
-                    value: '12',
-
-                    icon: Icons.bar_chart,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            SizedBox(
-              width: double.infinity,
-
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/add-expense');
-                },
-
-                icon: const Icon(Icons.add),
-
-                label: const Text('Add Expense'),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

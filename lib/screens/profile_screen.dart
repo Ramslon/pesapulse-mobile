@@ -37,68 +37,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+
+        child: Column(
           children: [
-            const Icon(Icons.person),
+            const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
 
-            const SizedBox(width: 10),
+            const SizedBox(height: 30),
 
-            const Text('Profile'),
+            TextField(
+              controller: nameController,
+
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            TextField(
+              controller: emailController,
+
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+
+              child: ElevatedButton(
+                onPressed: isLoading ? null : updateProfile,
+
+                child: isLoading
+                    ? const CircularProgressIndicator()
+                    : const Text('Update Profile'),
+              ),
+            ),
           ],
-        ),
-      ),
-
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-
-          child: Column(
-            children: [
-              const CircleAvatar(
-                radius: 40,
-                child: Icon(Icons.person, size: 40),
-              ),
-
-              const SizedBox(height: 30),
-
-              TextField(
-                controller: nameController,
-
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              TextField(
-                controller: emailController,
-
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : updateProfile,
-
-                  child: isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('Update Profile'),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

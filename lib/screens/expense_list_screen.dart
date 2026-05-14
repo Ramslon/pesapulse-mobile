@@ -101,146 +101,130 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            const Icon(Icons.receipt_long),
+    return isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : expenses.isEmpty
+        ? const Center(child: Text('No expenses found'))
+        : Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(10),
 
-            const SizedBox(width: 10),
+                child: TextField(
+                  controller: searchController,
 
-            const Text('My Expenses'),
-          ],
-        ),
-      ),
+                  onChanged: searchExpenses,
 
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : expenses.isEmpty
-          ? const Center(child: Text('No expenses found'))
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(10),
+                  decoration: const InputDecoration(
+                    hintText: 'Search expenses...',
 
-                  child: TextField(
-                    controller: searchController,
+                    prefixIcon: Icon(Icons.search),
 
-                    onChanged: searchExpenses,
-
-                    decoration: const InputDecoration(
-                      hintText: 'Search expenses...',
-
-                      prefixIcon: Icon(Icons.search),
-
-                      border: OutlineInputBorder(),
-                    ),
+                    border: OutlineInputBorder(),
                   ),
                 ),
+              ),
 
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
 
-                    itemCount: filteredExpenses.length + (hasMore ? 1 : 0),
+                  itemCount: filteredExpenses.length + (hasMore ? 1 : 0),
 
-                    itemBuilder: (context, index) {
-                      if (index == filteredExpenses.length) {
-                        return const Padding(
-                          padding: EdgeInsets.all(20),
+                  itemBuilder: (context, index) {
+                    if (index == filteredExpenses.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(20),
 
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
 
-                      final expense = filteredExpenses[index];
+                    final expense = filteredExpenses[index];
 
-                      return Card(
-                        elevation: 3,
+                    return Card(
+                      elevation: 3,
 
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        margin: const EdgeInsets.all(10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      margin: const EdgeInsets.all(10),
 
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
 
-                          child: ListTile(
-                            title: Text(expense['title']),
+                        child: ListTile(
+                          title: Text(expense['title']),
 
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
 
-                              children: [
-                                Text('Category: ${expense['category']}'),
+                            children: [
+                              Text('Category: ${expense['category']}'),
 
-                                Text('Date: ${expense['expense_date']}'),
-                              ],
-                            ),
+                              Text('Date: ${expense['expense_date']}'),
+                            ],
+                          ),
 
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
 
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit),
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
 
-                                  onPressed: () async {
-                                    final result = await Navigator.push(
-                                      context,
+                                onPressed: () async {
+                                  final result = await Navigator.push(
+                                    context,
 
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            EditExpenseScreen(expense: expense),
-                                      ),
-                                    );
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          EditExpenseScreen(expense: expense),
+                                    ),
+                                  );
 
-                                    if (result == true) {
-                                      expenses.clear();
+                                  if (result == true) {
+                                    expenses.clear();
 
-                                      filteredExpenses.clear();
+                                    filteredExpenses.clear();
 
-                                      currentPage = 1;
+                                    currentPage = 1;
 
-                                      hasMore = true;
+                                    hasMore = true;
 
-                                      fetchExpenses();
-                                    }
-                                  },
-                                ),
+                                    fetchExpenses();
+                                  }
+                                },
+                              ),
 
-                                IconButton(
-                                  icon: const Icon(Icons.delete),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
 
-                                  onPressed: () async {
-                                    await ApiService.deleteExpense(
-                                      expense['id'],
-                                    );
+                                onPressed: () async {
+                                  await ApiService.deleteExpense(expense['id']);
 
-                                    expenses.removeAt(index);
+                                  expenses.removeAt(index);
 
-                                    filteredExpenses = expenses;
+                                  filteredExpenses = expenses;
 
-                                    setState(() {});
+                                  setState(() {});
 
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Expense deleted'),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Expense deleted'),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
-    );
+              ),
+            ],
+          );
   }
 }
