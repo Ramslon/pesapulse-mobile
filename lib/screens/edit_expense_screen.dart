@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../services/api_services.dart';
+import '../widgets/custom_button.dart';
+import '../widgets/custom_textfield.dart';
 
 class EditExpenseScreen extends StatefulWidget {
   final Map expense;
@@ -108,53 +110,30 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
           child: Column(
             children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+              CustomTextField(controller: titleController, label: 'Title'),
 
               const SizedBox(height: 20),
 
-              TextField(
-                controller: amountController,
-                decoration: const InputDecoration(
-                  labelText: 'Amount',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+              CustomTextField(controller: amountController, label: 'Amount'),
 
               const SizedBox(height: 20),
 
-              TextField(
+              CustomTextField(
                 controller: categoryController,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
-                ),
+
+                label: 'Category',
               ),
 
               const SizedBox(height: 20),
 
-              TextField(
-                controller: dateController,
-                decoration: const InputDecoration(
-                  labelText: 'Date',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+              CustomTextField(controller: dateController, label: 'Date'),
 
               const SizedBox(height: 20),
 
-              TextField(
+              CustomTextField(
                 controller: descriptionController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
+
+                label: 'Description',
               ),
 
               const SizedBox(height: 30),
@@ -163,12 +142,10 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                 width: double.infinity,
                 height: 50,
 
-                child: ElevatedButton(
+                child: CustomButton(
+                  text: 'Update Expense',
+                  isLoading: isLoading,
                   onPressed: updateExpense,
-
-                  child: isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('Update Expense'),
                 ),
               ),
             ],

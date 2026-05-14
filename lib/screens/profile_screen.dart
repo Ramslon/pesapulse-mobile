@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../services/api_services.dart';
+import '../widgets/custom_button.dart';
+import '../widgets/custom_textfield.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -47,25 +49,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 30),
 
-            TextField(
-              controller: nameController,
-
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
-              ),
-            ),
+            CustomTextField(controller: nameController, label: 'Name'),
 
             const SizedBox(height: 20),
 
-            TextField(
-              controller: emailController,
-
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-              ),
-            ),
+            CustomTextField(controller: emailController, label: 'Email'),
 
             const SizedBox(height: 30),
 
@@ -73,12 +61,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: double.infinity,
               height: 50,
 
-              child: ElevatedButton(
-                onPressed: isLoading ? null : updateProfile,
-
-                child: isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('Update Profile'),
+              child: CustomButton(
+                text: 'Update Profile',
+                icon: Icons.person,
+                isLoading: isLoading,
+                onPressed: updateProfile,
               ),
             ),
           ],

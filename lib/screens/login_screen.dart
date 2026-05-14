@@ -3,6 +3,8 @@ import 'register_screen.dart';
 import '../services/api_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
+import '../widgets/custom_button.dart';
+import '../widgets/custom_textfield.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -76,24 +78,20 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                TextField(
+                CustomTextField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
+
+                  label: 'Email',
                 ),
 
                 const SizedBox(height: 20),
 
-                TextField(
+                CustomTextField(
                   controller: passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
-                  ),
+
+                  label: 'Password',
                 ),
 
                 const SizedBox(height: 30),
@@ -102,11 +100,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 50,
 
-                  child: ElevatedButton(
+                  child: CustomButton(
+                    text: 'Login',
+                    isLoading: isLoading,
                     onPressed: loginUser,
-                    child: isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text('Login'),
                   ),
                 ),
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 
 import '../services/api_services.dart';
 import 'edit_expense_screen.dart';
@@ -102,7 +103,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   @override
   Widget build(BuildContext context) {
     return isLoading
-        ? const Center(child: CircularProgressIndicator())
+        ? const LoadingWidget()
         : expenses.isEmpty
         ? const Center(child: Text('No expenses found'))
         : Column(

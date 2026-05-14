@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
+import '../widgets/custom_button.dart';
+import '../widgets/custom_textfield.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -67,34 +69,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
+                CustomTextField(controller: nameController, label: 'Full Name'),
 
                 const SizedBox(height: 20),
 
-                TextField(
+                CustomTextField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
+
+                  label: 'Email',
                 ),
 
                 const SizedBox(height: 20),
 
-                TextField(
+                CustomTextField(
                   controller: passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
-                  ),
+
+                  label: 'Password',
                 ),
 
                 const SizedBox(height: 30),
@@ -103,11 +95,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   width: double.infinity,
                   height: 50,
 
-                  child: ElevatedButton(
+                  child: CustomButton(
+                    text: 'Register',
+                    isLoading: isLoading,
                     onPressed: registerUser,
-                    child: isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text('Register'),
                   ),
                 ),
               ],

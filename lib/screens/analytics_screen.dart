@@ -1,7 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 
 import '../services/api_services.dart';
+import '../widgets/loading_widget.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -103,7 +105,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     return isLoading
-        ? const Center(child: CircularProgressIndicator())
+        ? const LoadingWidget()
         : SingleChildScrollView(
             padding: const EdgeInsets.all(20),
 

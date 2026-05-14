@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
+import '../widgets/custom_button.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -178,12 +179,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 width: double.infinity,
                 height: 50,
 
-                child: ElevatedButton(
+                child: CustomButton(
+                  text: 'Save Expense',
+                  isLoading: isLoading,
                   onPressed: addExpense,
-
-                  child: isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('Save Expense'),
                 ),
               ),
             ],
