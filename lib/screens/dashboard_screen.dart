@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/loading_widget.dart';
+import '../services/api_services.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -23,17 +24,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> loadDashboardData() async {
-    final data = await ApiService.getDashboardSummary();
+    try {
+      final data = await ApiService.getDashboardSummary();
 
-    setState(() {
-      totalExpenses = data['total_expenses'];
+      setState(() {
+        totalExpenses = data['total_expenses'];
 
-      totalCount = data['total_count'];
+        totalCount = data['total_count'];
 
-      totalCategories = data['categories'];
+        totalCategories = data['categories'];
 
-      isLoading = false;
-    });
+        isLoading = false;
+      });
+    } catch (e) {
+      print(e);
+
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   @override
@@ -71,7 +84,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: DashboardCard(
                   title: 'Expenses',
 
-                  value: '120',
+                  value: totalCount.toString(),
 
                   icon: Icons.account_balance_wallet,
                 ),
@@ -83,7 +96,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: DashboardCard(
                   title: 'Budget',
 
-                  value: 'KES 50K',
+                  value: 'KES $totalExpenses',
 
                   icon: Icons.savings,
                 ),
@@ -99,7 +112,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: DashboardCard(
                   title: 'Categories',
 
-                  value: '8',
+                  value: totalCategories.toString(),
 
                   icon: Icons.category,
                 ),
@@ -111,7 +124,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: DashboardCard(
                   title: 'Reports',
 
-                  value: '12',
+                  value: totalCount.toString(),
 
                   icon: Icons.bar_chart,
                 ),
