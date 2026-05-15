@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static const String baseUrl = 'http://10.5.50.86:8000/api';
+  static String token = '';
 
   static Future<Map<String, dynamic>> loginUser(
     String email,
@@ -162,6 +163,15 @@ class ApiService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
 
       body: {'name': name, 'email': email},
+    );
+
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> getDashboardSummary() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/dashboard-summary'),
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
     return jsonDecode(response.body);

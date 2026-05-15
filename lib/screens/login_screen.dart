@@ -43,6 +43,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
         await prefs.setString('token', response['token']);
 
+        ApiService.token = response['token'];
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),

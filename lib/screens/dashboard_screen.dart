@@ -12,6 +12,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool isLoading = true;
 
+  int totalExpenses = 0;
+  int totalCount = 0;
+  int totalCategories = 0;
+
   @override
   void initState() {
     super.initState();
@@ -19,9 +23,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> loadDashboardData() async {
-    await Future.delayed(const Duration(seconds: 2)); // simulate API
+    final data = await ApiService.getDashboardSummary();
 
     setState(() {
+      totalExpenses = data['total_expenses'];
+
+      totalCount = data['total_count'];
+
+      totalCategories = data['categories'];
+
       isLoading = false;
     });
   }

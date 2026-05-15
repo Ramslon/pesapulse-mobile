@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
+import '../services/api_services.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -29,6 +29,8 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (token != null) {
+      ApiService.token = token;
+
       Navigator.pushReplacement(
         context,
 
