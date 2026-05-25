@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/loading_widget.dart';
 import '../services/api_services.dart';
+import '../screens/add_expense_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -139,7 +140,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             child: ElevatedButton.icon(
               onPressed: () {
-                Navigator.pushNamed(context, '/add-expense');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddExpenseScreen(),
+                  ),
+                );
               },
 
               icon: const Icon(Icons.add),
