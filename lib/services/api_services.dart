@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.5.50.86:8000/api';
+  static const String baseUrl = 'https://pesapulse-t9hk.onrender.com/api';
   static String token = '';
 
   static Future<Map<String, dynamic>> loginUser(
