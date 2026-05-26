@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
+import 'package:provider/provider.dart';
+import 'providers/theme_provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -10,14 +17,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
       title: 'PesaPulse',
 
-      theme: ThemeData(
-        primarySwatch: Colors.green,
+      themeMode: themeProvider.themeMode,
 
+      theme: ThemeData(
+        brightness: Brightness.light,
+        primarySwatch: Colors.green,
         scaffoldBackgroundColor: Colors.grey[100],
 
         appBarTheme: const AppBarTheme(
@@ -60,9 +71,16 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      darkTheme: ThemeData.dark(),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
 
-      themeMode: ThemeMode.system,
+        primarySwatch: Colors.green,
+
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+        ),
+      ),
 
       home: const SplashScreen(),
     );

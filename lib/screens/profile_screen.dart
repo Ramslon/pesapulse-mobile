@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -67,6 +69,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 isLoading: isLoading,
                 onPressed: updateProfile,
               ),
+            ),
+
+            const SizedBox(height: 30),
+
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return SwitchListTile(
+                  title: const Text('Dark Mode'),
+                  secondary: const Icon(Icons.dark_mode),
+                  value: themeProvider.isDarkMode,
+
+                  onChanged: (value) {
+                    themeProvider.toggleTheme(value);
+                  },
+                );
+              },
             ),
           ],
         ),
