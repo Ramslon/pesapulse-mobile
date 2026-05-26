@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(
@@ -26,61 +27,8 @@ class MyApp extends StatelessWidget {
 
       themeMode: themeProvider.themeMode,
 
-      theme: ThemeData(
-        brightness: Brightness.light,
-        primarySwatch: Colors.green,
-        scaffoldBackgroundColor: Colors.grey[100],
-
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.green,
-
-          foregroundColor: Colors.white,
-
-          elevation: 0,
-        ),
-
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-
-            foregroundColor: Colors.white,
-
-            minimumSize: const Size(double.infinity, 50),
-
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-
-          fillColor: Colors.white,
-
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-
-            borderSide: BorderSide.none,
-          ),
-
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-        ),
-      ),
-
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-
-        primarySwatch: Colors.green,
-
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-        ),
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
 
       home: const SplashScreen(),
     );
