@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/api_services.dart';
+import '../services/notification_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import 'package:provider/provider.dart';
@@ -85,6 +86,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 );
               },
+            ),
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+
+              child: CustomButton(
+                text: 'Test Notification',
+
+                icon: Icons.notifications,
+
+                onPressed: () {
+                  NotificationService.showNotification(
+                    title: 'PesaPulse Reminder',
+                    body: 'Remember to track your expenses today!',
+                  );
+                },
+              ),
             ),
           ],
         ),
