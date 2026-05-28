@@ -21,6 +21,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool isLoading = false;
 
+  bool dailyReminder = true;
+
+  bool expenseAlerts = true;
+
+  bool weeklySummary = false;
+
   void updateProfile() async {
     setState(() {
       isLoading = true;
@@ -89,21 +95,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 20),
 
-            SizedBox(
-              width: double.infinity,
-              height: 50,
+            Align(
+              alignment: Alignment.centerLeft,
 
-              child: CustomButton(
-                text: 'Test Notification',
+              child: Text(
+                'Notification Settings',
 
-                icon: Icons.notifications,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
 
-                onPressed: () {
-                  NotificationService.showNotification(
-                    title: 'PesaPulse Reminder',
-                    body: 'Remember to track your expenses today!',
-                  );
-                },
+            const SizedBox(height: 10),
+
+            Card(
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Daily Reminder'),
+
+                    secondary: const Icon(Icons.notifications_active),
+
+                    value: dailyReminder,
+
+                    onChanged: (value) {
+                      setState(() {
+                        dailyReminder = value;
+                      });
+
+                      NotificationService.showNotification(
+                        title: 'Daily Reminder',
+
+                        body: value
+                            ? 'Daily reminders enabled'
+                            : 'Daily reminders disabled',
+                      );
+                    },
+                  ),
+
+                  SwitchListTile(
+                    title: const Text('Expense Alerts'),
+
+                    secondary: const Icon(Icons.warning),
+
+                    value: expenseAlerts,
+
+                    onChanged: (value) {
+                      setState(() {
+                        expenseAlerts = value;
+                      });
+
+                      NotificationService.showNotification(
+                        title: 'Expense Alerts',
+
+                        body: value
+                            ? 'Expense alerts enabled'
+                            : 'Expense alerts disabled',
+                      );
+                    },
+                  ),
+
+                  SwitchListTile(
+                    title: const Text('Weekly Summary'),
+
+                    secondary: const Icon(Icons.bar_chart),
+
+                    value: weeklySummary,
+
+                    onChanged: (value) {
+                      setState(() {
+                        weeklySummary = value;
+                      });
+
+                      NotificationService.showNotification(
+                        title: 'Weekly Summary',
+
+                        body: value
+                            ? 'Weekly summaries enabled'
+                            : 'Weekly summaries disabled',
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ],
