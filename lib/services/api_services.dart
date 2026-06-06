@@ -7,6 +7,12 @@ class ApiService {
   static const String baseUrl = 'https://pesapulse-t9hk.onrender.com/api';
   static String token = '';
 
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return prefs.getString('token');
+  }
+
   static Future<Map<String, dynamic>> loginUser(
     String email,
     String password,
@@ -172,6 +178,32 @@ class ApiService {
     final response = await http.get(
       Uri.parse('$baseUrl/dashboard-summary'),
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+    );
+
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> updatePreferences(
+    bool dailyReminder,
+    bool expenseAlerts,
+    bool weeklySummary,
+  ) async {
+    final token = await getToken();
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/preferences'),
+
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+
+      body: jsonEncode({
+        'daily_reminder': dailyReminder,
+        'expense_alerts': expenseAlerts,
+        'weekly_summary': weeklySummary,
+      }),
     );
 
     return jsonDecode(response.body);
