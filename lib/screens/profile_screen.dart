@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +28,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool weeklySummary = false;
 
+  @override
+  void initState() {
+    super.initState();
+
+    loadSettings();
+  }
+
   void updateProfile() async {
     setState(() {
       isLoading = true;
@@ -44,6 +52,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(response['message'])));
+  }
+
+  Future<void> loadSettings() async {
+    dailyReminder = await SettingsService.getDailyReminder();
+
+    expenseAlerts = await SettingsService.getExpenseAlerts();
+
+    weeklySummary = await SettingsService.getWeeklySummary();
+
+    setState(() {});
   }
 
   @override
@@ -117,10 +135,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     value: dailyReminder,
 
-                    onChanged: (value) {
+                    onChanged: (value) async {
                       setState(() {
                         dailyReminder = value;
                       });
+
+                      await SettingsService.setDailyReminder(value);
 
                       NotificationService.showNotification(
                         title: 'Daily Reminder',
@@ -139,10 +159,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     value: expenseAlerts,
 
-                    onChanged: (value) {
+                    onChanged: (value) async {
                       setState(() {
                         expenseAlerts = value;
                       });
+                      await SettingsService.setExpenseAlerts(value);
 
                       NotificationService.showNotification(
                         title: 'Expense Alerts',
@@ -161,10 +182,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     value: weeklySummary,
 
-                    onChanged: (value) {
+                    onChanged: (value) async {
                       setState(() {
                         weeklySummary = value;
                       });
+                      await SettingsService.setWeeklySummary(value);
 
                       NotificationService.showNotification(
                         title: 'Weekly Summary',
