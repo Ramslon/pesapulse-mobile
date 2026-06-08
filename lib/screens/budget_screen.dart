@@ -15,6 +15,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
   double spent = 0;
   double remaining = 0;
 
+  double get percentageUsed {
+    if (budget <= 0) return 0;
+
+    return (spent / budget) * 100;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -98,6 +104,71 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ),
           ),
+
+          const SizedBox(height: 30),
+
+          Text(
+            '${budget > 0 ? ((spent / budget) * 100).toStringAsFixed(0) : 0}% Used',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 10),
+
+          LinearProgressIndicator(
+            value: budget > 0 ? spent / budget : 0,
+            minHeight: 10,
+            borderRadius: BorderRadius.circular(10),
+          ),
+
+          if (percentageUsed >= 80)
+            Container(
+              margin: const EdgeInsets.only(top: 20),
+
+              padding: const EdgeInsets.all(15),
+
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+
+              child: const Row(
+                children: [
+                  Icon(Icons.warning),
+
+                  SizedBox(width: 10),
+
+                  Expanded(
+                    child: Text(
+                      'You have used over 80% of your monthly budget.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          if (spent > budget && budget > 0)
+            Container(
+              margin: const EdgeInsets.only(top: 20),
+
+              padding: const EdgeInsets.all(15),
+
+              decoration: BoxDecoration(
+                color: Colors.red.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+
+              child: const Row(
+                children: [
+                  Icon(Icons.error),
+
+                  SizedBox(width: 10),
+
+                  Expanded(
+                    child: Text('Budget exceeded! Consider reducing expenses.'),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

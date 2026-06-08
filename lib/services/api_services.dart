@@ -219,4 +219,22 @@ class ApiService {
 
     return jsonDecode(response.body);
   }
+
+  static Future<Map<String, dynamic>> setBudget(double amount) async {
+    final token = await getToken();
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/budget'),
+
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+
+      body: jsonEncode({'amount': amount}),
+    );
+
+    return jsonDecode(response.body);
+  }
 }

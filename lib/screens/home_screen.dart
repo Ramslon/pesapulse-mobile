@@ -7,6 +7,7 @@ import 'expense_list_screen.dart';
 import 'profile_screen.dart';
 import 'analytics_screen.dart';
 import 'login_screen.dart';
+import 'budget_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,17 +24,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
     const ExpenseListScreen(),
 
+    const BudgetScreen(),
+
     const AnalyticsScreen(),
 
     const ProfileScreen(),
   ];
 
-  final List<String> titles = ['Dashboard', 'Expenses', 'Analytics', 'Profile'];
+  final List<String> titles = [
+    'Dashboard',
+    'Expenses',
+    'Budget',
+    'Analytics',
+    'Profile',
+  ];
 
   final List<IconData> icons = [
     Icons.dashboard,
 
     Icons.receipt_long,
+
+    Icons.account_balance_wallet,
 
     Icons.bar_chart,
 
@@ -103,6 +114,12 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.receipt_long),
 
             label: 'Expenses',
+          ),
+
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet),
+
+            label: 'Budget',
           ),
 
           BottomNavigationBarItem(
