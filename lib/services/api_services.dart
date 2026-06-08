@@ -208,4 +208,15 @@ class ApiService {
 
     return jsonDecode(response.body);
   }
+
+  static Future<Map<String, dynamic>> getBudgetSummary() async {
+    final token = await getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/budget-summary'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    return jsonDecode(response.body);
+  }
 }
