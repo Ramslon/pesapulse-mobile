@@ -21,6 +21,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
     return (spent / budget) * 100;
   }
 
+  final TextEditingController budgetController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +35,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
       setState(() {
         budget = double.tryParse(data['budget'].toString()) ?? 0;
+
+        budgetController.text = budget.toStringAsFixed(0);
 
         spent = double.tryParse(data['spent'].toString()) ?? 0;
 
@@ -48,6 +52,40 @@ class _BudgetScreenState extends State<BudgetScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> saveBudget() async {
+    try {
+      if (budgetController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter a budget amount')),
+        );
+        return;
+      }
+
+      final amount = double.parse(budgetController.text.trim());
+
+      if (amount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Budget must be greater than zero')),
+        );
+        return;
+      }
+
+      await ApiService.setBudget(amount);
+
+      await loadBudget();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Budget saved successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -67,6 +105,41 @@ class _BudgetScreenState extends State<BudgetScreen> {
           const Text(
             'Monthly Budget',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          ),
+
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+
+              child: Column(
+                children: [
+                  TextField(
+                    controller: budgetController,
+
+                    keyboardType: TextInputType.number,
+
+                    decoration: const InputDecoration(
+                      labelText: 'Monthly Budget Amount',
+                      prefixText: 'KES ',
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  SizedBox(
+                    width: double.infinity,
+
+                    child: ElevatedButton.icon(
+                      onPressed: saveBudget,
+
+                      icon: const Icon(Icons.save),
+
+                      label: const Text('Save Budget'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
 
           const SizedBox(height: 30),
