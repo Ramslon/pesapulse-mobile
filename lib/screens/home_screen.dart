@@ -8,6 +8,7 @@ import 'profile_screen.dart';
 import 'analytics_screen.dart';
 import 'login_screen.dart';
 import 'budget_screen.dart';
+import 'goals_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     const AnalyticsScreen(),
 
+    const GoalsScreen(),
+
     const ProfileScreen(),
   ];
 
@@ -36,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Expenses',
     'Budget',
     'Analytics',
+    'Goals',
     'Profile',
   ];
 
@@ -47,6 +51,8 @@ class _HomeScreenState extends State<HomeScreen> {
     Icons.account_balance_wallet,
 
     Icons.bar_chart,
+
+    Icons.flag,
 
     Icons.person,
   ];
@@ -128,6 +134,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
             label: 'Analytics',
           ),
+
+          BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Goals'),
 
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

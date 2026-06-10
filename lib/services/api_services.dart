@@ -237,4 +237,41 @@ class ApiService {
 
     return jsonDecode(response.body);
   }
+
+  static Future<List<dynamic>> getGoals() async {
+    final token = await getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/goals'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> createGoal({
+    required String title,
+    required double targetAmount,
+    String? targetDate,
+  }) async {
+    final token = await getToken();
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/goals'),
+
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+
+      body: jsonEncode({
+        'title': title,
+        'target_amount': targetAmount,
+        'target_date': targetDate,
+      }),
+    );
+
+    return jsonDecode(response.body);
+  }
 }
