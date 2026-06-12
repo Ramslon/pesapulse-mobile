@@ -246,7 +246,7 @@ class ApiService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
     print("STATUS CODE: ${response.statusCode}");
-  print("BODY: ${response.body}");
+    print("BODY: ${response.body}");
 
     return jsonDecode(response.body);
   }
@@ -272,6 +272,27 @@ class ApiService {
         'target_amount': targetAmount,
         'target_date': targetDate,
       }),
+    );
+
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> updateGoalProgress(
+    int goalId,
+    double amount,
+  ) async {
+    final token = await getToken();
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/goals/$goalId/progress'),
+
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+
+      body: jsonEncode({'amount': amount}),
     );
 
     return jsonDecode(response.body);

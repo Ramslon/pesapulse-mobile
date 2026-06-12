@@ -42,6 +42,54 @@ class _GoalsScreenState extends State<GoalsScreen> {
     }
   }
 
+  Future<void> showAddSavingsDialog(int goalId) async {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add Savings'),
+
+          content: TextField(
+            controller: controller,
+
+            keyboardType: TextInputType.number,
+
+            decoration: const InputDecoration(labelText: 'Amount'),
+          ),
+
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+
+              child: const Text('Cancel'),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                final amount = double.tryParse(controller.text) ?? 0;
+
+                await ApiService.updateGoalProgress(goalId, amount);
+
+                if (!mounted) return;
+
+                Navigator.pop(context);
+
+                loadGoals();
+              },
+
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -133,6 +181,21 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
                           Text(
                             '${(percentage * 100).toStringAsFixed(0)}% Complete',
+                          ),
+                          const SizedBox(height: 10),
+
+                          SizedBox(
+                            width: double.infinity,
+
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                showAddSavingsDialog(goal['id']);
+                              },
+
+                              icon: const Icon(Icons.savings),
+
+                              label: const Text('Add Savings'),
+                            ),
                           ),
                         ],
                       ),
