@@ -18,10 +18,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
   @override
   void initState() {
     super.initState();
+    print("GoalsScreen initState");
     loadGoals();
   }
 
   Future<void> loadGoals() async {
+    print("loadGoals started");
     try {
       final data = await ApiService.getGoals();
 
@@ -46,85 +48,98 @@ class _GoalsScreenState extends State<GoalsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (goals.isEmpty) {
-      return const Center(
-        child: Text('No financial goals yet', style: TextStyle(fontSize: 18)),
-      );
-    }
-
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AddGoalScreen()),
+            MaterialPageRoute(builder: (context) => const AddGoalScreen()),
           );
 
           if (result == true) {
             loadGoals();
+            final data = await ApiService.getGoals();
+
+            print(data);
           }
         },
-
         child: const Icon(Icons.add),
       ),
+
       body: RefreshIndicator(
         onRefresh: loadGoals,
 
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-
-          itemCount: goals.length,
-
-          itemBuilder: (context, index) {
-            final goal = goals[index];
-
-            final target =
-                double.tryParse(goal['target_amount'].toString()) ?? 0;
-
-            final saved = double.tryParse(goal['saved_amount'].toString()) ?? 0;
-
-            final double percentage = target > 0
-                ? (saved / target).clamp(0.0, 1.0).toDouble()
-                : 0.0;
-
-            return Card(
-              margin: const EdgeInsets.only(bottom: 15),
-
-              child: Padding(
+        child: goals.isEmpty
+            ? ListView(
+                children: const [
+                  SizedBox(height: 300),
+                  Center(
+                    child: Text(
+                      'No financial goals yet',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ],
+              )
+            : ListView.builder(
                 padding: const EdgeInsets.all(16),
+                itemCount: goals.length,
 
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                itemBuilder: (context, index) {
+                  final goal = goals[index];
 
-                  children: [
-                    Text(
-                      goal['title'],
+                  final target =
+                      double.tryParse(goal['target_amount'].toString()) ?? 0;
 
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  final saved =
+                      double.tryParse(goal['saved_amount'].toString()) ?? 0;
+
+                  final double percentage = target > 0
+                      ? (saved / target).clamp(0.0, 1.0).toDouble()
+                      : 0.0;
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 15),
+
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+
+                        children: [
+                          Text(
+                            goal['title'],
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          Text(
+                            'KES ${saved.toStringAsFixed(0)} / ${target.toStringAsFixed(0)}',
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          LinearProgressIndicator(
+                            value: percentage,
+                            minHeight: 10,
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          Text(
+                            '${(percentage * 100).toStringAsFixed(0)}% Complete',
+                          ),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 10),
-
-                    Text(
-                      'KES ${saved.toStringAsFixed(0)} / ${target.toStringAsFixed(0)}',
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    LinearProgressIndicator(value: percentage, minHeight: 10),
-
-                    const SizedBox(height: 10),
-
-                    Text('${(percentage * 100).toStringAsFixed(0)}% Complete'),
-                  ],
-                ),
+                  );
+                },
               ),
-            );
-          },
-        ),
       ),
     );
   }

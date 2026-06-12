@@ -245,6 +245,8 @@ class ApiService {
       Uri.parse('$baseUrl/goals'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+    print("STATUS CODE: ${response.statusCode}");
+  print("BODY: ${response.body}");
 
     return jsonDecode(response.body);
   }
