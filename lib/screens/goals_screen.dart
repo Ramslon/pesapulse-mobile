@@ -18,12 +18,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
   @override
   void initState() {
     super.initState();
-    print("GoalsScreen initState");
+
     loadGoals();
   }
 
   Future<void> loadGoals() async {
-    print("loadGoals started");
     try {
       final data = await ApiService.getGoals();
 
@@ -79,7 +78,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
                 Navigator.pop(context);
 
-                loadGoals();
+                await loadGoals();
               },
 
               child: const Text('Save'),
@@ -106,9 +105,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
           if (result == true) {
             loadGoals();
-            final data = await ApiService.getGoals();
-
-            print(data);
           }
         },
         child: const Icon(Icons.add),
@@ -156,18 +152,35 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
 
                         children: [
-                          Text(
-                            goal['title'],
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            children: [
+                              Icon(
+                                percentage >= 1.0
+                                    ? Icons.emoji_events
+                                    : Icons.flag,
+                                color: percentage >= 1.0
+                                    ? Colors.amber
+                                    : Colors.blue,
+                              ),
+
+                              const SizedBox(width: 10),
+
+                              Expanded(
+                                child: Text(
+                                  goal['title'],
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
 
                           const SizedBox(height: 10),
 
                           Text(
-                            'KES ${saved.toStringAsFixed(0)} / ${target.toStringAsFixed(0)}',
+                            'KES ${saved.toStringAsFixed(2)} / ${target.toStringAsFixed(0)}',
                           ),
 
                           const SizedBox(height: 10),
@@ -177,20 +190,64 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             minHeight: 10,
                           ),
 
+                          if (percentage >= 1.0)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 10),
+                              child: Text(
+                                '🎉 Congratulations! You achieved this goal.',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+
                           const SizedBox(height: 10),
 
-                          Text(
-                            '${(percentage * 100).toStringAsFixed(0)}% Complete',
-                          ),
+                          percentage >= 1.0
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+
+                                    children: [
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: Colors.white,
+                                      ),
+
+                                      SizedBox(width: 8),
+
+                                      Text(
+                                        'Goal Achieved',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Text(
+                                  '${(percentage * 100).toStringAsFixed(0)}% Complete',
+                                ),
                           const SizedBox(height: 10),
 
                           SizedBox(
                             width: double.infinity,
 
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                showAddSavingsDialog(goal['id']);
-                              },
+                              onPressed: percentage >= 1.0
+                                  ? null
+                                  : () {
+                                      showAddSavingsDialog(goal['id']);
+                                    },
 
                               icon: const Icon(Icons.savings),
 
