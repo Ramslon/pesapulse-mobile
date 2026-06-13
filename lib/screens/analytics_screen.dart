@@ -121,6 +121,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }).toList();
   }
 
+  List<PieChartSectionData> getGoalSections() {
+    return [
+      PieChartSectionData(
+        color: Colors.green,
+        value: completedGoals.toDouble(),
+        title: 'Completed\n$completedGoals',
+        radius: 90,
+        titleStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      PieChartSectionData(
+        color: Colors.orange,
+        value: activeGoals.toDouble(),
+        title: 'Active\n$activeGoals',
+        radius: 90,
+        titleStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ];
+  }
+
   Widget buildStatCard(String title, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -264,6 +290,36 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       centerSpaceRadius: 40,
 
                       sectionsSpace: 3,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                const Text(
+                  'Goal Status',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  height: 250,
+                  child: PieChart(
+                    PieChartData(
+                      sections: getGoalSections(),
+                      centerSpaceRadius: 40,
+                      sectionsSpace: 3,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                Center(
+                  child: Text(
+                    '$completedGoals of $totalGoals goals completed',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
