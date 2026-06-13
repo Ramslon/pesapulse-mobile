@@ -20,6 +20,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Map<String, double> categoryTotals = {};
 
+  Map<int, double> monthlyTotals = {};
+
   int totalGoals = 0;
   int completedGoals = 0;
   int activeGoals = 0;
@@ -44,12 +46,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
       Map<String, double> categories = {};
 
+      Map<int, double> monthlyData = {};
+
       for (var expense in data) {
         double amount = double.parse(expense['amount'].toString());
 
         String category = expense['category'];
 
         total += amount;
+
+        DateTime date = DateTime.parse(expense['created_at']);
+
+        int month = date.month;
+
+        monthlyData[month] = (monthlyData[month] ?? 0) + amount;
 
         if (categories.containsKey(category)) {
           categories[category] = categories[category]! + amount;
@@ -64,6 +74,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         totalSpending = total;
 
         categoryTotals = categories;
+
+        monthlyTotals = monthlyData;
 
         totalGoals = int.tryParse(goalAnalytics['total_goals'].toString()) ?? 0;
 
@@ -145,6 +157,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         ),
       ),
     ];
+  }
+
+  List<BarChartGroupData> getMonthlyBars() {
+    return monthlyTotals.entries.map((entry) {
+      return BarChartGroupData(
+        x: entry.key,
+
+        barRods: [
+          BarChartRodData(
+            toY: entry.value,
+            width: 18,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ],
+      );
+    }).toList();
   }
 
   Widget buildStatCard(String title, String value, IconData icon) {
@@ -309,6 +337,59 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       sections: getGoalSections(),
                       centerSpaceRadius: 40,
                       sectionsSpace: 3,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                const Text(
+                  'Monthly Spending Trend',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  height: 300,
+
+                  child: BarChart(
+                    BarChartData(
+                      borderData: FlBorderData(show: false),
+
+                      titlesData: FlTitlesData(
+                        leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: true),
+                        ),
+
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+
+                            getTitlesWidget: (value, meta) {
+                              const months = [
+                                '',
+                                'Jan',
+                                'Feb',
+                                'Mar',
+                                'Apr',
+                                'May',
+                                'Jun',
+                                'Jul',
+                                'Aug',
+                                'Sep',
+                                'Oct',
+                                'Nov',
+                                'Dec',
+                              ];
+
+                              return Text(months[value.toInt()]);
+                            },
+                          ),
+                        ),
+                      ),
+
+                      barGroups: getMonthlyBars(),
                     ),
                   ),
                 ),
