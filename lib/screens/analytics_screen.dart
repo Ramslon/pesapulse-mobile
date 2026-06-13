@@ -27,6 +27,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   int activeGoals = 0;
   double completionRate = 0;
 
+  double healthScore = 0;
+  String healthStatus = '';
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +90,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
         completionRate =
             double.tryParse(goalAnalytics['completion_rate'].toString()) ?? 0;
+
+        calculateHealthScore();
 
         isLoading = false;
       });
@@ -173,6 +178,35 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         ],
       );
     }).toList();
+  }
+
+  void calculateHealthScore() {
+    double score = 0;
+
+    // Goal completion contributes up to 50 points
+    score += completionRate * 0.5;
+
+    // Active goals contribute up to 25 points
+    if (totalGoals > 0) {
+      score += ((totalGoals - activeGoals) / totalGoals) * 25;
+    }
+
+    // Budget discipline contributes up to 25 points
+    if (totalSpending > 0) {
+      score += 25;
+    }
+
+    healthScore = score.clamp(0, 100);
+
+    if (healthScore >= 80) {
+      healthStatus = 'Excellent';
+    } else if (healthScore >= 60) {
+      healthStatus = 'Good';
+    } else if (healthScore >= 40) {
+      healthStatus = 'Fair';
+    } else {
+      healthStatus = 'Needs Improvement';
+    }
   }
 
   Widget buildStatCard(String title, String value, IconData icon) {
@@ -296,6 +330,53 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 30),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+
+                    color: healthScore >= 80
+                        ? Colors.green
+                        : healthScore >= 60
+                        ? Colors.orange
+                        : Colors.red,
+                  ),
+
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Financial Health Score',
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Text(
+                        '${healthScore.toStringAsFixed(0)}/100',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Text(
+                        healthStatus,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 30),
