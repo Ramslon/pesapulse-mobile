@@ -4,7 +4,6 @@ import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 
 import '../services/api_services.dart';
 
-
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
 
@@ -21,6 +20,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Map<String, double> categoryTotals = {};
 
+  int totalGoals = 0;
+  int completedGoals = 0;
+  int activeGoals = 0;
+  double completionRate = 0;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +35,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Future<void> fetchAnalytics() async {
     try {
       final response = await ApiService.getExpenses();
+
+      final goalAnalytics = await ApiService.getGoalAnalytics();
 
       final List data = response['data'] ?? [];
 
@@ -59,12 +65,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
         categoryTotals = categories;
 
+        totalGoals = int.tryParse(goalAnalytics['total_goals'].toString()) ?? 0;
+
+        completedGoals =
+            int.tryParse(goalAnalytics['completed_goals'].toString()) ?? 0;
+
+        activeGoals =
+            int.tryParse(goalAnalytics['active_goals'].toString()) ?? 0;
+
+        completionRate =
+            double.tryParse(goalAnalytics['completion_rate'].toString()) ?? 0;
+
         isLoading = false;
       });
     } catch (e) {
       setState(() {
         isLoading = false;
       });
+
+      debugPrint('Analytics Error: $e');
     }
   }
 
@@ -100,6 +119,34 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
       return section;
     }).toList();
+  }
+
+  Widget buildStatCard(String title, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+
+      child: Column(
+        children: [
+          Icon(icon, size: 30),
+
+          const SizedBox(height: 10),
+
+          Text(
+            value,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 5),
+
+          Text(title),
+        ],
+      ),
+    );
   }
 
   @override
@@ -147,6 +194,54 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                     ],
                   ),
+                ),
+
+                const SizedBox(height: 30),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: buildStatCard(
+                        'Goals',
+                        totalGoals.toString(),
+                        Icons.flag,
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: buildStatCard(
+                        'Completed',
+                        completedGoals.toString(),
+                        Icons.emoji_events,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: buildStatCard(
+                        'Active',
+                        activeGoals.toString(),
+                        Icons.track_changes,
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: buildStatCard(
+                        'Rate',
+                        '${completionRate.toStringAsFixed(0)}%',
+                        Icons.trending_up,
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 30),

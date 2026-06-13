@@ -295,4 +295,15 @@ class ApiService {
 
     return jsonDecode(response.body);
   }
+
+  static Future<Map<String, dynamic>> getGoalAnalytics() async {
+    final token = await getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/goals/analytics'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    return jsonDecode(response.body);
+  }
 }
