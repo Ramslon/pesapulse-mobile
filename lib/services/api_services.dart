@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/user_preferences.dart';
 
 class ApiService {
   static const String baseUrl = 'https://pesapulse-t9hk.onrender.com/api';
@@ -183,30 +184,54 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> updatePreferences(
-    bool dailyReminder,
-    bool expenseAlerts,
-    bool weeklySummary,
-  ) async {
+  static Future<void> updatePreferences(Map<String, dynamic> data) async {
     final token = await getToken();
 
     final response = await http.put(
       Uri.parse('$baseUrl/preferences'),
-
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-
-      body: jsonEncode({
-        'daily_reminder': dailyReminder,
-        'expense_alerts': expenseAlerts,
-        'weekly_summary': weeklySummary,
-      }),
+      body: jsonEncode(data),
     );
 
-    return jsonDecode(response.body);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update preferences');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getPreferences() async {
+    final token = await getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/preferences'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load preferences');
+    }
+
+    final data = jsonDecode(response.body);
+
+    // 🔥 NORMALIZE (MERGE SAFETY LAYER)
+    return {
+      'dark_mode': data['dark_mode'] ?? false,
+      'notifications_enabled': data['notifications_enabled'] ?? true,
+
+      // old system fallback
+      'daily_reminder': data['daily_reminder'] ?? false,
+      'expense_alerts': data['expense_alerts'] ?? false,
+      'weekly_summary': data['weekly_summary'] ?? false,
+    };
+  }
+
+  static Future<UserPreferences> getUserPreferences() async {
+    final data = await getPreferences();
+
+    return UserPreferences.fromJson(data);
   }
 
   static Future<Map<String, dynamic>> getBudgetSummary() async {

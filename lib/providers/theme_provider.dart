@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_services.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.light;
@@ -16,9 +17,17 @@ class ThemeProvider extends ChangeNotifier {
     _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
 
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.setBool('darkMode', isDark);
 
     notifyListeners();
+
+    // 🔥 sync to backend
+    try {
+      await ApiService.updatePreferences({'dark_mode': isDark});
+    } catch (e) {
+      // ignore network failure (offline support)
+    }
   }
 
   void loadTheme() async {
@@ -29,5 +38,21 @@ class ThemeProvider extends ChangeNotifier {
     _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
 
     notifyListeners();
+  }
+
+  Future<void> syncWithBackend() async {
+    try {
+      final prefs = await ApiService.getUserPreferences();
+
+      _themeMode = prefs.darkMode ? ThemeMode.dark : ThemeMode.light;
+
+      final localPrefs = await SharedPreferences.getInstance();
+
+      await localPrefs.setBool('darkMode', prefs.darkMode);
+
+      notifyListeners();
+    } catch (e) {
+      // fallback already handled by local prefs
+    }
   }
 }

@@ -39,29 +39,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       isLoading = true;
     });
+    try {
+      final response = await ApiService.updateProfile(
+        nameController.text.trim(),
+        emailController.text.trim(),
+      );
 
-    final response = await ApiService.updateProfile(
-      nameController.text.trim(),
-      emailController.text.trim(),
-    );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response['message'])));
+    } catch (e) {
+      if (!mounted) return;
 
-    setState(() {
-      isLoading = false;
-    });
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(response['message'])));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> loadSettings() async {
-    dailyReminder = await SettingsService.getDailyReminder();
+    try {
+      final prefs = await ApiService.getUserPreferences();
 
-    expenseAlerts = await SettingsService.getExpenseAlerts();
+      if (!mounted) return;
 
-    weeklySummary = await SettingsService.getWeeklySummary();
+      setState(() {
+        dailyReminder = prefs.dailyReminder;
+        expenseAlerts = prefs.expenseAlerts;
+        weeklySummary = prefs.weeklySummary;
+      });
+    } catch (e) {
+      // fallback to local storage
 
-    setState(() {});
+      dailyReminder = await SettingsService.getDailyReminder();
+      expenseAlerts = await SettingsService.getExpenseAlerts();
+      weeklySummary = await SettingsService.getWeeklySummary();
+
+      if (!mounted) return;
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    super.dispose();
   }
 
   @override
@@ -142,6 +172,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       await SettingsService.setDailyReminder(value);
 
+                      await ApiService.updatePreferences({
+                        'daily_reminder': value,
+                        'expense_alerts': expenseAlerts,
+                        'weekly_summary': weeklySummary,
+                      });
+
                       NotificationService.showNotification(
                         title: 'Daily Reminder',
 
@@ -165,6 +201,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       });
                       await SettingsService.setExpenseAlerts(value);
 
+                      await ApiService.updatePreferences({
+                        'daily_reminder': dailyReminder,
+                        'expense_alerts': value,
+                        'weekly_summary': weeklySummary,
+                      });
+
                       NotificationService.showNotification(
                         title: 'Expense Alerts',
 
@@ -187,6 +229,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         weeklySummary = value;
                       });
                       await SettingsService.setWeeklySummary(value);
+
+                      await ApiService.updatePreferences({
+                        'daily_reminder': dailyReminder,
+                        'expense_alerts': expenseAlerts,
+                        'weekly_summary': value,
+                      });
 
                       NotificationService.showNotification(
                         title: 'Weekly Summary',
