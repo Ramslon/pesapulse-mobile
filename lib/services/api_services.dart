@@ -175,6 +175,21 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<Map<String, dynamic>> getProfile() async {
+    final token = await getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/profile'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load profile');
+    }
+
+    return jsonDecode(response.body);
+  }
+
   static Future<Map<String, dynamic>> getDashboardSummary() async {
     final response = await http.get(
       Uri.parse('$baseUrl/dashboard-summary'),

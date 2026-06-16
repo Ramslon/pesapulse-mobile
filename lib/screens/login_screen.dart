@@ -5,6 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
+import '../services/settings_service.dart';
+import '../providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,6 +45,15 @@ class _LoginScreenState extends State<LoginScreen> {
         final prefs = await SharedPreferences.getInstance();
 
         await prefs.setString('token', response['token']);
+
+        // Sync notification preference
+        await SettingsService.syncFromBackend();
+
+        // Sync theme preference
+        await Provider.of<ThemeProvider>(
+          context,
+          listen: false,
+        ).syncWithBackend();
 
         ApiService.token = response['token'];
 

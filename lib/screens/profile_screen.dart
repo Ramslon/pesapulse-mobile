@@ -33,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
 
     loadSettings();
+    loadProfile();
   }
 
   void updateProfile() async {
@@ -44,6 +45,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         nameController.text.trim(),
         emailController.text.trim(),
       );
+
+      await loadProfile();
 
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -61,6 +64,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final profile = await ApiService.getProfile();
+
+      nameController.text = profile['name'] ?? '';
+
+      emailController.text = profile['email'] ?? '';
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('Profile load error: $e');
     }
   }
 

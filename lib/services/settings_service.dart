@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_services.dart';
 
 class SettingsService {
   // DAILY REMINDER
@@ -38,5 +39,15 @@ class SettingsService {
     final prefs = await SharedPreferences.getInstance();
 
     return prefs.getBool('weeklySummary') ?? false;
+  }
+
+  static Future<void> syncFromBackend() async {
+    final prefs = await ApiService.getPreferences();
+
+    await setDailyReminder(prefs['daily_reminder'] ?? false);
+
+    await setExpenseAlerts(prefs['expense_alerts'] ?? false);
+
+    await setWeeklySummary(prefs['weekly_summary'] ?? false);
   }
 }
