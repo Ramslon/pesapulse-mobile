@@ -28,12 +28,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool weeklySummary = false;
 
+  int totalGoals = 0;
+  int completedGoals = 0;
+  int totalExpenses = 0;
+  int totalBudgets = 0;
+
   @override
   void initState() {
     super.initState();
 
     loadSettings();
     loadProfile();
+    loadDashboardStats();
   }
 
   void updateProfile() async {
@@ -106,6 +112,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> loadDashboardStats() async {
+    try {
+      final goalsAnalytics = await ApiService.getGoalAnalytics();
+
+      final expenses = await ApiService.getExpenses();
+
+      final budgetSummary = await ApiService.getBudgetSummary();
+
+      setState(() {
+        totalGoals = goalsAnalytics['total_goals'] ?? 0;
+
+        completedGoals = goalsAnalytics['completed_goals'] ?? 0;
+
+        totalExpenses = (expenses['data'] as List).length;
+
+        totalBudgets = budgetSummary['budget'] != null ? 1 : 0;
+      });
+    } catch (e) {
+      debugPrint('Stats Error: $e');
+    }
+  }
+
   @override
   void dispose() {
     nameController.dispose();
@@ -168,14 +196,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             Row(
               children: [
-                Expanded(child: _buildProfileStat('Goals', Icons.flag)),
+                Expanded(
+                  child: _buildProfileStat('$totalGoals', 'Goals', Icons.flag),
+                ),
 
                 const SizedBox(width: 10),
 
                 Expanded(
                   child: _buildProfileStat(
+                    '$completedGoals',
+                    'Completed',
+                    Icons.emoji_events,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildProfileStat(
+                    '$totalBudgets',
                     'Budgets',
                     Icons.account_balance_wallet,
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: _buildProfileStat(
+                    '$totalExpenses',
+                    'Expenses',
+                    Icons.receipt_long,
                   ),
                 ),
               ],
@@ -323,7 +378,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileStat(String title, IconData icon) {
+  Widget _buildProfileStat(String value, String title, IconData icon) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -334,7 +389,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 10),
 
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 5),
+
+            Text(title),
           ],
         ),
       ),
