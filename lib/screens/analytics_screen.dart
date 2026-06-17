@@ -14,6 +14,8 @@ class AnalyticsScreen extends StatefulWidget {
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   List expenses = [];
 
+  List<String> insights = [];
+
   bool isLoading = true;
 
   double totalSpending = 0;
@@ -92,6 +94,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             double.tryParse(goalAnalytics['completion_rate'].toString()) ?? 0;
 
         calculateHealthScore();
+
+        generateInsights();
 
         isLoading = false;
       });
@@ -206,6 +210,37 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       healthStatus = 'Fair';
     } else {
       healthStatus = 'Needs Improvement';
+    }
+  }
+
+  void generateInsights() {
+    insights.clear();
+
+    if (categoryTotals.isNotEmpty) {
+      final highestCategory = categoryTotals.entries.reduce(
+        (a, b) => a.value > b.value ? a : b,
+      );
+
+      insights.add(
+        'Highest spending category: ${highestCategory.key} '
+        '(KES ${highestCategory.value.toStringAsFixed(0)})',
+      );
+    }
+
+    if (completionRate == 100) {
+      insights.add('Excellent! All your financial goals have been completed.');
+    } else if (completionRate >= 50) {
+      insights.add('Good progress on your financial goals.');
+    } else {
+      insights.add(
+        'Consider increasing savings contributions toward your goals.',
+      );
+    }
+
+    if (healthScore >= 80) {
+      insights.add('Your financial health is excellent.');
+    } else {
+      insights.add('There is room to improve your financial health score.');
     }
   }
 
@@ -482,6 +517,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                const Text(
+                  'Smart Insights',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 20),
+
+                ...insights.map(
+                  (insight) => Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.lightbulb, color: Colors.amber),
+                      title: Text(insight),
                     ),
                   ),
                 ),
