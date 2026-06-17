@@ -32,6 +32,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   double healthScore = 0;
   String healthStatus = '';
 
+  double budgetAmount = 0;
+  double budgetSpent = 0;
+  double budgetRemaining = 0;
+  double budgetUsage = 0;
+
+  String budgetStatus = '';
+  String recommendation = '';
+  String categoryAdvice = '';
+  String topCategory = '';
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +54,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       final response = await ApiService.getExpenses();
 
       final goalAnalytics = await ApiService.getGoalAnalytics();
+
+      final insights = await ApiService.getFinancialInsights();
 
       final List data = response['data'] ?? [];
 
@@ -92,6 +104,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
         completionRate =
             double.tryParse(goalAnalytics['completion_rate'].toString()) ?? 0;
+
+        budgetAmount = double.tryParse(insights['budget'].toString()) ?? 0;
+
+        budgetSpent = double.tryParse(insights['spent'].toString()) ?? 0;
+
+        budgetRemaining =
+            double.tryParse(insights['remaining'].toString()) ?? 0;
+
+        budgetUsage =
+            double.tryParse(insights['usage_percentage'].toString()) ?? 0;
+
+        budgetStatus = insights['status'] ?? '';
+        recommendation = insights['recommendation'] ?? '';
+        categoryAdvice = insights['category_advice'] ?? '';
+        topCategory = insights['top_category'] ?? '';
 
         calculateHealthScore();
 
@@ -272,6 +299,52 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
+  Widget buildRecommendationCard() {
+    Color cardColor;
+
+    if (budgetStatus == 'overspent') {
+      cardColor = Colors.red;
+    } else if (budgetStatus == 'warning') {
+      cardColor = Colors.orange;
+    } else {
+      cardColor = Colors.green;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+
+        children: [
+          const Text(
+            'Smart Recommendation',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Text(
+            recommendation,
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+          ),
+
+          Text(categoryAdvice, style: const TextStyle(color: Colors.white70)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return isLoading
@@ -413,6 +486,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 20),
+
+                buildRecommendationCard(),
 
                 const SizedBox(height: 30),
 
