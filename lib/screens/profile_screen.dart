@@ -121,15 +121,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         child: Column(
           children: [
-            const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
 
-            const SizedBox(height: 30),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+
+              child: Column(
+                children: [
+                  const CircleAvatar(
+                    radius: 45,
+                    child: Icon(Icons.person, size: 45),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  Text(
+                    nameController.text.isEmpty ? 'User' : nameController.text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  Text(
+                    emailController.text,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
 
             CustomTextField(controller: nameController, label: 'Name'),
 
             const SizedBox(height: 20),
 
             CustomTextField(controller: emailController, label: 'Email'),
+
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+                Expanded(child: _buildProfileStat('Goals', Icons.flag)),
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: _buildProfileStat(
+                    'Budgets',
+                    Icons.account_balance_wallet,
+                  ),
+                ),
+              ],
+            ),
 
             const SizedBox(height: 30),
 
@@ -267,6 +317,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileStat(String title, IconData icon) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+
+        child: Column(
+          children: [
+            Icon(icon, size: 30),
+
+            const SizedBox(height: 10),
+
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
       ),
