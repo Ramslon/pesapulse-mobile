@@ -323,13 +323,28 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
 
         children: [
-          const Text(
-            'Smart Recommendation',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Icon(
+                budgetStatus == 'overspent'
+                    ? Icons.warning
+                    : budgetStatus == 'warning'
+                    ? Icons.error_outline
+                    : Icons.check_circle,
+                color: Colors.white,
+              ),
+
+              const SizedBox(width: 10),
+
+              const Text(
+                'Smart Recommendation',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 10),
@@ -339,7 +354,50 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
 
+          const SizedBox(height: 15),
+
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.pie_chart, color: Colors.white),
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Text(
+                    'Top Spending Category: $topCategory',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
           Text(categoryAdvice, style: const TextStyle(color: Colors.white70)),
+
+          const SizedBox(height: 15),
+
+          LinearProgressIndicator(value: budgetUsage / 100, minHeight: 10),
+
+          const SizedBox(height: 10),
+
+          Text(
+            '${budgetUsage.toStringAsFixed(1)}% of budget used',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -463,6 +521,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         style: TextStyle(color: Colors.white, fontSize: 18),
                       ),
 
+                      const Icon(
+                        Icons.health_and_safety,
+                        color: Colors.white,
+                        size: 40,
+                      ),
+
                       const SizedBox(height: 10),
 
                       Text(
@@ -493,10 +557,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
                 const SizedBox(height: 30),
 
-                const Text(
-                  'Category Breakdown',
-
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(context).cardColor,
+                  ),
+                  child: const Text(
+                    'Category Breakdown',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -516,9 +587,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                const Text(
-                  'Goal Status',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(context).cardColor,
+                  ),
+                  child: const Text(
+                    'Goal Status',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -536,9 +615,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
                 const SizedBox(height: 40),
 
-                const Text(
-                  'Monthly Spending Trend',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(context).cardColor,
+                  ),
+                  child: const Text(
+                    'Monthly Spending Trend',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -600,9 +687,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
                 const SizedBox(height: 40),
 
-                const Text(
-                  'Smart Insights',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(context).cardColor,
+                  ),
+                  child: const Text(
+                    'Smart Insights',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
                 ),
 
                 const SizedBox(height: 20),
