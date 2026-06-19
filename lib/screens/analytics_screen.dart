@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 
 import '../services/api_services.dart';
+import '../services/export_service.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -549,6 +550,56 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                     ],
                   ),
+                ),
+
+                const SizedBox(height: 20),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.picture_as_pdf),
+                        label: const Text('Export PDF'),
+
+                        onPressed: () async {
+                          await ExportService.exportExpensesPdf(expenses);
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'PDF report exported successfully',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.table_chart),
+                        label: const Text('Export CSV'),
+
+                        onPressed: () async {
+                          await ExportService.exportExpensesCsv(expenses);
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'CSV report exported successfully',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 20),
