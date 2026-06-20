@@ -562,8 +562,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         label: const Text('Export PDF'),
 
                         onPressed: () async {
-                          await ExportService.exportExpensesPdf(expenses);
+                          final file = await ExportService.exportExpensesPdf(
+                            expenses,
+                          );
 
+                          await ExportService.shareFile(file);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -585,7 +588,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         label: const Text('Export CSV'),
 
                         onPressed: () async {
-                          await ExportService.exportExpensesCsv(expenses);
+                          final file = await ExportService.exportExpensesCsv(
+                            expenses,
+                          );
+
+                          await ExportService.shareFile(file);
 
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
