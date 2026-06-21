@@ -46,4 +46,12 @@ class ReportHistoryService {
 
     await prefs.remove(reportsKey);
   }
+
+  static Future<void> saveReportsList(
+    List<Map<String, dynamic>> reports,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setStringList(reportsKey, reports.map(jsonEncode).toList());
+  }
 }

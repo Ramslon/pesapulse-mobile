@@ -5,6 +5,7 @@ import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 import '../services/api_services.dart';
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
+import 'dart:io';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -279,10 +280,68 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
   }
 
+  Future<void> shareExistingReport(String path) async {
+    final file = File(path);
+
+    if (await file.exists()) {
+      await ExportService.shareFile(file);
+    } else {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Report file no longer exists')),
+      );
+    }
+  }
+
+  Future<void> previewReport(Map<String, dynamic> report) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Report Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Name: ${report['name']}'),
+              const SizedBox(height: 10),
+              Text('Created: ${report['created_at']}'),
+              const SizedBox(height: 10),
+              Text(
+                'Path: ${report['path']}',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> loadReports() async {
     reports = await ReportHistoryService.getReports();
 
+    if (!mounted) return;
+
     setState(() {});
+  }
+
+  Future<void> deleteReport(int index) async {
+    final reportsList = await ReportHistoryService.getReports();
+
+    reportsList.removeAt(index);
+
+    await ReportHistoryService.saveReportsList(reportsList);
+
+    await loadReports();
   }
 
   Widget buildStatCard(String title, String value, IconData icon) {
@@ -824,20 +883,49 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       )
                     : Card(
                         child: Column(
-                          children: reports.map((report) {
+                          children: reports.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final report = entry.value;
                             return ListTile(
-                              leading: const Icon(Icons.description),
+                              leading: Icon(
+                                report['name']
+                                        .toString()
+                                        .toLowerCase()
+                                        .endsWith('.pdf')
+                                    ? Icons.picture_as_pdf
+                                    : Icons.table_chart,
+                              ),
+
                               title: Text(report['name']),
+
                               subtitle: Text(
                                 report['created_at'].toString().substring(
                                   0,
                                   10,
                                 ),
                               ),
+
+                              onTap: () => previewReport(report),
+
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.share),
+                                    onPressed: () =>
+                                        shareExistingReport(report['path']),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => deleteReport(index),
+                                  ),
+                                ],
+                              ),
                             );
                           }).toList(),
                         ),
                       ),
+
                 ElevatedButton.icon(
                   onPressed: () async {
                     await ReportHistoryService.clearReports();
