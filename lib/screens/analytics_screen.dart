@@ -4,6 +4,7 @@ import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 
 import '../services/api_services.dart';
 import '../services/export_service.dart';
+import '../services/report_history_service.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -16,6 +17,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   List expenses = [];
 
   List<String> insights = [];
+
+  List<Map<String, dynamic>> reports = [];
 
   bool isLoading = true;
 
@@ -48,6 +51,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     super.initState();
 
     fetchAnalytics();
+    loadReports();
   }
 
   Future<void> fetchAnalytics() async {
@@ -56,7 +60,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
       final goalAnalytics = await ApiService.getGoalAnalytics();
 
-      final insights = await ApiService.getFinancialInsights();
+      final financialInsights = await ApiService.getFinancialInsights();
 
       final List data = response['data'] ?? [];
 
@@ -106,20 +110,23 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         completionRate =
             double.tryParse(goalAnalytics['completion_rate'].toString()) ?? 0;
 
-        budgetAmount = double.tryParse(insights['budget'].toString()) ?? 0;
+        budgetAmount =
+            double.tryParse(financialInsights['budget'].toString()) ?? 0;
 
-        budgetSpent = double.tryParse(insights['spent'].toString()) ?? 0;
+        budgetSpent =
+            double.tryParse(financialInsights['spent'].toString()) ?? 0;
 
         budgetRemaining =
-            double.tryParse(insights['remaining'].toString()) ?? 0;
+            double.tryParse(financialInsights['remaining'].toString()) ?? 0;
 
         budgetUsage =
-            double.tryParse(insights['usage_percentage'].toString()) ?? 0;
+            double.tryParse(financialInsights['usage_percentage'].toString()) ??
+            0;
 
-        budgetStatus = insights['status'] ?? '';
-        recommendation = insights['recommendation'] ?? '';
-        categoryAdvice = insights['category_advice'] ?? '';
-        topCategory = insights['top_category'] ?? '';
+        budgetStatus = financialInsights['status'] ?? '';
+        recommendation = financialInsights['recommendation'] ?? '';
+        categoryAdvice = financialInsights['category_advice'] ?? '';
+        topCategory = financialInsights['top_category'] ?? '';
 
         calculateHealthScore();
 
@@ -272,6 +279,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
   }
 
+  Future<void> loadReports() async {
+    reports = await ReportHistoryService.getReports();
+
+    setState(() {});
+  }
+
   Widget buildStatCard(String title, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -388,7 +401,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
           const SizedBox(height: 15),
 
-          LinearProgressIndicator(value: budgetUsage / 100, minHeight: 10),
+          LinearProgressIndicator(
+            value: (budgetUsage / 100).clamp(0.0, 1.0),
+            minHeight: 10,
+          ),
 
           const SizedBox(height: 10),
 
@@ -565,6 +581,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           final file = await ExportService.exportExpensesPdf(
                             expenses,
                           );
+                          await ReportHistoryService.saveReport(
+                            name: file.path.split('/').last,
+                            path: file.path,
+                          );
+
+                          await loadReports();
 
                           await ExportService.shareFile(file);
                           if (context.mounted) {
@@ -591,6 +613,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           final file = await ExportService.exportExpensesCsv(
                             expenses,
                           );
+
+                          await ReportHistoryService.saveReport(
+                            name: file.path.split('/').last,
+                            path: file.path,
+                          );
+                          await loadReports();
 
                           await ExportService.shareFile(file);
 
@@ -767,6 +795,59 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       title: Text(insight),
                     ),
                   ),
+                ),
+
+                const SizedBox(height: 40),
+
+                const Text(
+                  'Reports Center',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 10),
+
+                Text(
+                  '${reports.length} Reports Generated',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 15),
+
+                reports.isEmpty
+                    ? const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Center(
+                            child: Text('No reports generated yet'),
+                          ),
+                        ),
+                      )
+                    : Card(
+                        child: Column(
+                          children: reports.map((report) {
+                            return ListTile(
+                              leading: const Icon(Icons.description),
+                              title: Text(report['name']),
+                              subtitle: Text(
+                                report['created_at'].toString().substring(
+                                  0,
+                                  10,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await ReportHistoryService.clearReports();
+
+                    await loadReports();
+                  },
+
+                  icon: const Icon(Icons.delete),
+
+                  label: const Text('Clear Report History'),
                 ),
               ],
             ),
