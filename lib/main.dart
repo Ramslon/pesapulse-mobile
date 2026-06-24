@@ -4,12 +4,16 @@ import 'screens/splash_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
 import 'theme/app_theme.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await Permission.notification.request();
+
   await NotificationService.init();
 
+  
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),

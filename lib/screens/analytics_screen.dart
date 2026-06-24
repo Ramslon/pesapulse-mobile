@@ -5,6 +5,7 @@ import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 import '../services/api_services.dart';
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
+import '../services/notification_service.dart';
 import 'dart:io';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -50,6 +51,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   @override
   void initState() {
     super.initState();
+
+    NotificationService.scheduleNotification(
+      id: 99,
+      title: 'PesaPulse Test',
+      body: 'Scheduled notification working',
+      scheduledDate: DateTime.now().add(const Duration(seconds: 30)),
+    );
+    NotificationService.debugPendingNotifications();
 
     fetchAnalytics();
     loadReports();
