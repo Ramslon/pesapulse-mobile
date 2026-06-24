@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
+import '../services/notification_service.dart';
 
 import 'add_goals_screen.dart';
 
@@ -72,11 +73,47 @@ class _GoalsScreenState extends State<GoalsScreen> {
               onPressed: () async {
                 final amount = double.tryParse(controller.text) ?? 0;
 
-                await ApiService.updateGoalProgress(goalId, amount);
+                final response = await ApiService.updateGoalProgress(
+                  goalId,
+                  amount,
+                );
+
+                final milestone = response['milestone'];
 
                 if (!mounted) return;
 
                 Navigator.pop(context);
+
+                if (milestone != null) {
+                  await NotificationService.showNotification(
+                    title: milestone['percentage'] == 100
+                        ? '🏆 Goal Completed'
+                        : '🎯 Goal Milestone',
+                    body: milestone['message'],
+                  );
+
+                  if (!mounted) return;
+
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: Text(
+                        milestone['percentage'] == 100
+                            ? '🏆 Goal Completed'
+                            : '🎉 Milestone Reached',
+                      ),
+                      content: Text(milestone['message']),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Awesome'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
                 await loadGoals();
               },
@@ -188,55 +225,130 @@ class _GoalsScreenState extends State<GoalsScreen> {
                           LinearProgressIndicator(
                             value: percentage,
                             minHeight: 10,
+                            borderRadius: BorderRadius.circular(10),
+                            color: percentage >= 1.0
+                                ? Colors.green
+                                : percentage >= 0.75
+                                ? Colors.orange
+                                : Colors.blue,
                           ),
 
                           if (percentage >= 1.0)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 10),
-                              child: Text(
-                                '🎉 Congratulations! You achieved this goal.',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
                               ),
-                            ),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: const [
+                                  Icon(Icons.emoji_events, color: Colors.white),
 
-                          const SizedBox(height: 10),
+                                  SizedBox(width: 10),
 
-                          percentage >= 1.0
-                              ? Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-
-                                    children: [
-                                      Icon(
-                                        Icons.check_circle,
-                                        color: Colors.white,
-                                      ),
-
-                                      SizedBox(width: 8),
-
-                                      Text(
-                                        'Goal Achieved',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Goal Achieved',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+
+                                        Text(
+                                          'Congratulations! You achieved this goal.',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                )
-                              : Text(
-                                  '${(percentage * 100).toStringAsFixed(0)}% Complete',
-                                ),
+                                ],
+                              ),
+                            )
+                          else if (percentage >= 0.75)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade400,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.star, size: 18),
+                                  SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      '75% Milestone',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (percentage >= 0.50)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade400,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.star, size: 18),
+                                  SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      '50% Milestone',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (percentage >= 0.25)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade400,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.star, size: 18),
+                                  SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      '25% Milestone',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Text(
+                              '${(percentage * 100).toStringAsFixed(0)}% Complete',
+                            ),
                           const SizedBox(height: 10),
 
                           SizedBox(
