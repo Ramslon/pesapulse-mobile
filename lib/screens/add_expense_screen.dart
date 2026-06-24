@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 import '../widgets/custom_button.dart';
+import '../services/notification_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -64,6 +65,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       });
 
       if (response.containsKey('id')) {
+        await NotificationService.checkBudgetAlerts();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Expense added successfully')),
         );

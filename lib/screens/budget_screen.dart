@@ -15,6 +15,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
   double spent = 0;
   double remaining = 0;
 
+  String recommendation = '';
+  String categoryAdvice = '';
+  String budgetStatus = '';
+
   double get percentageUsed {
     if (budget <= 0) return 0;
 
@@ -32,6 +36,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Future<void> loadBudget() async {
     try {
       final data = await ApiService.getBudgetSummary();
+      final insights = await ApiService.getFinancialInsights();
 
       setState(() {
         budget = double.tryParse(data['budget'].toString()) ?? 0;
@@ -41,6 +46,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
         spent = double.tryParse(data['spent'].toString()) ?? 0;
 
         remaining = double.tryParse(data['remaining'].toString()) ?? 0;
+
+        budgetStatus = insights['status'] ?? '';
+        recommendation = insights['recommendation'] ?? '';
+        categoryAdvice = insights['category_advice'] ?? '';
 
         isLoading = false;
       });
@@ -192,6 +201,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
           LinearProgressIndicator(
             value: budget > 0 ? spent / budget : 0,
+
+            color: percentageUsed >= 100
+                ? Colors.red
+                : percentageUsed >= 80
+                ? Colors.orange
+                : Colors.green,
             minHeight: 10,
             borderRadius: BorderRadius.circular(10),
           ),
@@ -206,43 +221,82 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 color: Colors.orange.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
-
-              child: const Row(
+            ),
+          if (budgetStatus == 'warning')
+            Container(
+              margin: const EdgeInsets.only(top: 20),
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning),
-
-                  SizedBox(width: 10),
-
-                  Expanded(
-                    child: Text(
-                      'You have used over 80% of your monthly budget.',
-                    ),
+                  const Row(
+                    children: [
+                      Icon(Icons.warning_amber),
+                      SizedBox(width: 10),
+                      Text(
+                        'Budget Warning',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${percentageUsed.toStringAsFixed(1)}% of your budget has been used.',
+                  ),
+                  const SizedBox(height: 8),
+                  Text(recommendation),
                 ],
               ),
             ),
 
-          if (spent > budget && budget > 0)
+          if (budgetStatus == 'overspent')
             Container(
               margin: const EdgeInsets.only(top: 20),
-
               padding: const EdgeInsets.all(15),
-
               decoration: BoxDecoration(
                 color: Colors.red.shade100,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
-
-              child: const Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.error),
-
-                  SizedBox(width: 10),
-
-                  Expanded(
-                    child: Text('Budget exceeded! Consider reducing expenses.'),
+                  const Row(
+                    children: [
+                      Icon(Icons.error),
+                      SizedBox(width: 10),
+                      Text(
+                        'Budget Exceeded',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'You have spent ${percentageUsed.toStringAsFixed(1)}% of your budget.',
+                  ),
+                  const SizedBox(height: 8),
+                  Text(recommendation),
                 ],
+              ),
+            ),
+
+          if (categoryAdvice.isNotEmpty)
+            Card(
+              margin: const EdgeInsets.only(top: 20),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.lightbulb),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(categoryAdvice)),
+                  ],
+                ),
               ),
             ),
         ],

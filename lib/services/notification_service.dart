@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -28,18 +29,22 @@ class NotificationService {
       final insights = await ApiService.getFinancialInsights();
 
       final status = insights['status'];
+      final percentage =
+          double.tryParse(insights['usage_percentage'].toString()) ?? 0;
 
       if (status == 'warning') {
         await showNotification(
           title: 'Budget Warning',
-          body: 'You have used more than 80% of your budget.',
+          body:
+              '${percentage.toStringAsFixed(1)}% used. ${insights['recommendation']}',
         );
       }
 
       if (status == 'overspent') {
         await showNotification(
           title: 'Budget Exceeded',
-          body: 'You have exceeded your budget. Review your expenses.',
+          body:
+              'You have spent ${percentage.toStringAsFixed(1)}% of your budget.',
         );
       }
     } catch (e) {
@@ -50,6 +55,7 @@ class NotificationService {
   static Future<void> showNotification({
     required String title,
     required String body,
+    Color color = const Color(0xFF2E7D32),
   }) async {
     const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails(
@@ -61,6 +67,18 @@ class NotificationService {
           importance: Importance.max,
           priority: Priority.high,
         );
+
+    await showNotification(
+      title: 'Budget Warning',
+      body: '82.4% of budget used',
+      color: const Color(0xFFFF9800),
+    );
+
+    await showNotification(
+      title: 'Budget Exceeded',
+      body: '114.7% of budget used',
+      color: const Color(0xFFD32F2F),
+    );
 
     const NotificationDetails notificationDetails = NotificationDetails(
       android: androidNotificationDetails,
@@ -117,6 +135,7 @@ class NotificationService {
           channelDescription: 'Expense reminders and alerts',
           importance: Importance.max,
           priority: Priority.high,
+          color: Color(0xFF2E7D32),
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
