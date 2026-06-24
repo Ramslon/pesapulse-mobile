@@ -32,17 +32,33 @@ class NotificationService {
       final percentage =
           double.tryParse(insights['usage_percentage'].toString()) ?? 0;
 
+      if (status == 'critical') {
+        await showNotification(
+          title: 'Critical Budget Alert',
+          body:
+              'You have spent ${percentage.toStringAsFixed(1)}% of your budget.',
+        );
+      }
+
       if (status == 'warning') {
         await showNotification(
           title: 'Budget Warning',
           body:
-              '${percentage.toStringAsFixed(1)}% used. ${insights['recommendation']}',
+              'You have spent ${percentage.toStringAsFixed(1)}% of your budget.',
         );
       }
 
       if (status == 'overspent') {
         await showNotification(
           title: 'Budget Exceeded',
+          body:
+              'You have spent ${percentage.toStringAsFixed(1)}% of your budget.',
+        );
+      }
+
+      if (status == 'healthy') {
+        await showNotification(
+          title: 'Budget Healthy',
           body:
               'You have spent ${percentage.toStringAsFixed(1)}% of your budget.',
         );
@@ -67,6 +83,12 @@ class NotificationService {
           importance: Importance.max,
           priority: Priority.high,
         );
+
+    await showNotification(
+      title: 'Budget Warning',
+      body: '82.4% of budget used',
+      color: const Color.fromARGB(255, 255, 0, 13),
+    );
 
     await showNotification(
       title: 'Budget Warning',

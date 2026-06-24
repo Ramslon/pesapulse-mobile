@@ -193,7 +193,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
           const SizedBox(height: 30),
 
           Text(
-            '${budget > 0 ? ((spent / budget) * 100).toStringAsFixed(0) : 0}% Used',
+            '${percentageUsed.toStringAsFixed(1)}% Used',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
 
@@ -222,12 +222,43 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
+          if (budgetStatus == 'critical')
+            Container(
+              margin: const EdgeInsets.only(top: 20),
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.red.shade700,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.dangerous),
+                      SizedBox(width: 10),
+                      Text(
+                        'Critical Budget Alert',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${percentageUsed.toStringAsFixed(1)}% of your budget has been used.',
+                  ),
+                  const SizedBox(height: 8),
+                  Text(recommendation),
+                ],
+              ),
+            ),
+
           if (budgetStatus == 'warning')
             Container(
               margin: const EdgeInsets.only(top: 20),
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
-                color: Colors.orange.shade100,
+                color: Colors.amber.shade700,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -258,7 +289,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               margin: const EdgeInsets.only(top: 20),
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
-                color: Colors.red.shade100,
+                color: Colors.deepOrange.shade700,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -280,6 +311,41 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(recommendation),
+                ],
+              ),
+            ),
+
+          if (budgetStatus == 'healthy')
+            Container(
+              margin: const EdgeInsets.only(top: 20),
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.green.shade700,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 10),
+                      Text(
+                        'Budget Healthy',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    '${percentageUsed.toStringAsFixed(1)}% of your budget has been used.',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  SizedBox(height: 8),
+                  Text(recommendation, style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
