@@ -18,6 +18,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   List upcomingDeadlines = [];
 
+  Map<int, dynamic> goalInsights = {};
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +36,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
         goals = data;
         isLoading = false;
       });
+      await loadGoalInsights();
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -42,6 +45,24 @@ class _GoalsScreenState extends State<GoalsScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> loadGoalInsights() async {
+    try {
+      final Map<int, dynamic> insightsMap = {};
+
+      for (final goal in goals) {
+        final insight = await ApiService.getGoalInsights(goal['id']);
+
+        insightsMap[goal['id']] = insight;
+      }
+
+      setState(() {
+        goalInsights = insightsMap;
+      });
+    } catch (e) {
+      debugPrint(e.toString());
     }
   }
 
@@ -242,6 +263,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         ? (saved / target).clamp(0.0, 1.0).toDouble()
                         : 0.0;
 
+                    final insight = goalInsights[goal['id']];
+
+                    Color insightColor = Colors.green;
+
+                    if (insight != null) {
+                      switch (insight['status']) {
+                        case 'urgent':
+                          insightColor = Colors.red;
+                          break;
+
+                        case 'completed':
+                          insightColor = Colors.green;
+                          break;
+
+                        default:
+                          insightColor = Colors.blue;
+                      }
+                    }
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 15),
 
@@ -295,6 +335,78 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                   ? Colors.orange
                                   : Colors.blue,
                             ),
+
+                            if (insight != null)
+                              Container(
+                                margin: const EdgeInsets.only(
+                                  top: 12,
+                                  bottom: 12,
+                                ),
+
+                                padding: const EdgeInsets.all(12),
+
+                                decoration: BoxDecoration(
+                                  color: insightColor.withOpacity(0.1),
+
+                                  borderRadius: BorderRadius.circular(12),
+
+                                  border: Border.all(color: insightColor),
+                                ),
+
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          insight['status'] == 'completed'
+                                              ? Icons.emoji_events
+                                              : insight['status'] == 'urgent'
+                                              ? Icons.warning
+                                              : Icons.track_changes,
+                                          color: insightColor,
+                                        ),
+
+                                        const SizedBox(width: 8),
+
+                                        Text(
+                                          insight['status']
+                                              .toString()
+                                              .toUpperCase(),
+                                          style: TextStyle(
+                                            color: insightColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 8),
+
+                                    Text(
+                                      'Remaining: KES ${insight['remaining_amount']}',
+                                    ),
+
+                                    Text(
+                                      'Days Left: ${insight['days_remaining']}',
+                                    ),
+
+                                    Text(
+                                      'Monthly Savings Needed: KES ${insight['monthly_needed']}',
+                                    ),
+
+                                    const SizedBox(height: 6),
+
+                                    Text(
+                                      insight['message'] ?? '',
+                                      style: const TextStyle(
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
 
                             if (percentage >= 1.0)
                               Container(

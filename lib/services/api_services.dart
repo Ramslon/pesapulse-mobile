@@ -293,6 +293,21 @@ class ApiService {
     throw Exception('Failed to load financial insights');
   }
 
+  static Future<Map<String, dynamic>> getGoalInsights(int goalId) async {
+    final token = await getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/goals/$goalId/insights'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception('Failed to load goal insights');
+  }
+
   static Future<List<dynamic>> getGoals() async {
     final token = await getToken();
 
