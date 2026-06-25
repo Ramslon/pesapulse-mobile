@@ -49,6 +49,17 @@ class _GoalsScreenState extends State<GoalsScreen> {
     try {
       final data = await ApiService.getUpcomingGoalDeadlines();
 
+      for (final goal in data) {
+        final days = int.tryParse(goal['days_remaining'].toString()) ?? 0;
+
+        if (days <= 3) {
+          await NotificationService.showNotification(
+            title: '🎯 Goal Deadline Approaching',
+            body: '${goal['title']} is due in $days day(s)',
+          );
+        }
+      }
+
       setState(() {
         upcomingDeadlines = data;
       });
