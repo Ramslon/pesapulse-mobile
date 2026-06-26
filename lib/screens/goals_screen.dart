@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
 
@@ -20,12 +21,21 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   Map<int, dynamic> goalInsights = {};
 
+  Map<String, dynamic>? goalAnalytics = {};
+
+  final currency = NumberFormat.currency(
+    locale: 'en_KE',
+    symbol: 'KES ',
+    decimalDigits: 0,
+  );
+
   @override
   void initState() {
     super.initState();
 
     loadGoals();
     loadUpcomingDeadlines();
+    loadGoalsAnalytics();
   }
 
   Future<void> loadGoals() async {
@@ -37,6 +47,26 @@ class _GoalsScreenState extends State<GoalsScreen> {
         isLoading = false;
       });
       await loadGoalInsights();
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> loadGoalsAnalytics() async {
+    try {
+      final data = await ApiService.getGoalAnalytics();
+
+      setState(() {
+        goalAnalytics = data;
+        isLoading = false;
+      });
+      await loadGoalsAnalytics();
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -211,39 +241,128 @@ class _GoalsScreenState extends State<GoalsScreen> {
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Goals',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+
+                                Text(
+                                  '${goalAnalytics?['total_goals'] ?? 0}',
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      Expanded(
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Completed',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+
+                                Text(
+                                  '${goalAnalytics?['completed_goals'] ?? 0}',
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.trending_up),
+                      title: const Text('Success Rate'),
+                      trailing: Text(
+                        '${goalAnalytics?['completion_rate'] ?? 0}%',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
                   if (upcomingDeadlines.isNotEmpty)
                     Card(
-                      color: Colors.orange.shade50,
+                      color: const Color(0xFFFFF3E0),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        side: BorderSide(color: Colors.orange.shade300),
+                      ),
                       margin: const EdgeInsets.only(bottom: 20),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Row(
+                            Row(
                               children: [
                                 Icon(
                                   Icons.notifications_active,
-                                  color: Colors.orange,
+                                  color: Colors.orange.shade700,
                                 ),
-                                SizedBox(width: 8),
+                                const SizedBox(width: 10),
                                 Text(
                                   'Upcoming Goal Deadlines',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                    fontSize: 17,
+                                    color: Colors.orange.shade900,
                                   ),
                                 ),
                               ],
                             ),
 
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 15),
 
-                            ...upcomingDeadlines.map((deadline) {
+                            ...upcomingDeadlines.map((goal) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 8),
-                                child: Text(
-                                  '🎯 ${deadline['title']} - ${deadline['days_remaining']} day(s) left',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.flag_circle,
+                                      size: 18,
+                                      color: Colors.red.shade400,
+                                    ),
+
+                                    const SizedBox(width: 8),
+
+                                    Expanded(
+                                      child: Text(
+                                        '${goal['title']} • ${goal['days_remaining'].ceil()} day(s) left',
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
                             }),
@@ -317,10 +436,33 @@ class _GoalsScreenState extends State<GoalsScreen> {
                               ],
                             ),
 
+                            const SizedBox(height: 6),
+
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 16,
+                                  color: Colors.grey,
+                                ),
+
+                                const SizedBox(width: 6),
+
+                                Text(
+                                  goal['target_date'] != null
+                                      ? DateFormat('dd MMM yyyy').format(
+                                          DateTime.parse(goal['target_date']),
+                                        )
+                                      : 'No deadline',
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                              ],
+                            ),
+
                             const SizedBox(height: 10),
 
                             Text(
-                              'KES ${saved.toStringAsFixed(2)} / ${target.toStringAsFixed(0)}',
+                              '${currency.format(saved)} / ${currency.format(target)}',
                             ),
 
                             const SizedBox(height: 10),
@@ -385,15 +527,15 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                     const SizedBox(height: 8),
 
                                     Text(
-                                      'Remaining: KES ${insight['remaining_amount']}',
+                                      'Remaining: ${currency.format(insight['remaining_amount'])}',
                                     ),
 
                                     Text(
-                                      'Days Left: ${insight['days_remaining']}',
+                                      'Days Left: ${insight['days_remaining'].ceil()}',
                                     ),
 
                                     Text(
-                                      'Monthly Savings Needed: KES ${insight['monthly_needed']}',
+                                      'Monthly Savings Needed: ${currency.format(insight['monthly_needed'])}',
                                     ),
 
                                     const SizedBox(height: 6),
@@ -408,52 +550,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 ),
                               ),
 
-                            if (percentage >= 1.0)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Row(
-                                  children: const [
-                                    Icon(
-                                      Icons.emoji_events,
-                                      color: Colors.white,
-                                    ),
-
-                                    SizedBox(width: 10),
-
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Goal Achieved',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-
-                                          Text(
-                                            'Congratulations! You achieved this goal.',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            else if (percentage >= 0.75)
+                            if (percentage >= 0.75)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -471,6 +568,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                     Flexible(
                                       child: Text(
                                         '75% Milestone',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -495,6 +596,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                     Flexible(
                                       child: Text(
                                         '50% Milestone',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -519,6 +624,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                     Flexible(
                                       child: Text(
                                         '25% Milestone',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
