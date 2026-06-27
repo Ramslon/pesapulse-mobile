@@ -387,4 +387,19 @@ class ApiService {
 
     return jsonDecode(response.body);
   }
+
+  static Future<Map<String, dynamic>> getGoalForecast(int goalId) async {
+    final token = await getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/goals/$goalId/forecast'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception('Failed to load goal forecast');
+  }
 }

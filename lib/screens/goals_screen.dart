@@ -23,6 +23,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   Map<String, dynamic>? goalAnalytics = {};
 
+  Map<int, dynamic> forecasts = {};
+
   final currency = NumberFormat.currency(
     locale: 'en_KE',
     symbol: 'KES ',
@@ -41,9 +43,17 @@ class _GoalsScreenState extends State<GoalsScreen> {
   Future<void> loadGoals() async {
     try {
       final data = await ApiService.getGoals();
+      Map<int, dynamic> loadedForecasts = {};
+
+      for (final goal in data) {
+        final forecast = await ApiService.getGoalForecast(goal['id']);
+
+        loadedForecasts[goal['id']] = forecast;
+      }
 
       setState(() {
         goals = data;
+        forecasts = loadedForecasts;
         isLoading = false;
       });
       await loadGoalInsights();
@@ -401,6 +411,35 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       }
                     }
 
+                    final forecast = forecasts[goal['id']];
+
+                    Color forecastColor = Colors.blue;
+                    IconData forecastIcon = Icons.trending_flat;
+
+                    if (forecast != null) {
+                      switch (forecast['forecast']) {
+                        case 'ahead':
+                          forecastColor = Colors.green;
+                          forecastIcon = Icons.trending_up;
+                          break;
+
+                        case 'behind':
+                          forecastColor = Colors.red;
+                          forecastIcon = Icons.trending_down;
+                          break;
+
+                        case 'completed':
+                          forecastColor = Colors.teal;
+                          forecastIcon = Icons.emoji_events;
+                          break;
+
+                        case 'on_track':
+                          forecastColor = Colors.blue;
+                          forecastIcon = Icons.track_changes;
+                          break;
+                      }
+                    }
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 15),
 
@@ -637,6 +676,102 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             else
                               Text(
                                 '${(percentage * 100).toStringAsFixed(0)}% Complete',
+                              ),
+
+                            if (forecast != null)
+                              Card(
+                                margin: const EdgeInsets.only(top: 12),
+                                color: forecastColor.withOpacity(0.12),
+                                elevation: 0,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            forecastIcon,
+                                            color: forecastColor,
+                                          ),
+
+                                          const SizedBox(width: 8),
+
+                                          Text(
+                                            forecast['forecast']
+                                                .toString()
+                                                .replaceAll('_', ' ')
+                                                .toUpperCase(),
+                                            style: TextStyle(
+                                              color: forecastColor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 8),
+
+                                      Text(forecast['message']),
+
+                                      const SizedBox(height: 10),
+
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.calendar_today,
+                                            size: 16,
+                                          ),
+
+                                          const SizedBox(width: 6),
+
+                                          Expanded(
+                                            child: Text(
+                                              forecast['estimated_completion_date'] ??
+                                                  'Completion date unavailable',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 6),
+
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.savings, size: 16),
+
+                                          const SizedBox(width: 6),
+
+                                          Expanded(
+                                            child: Text(
+                                              'Save KES ${forecast['recommended_daily_saving']}/day',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 4),
+
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.account_balance_wallet,
+                                            size: 16,
+                                          ),
+
+                                          const SizedBox(width: 6),
+
+                                          Expanded(
+                                            child: Text(
+                                              'KES ${forecast['recommended_monthly_saving']}/month',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             const SizedBox(height: 10),
 
