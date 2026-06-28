@@ -11,30 +11,31 @@
 
 PesaPulse is a modern personal finance application built with **Flutter** and **Laravel** that helps users manage expenses, budgets, savings goals, and financial insights through intelligent analytics and forecasting.
 
+
+
 ---
 
-# 📱 Application Preview
+<h2 align="center">📱 Application Preview</h2>
 
+<p align="center">
+  <img src="docs/screenshots/dashboard.jpeg" width="240"/>
+  <img src="docs/screenshots/budget-overview.jpeg" width="240"/>
+</p>
 
-## Dashboard
+<p align="center">
+  <img src="docs/screenshots/analytics-dashboard.jpeg" width="240"/>
+  <img src="docs/screenshots/analytics-reports.jpeg" width="240"/>
+</p>
 
-![Dashboard](docs/screenshots/dashboard.jpeg)
+<p align="center">
+  <img src="docs/screenshots/analytics-goal-status.jpeg" width="240"/>
+  <img src="docs/screenshots/goals-archive.jpeg" width="240"/>
+</p>
 
-## Budget Management
-
-![Budget](docs/screenshots/budget-overview.jpeg)
-
-## Financial Analytics
-
-![Analytics](docs/screenshots/analytics-dashboard.jpeg)
-
-## Goal Archive
-
-![Goals](docs/screenshots/goals-archive.jpeg)
-
-## User Profile
-
-![Profile](docs/screenshots/profile-overview.jpeg)
+<p align="center">
+  <img src="docs/screenshots/profile-overview.jpeg" width="240"/>
+  <img src="docs/screenshots/profile-settings.jpeg" width="240"/>
+</p>
 
 ---
 
@@ -211,14 +212,37 @@ flutter run
 
 # 📸 Screenshots
 
-| Dashboard                           | Budget                                    |
-| ----------------------------------- | ----------------------------------------- |
-| ![](docs/screenshots/dashboard.jpeg) | ![](docs/screenshots/budget-overview.jpeg) |
+<p align="center">
+  <a href="docs/screenshots/dashboard.jpeg">
+    <img src="docs/screenshots/dashboard.jpeg" alt="Dashboard" width="280"/>
+  </a>
 
-| Analytics  
-                                   | Profile                                    |
-| --------------------------------------------- | ------------------------------------------ |
-| ![](docs/screenshots/analytics-dashboard.jpeg) | ![](docs/screenshots/profile-overview.jpeg) |
+  <a href="docs/screenshots/budget-overview.jpeg">
+    <img src="docs/screenshots/budget-overview.jpeg" alt="Budget Overview" width="280"/>
+  </a>
+</p>
+
+<p align="center">
+  <a href="docs/screenshots/analytics-dashboard.jpeg">
+    <img src="docs/screenshots/analytics-dashboard.jpeg" alt="Analytics Dashboard" width="280"/>
+  </a>
+
+  <a href="docs/screenshots/profile-overview.jpeg">
+    <img src="docs/screenshots/profile-overview.jpeg" alt="Profile Overview" width="280"/>
+  </a>
+</p>
+
+<p align="center">
+  <sub><b>Dashboard</b></sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <sub><b>Budget Overview</b></sub>
+</p>
+
+<p align="center">
+  <sub><b>Analytics Dashboard</b></sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <sub><b>Profile Overview</b></sub>
+</p>
 
 ---
 
