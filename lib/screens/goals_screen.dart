@@ -4,6 +4,7 @@ import '../services/api_services.dart';
 import '../services/notification_service.dart';
 
 import 'add_goals_screen.dart';
+import 'archived_goals_screen.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -220,6 +221,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Financial Goals'),
+        centerTitle: true,
+
+        actions: [
+          IconButton(
+            tooltip: 'Archived Goals',
+            icon: const Icon(Icons.archive),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ArchivedGoalsScreen()),
+              ).then((_) {
+                loadGoals();
+              });
+            },
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
@@ -589,7 +609,97 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 ),
                               ),
 
-                            if (percentage >= 0.75)
+                            if (percentage >= 1.0)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade900,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.star, size: 18),
+                                        SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            '🏆 Goal Completed',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 12),
+
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(Icons.archive),
+                                      label: const Text('Archive Goal'),
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (_) => AlertDialog(
+                                            title: const Text('Archive Goal'),
+                                            content: const Text(
+                                              'This completed goal will be moved to your archive.',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  false,
+                                                ),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  true,
+                                                ),
+                                                child: const Text('Archive'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirm != true) return;
+
+                                        await ApiService.archiveGoal(
+                                          goal['id'],
+                                        );
+
+                                        if (!mounted) return;
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Goal archived successfully',
+                                            ),
+                                          ),
+                                        );
+
+                                        loadGoals();
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else if (percentage >= 0.75)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -745,7 +855,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
                                           Expanded(
                                             child: Text(
-                                              'Save KES ${forecast['recommended_daily_saving']}/day',
+                                              '${currency.format(forecast['recommended_daily_saving'])}/day',
                                             ),
                                           ),
                                         ],
@@ -764,7 +874,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
                                           Expanded(
                                             child: Text(
-                                              'KES ${forecast['recommended_monthly_saving']}/month',
+                                              '${currency.format(forecast['recommended_monthly_saving'])}/month',
                                             ),
                                           ),
                                         ],

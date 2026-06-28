@@ -402,4 +402,45 @@ class ApiService {
 
     throw Exception('Failed to load goal forecast');
   }
+
+  static Future<void> archiveGoal(int goalId) async {
+    final token = await getToken();
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/goals/$goalId/archive'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(jsonDecode(response.body)['message']);
+    }
+  }
+
+  static Future<List<dynamic>> getArchivedGoals() async {
+    final token = await getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/goals/archived'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception('Failed to load archived goals');
+  }
+
+  static Future<void> restoreGoal(int goalId) async {
+    final token = await getToken();
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/goals/$goalId/restore'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(jsonDecode(response.body)['message']);
+    }
+  }
 }
