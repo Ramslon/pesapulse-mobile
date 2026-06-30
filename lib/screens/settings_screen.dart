@@ -107,6 +107,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void showAboutPesaPulse() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("About PesaPulse"),
+        content: const SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "PesaPulse is a personal finance management application designed to help users take control of their finances.",
+              ),
+
+              SizedBox(height: 15),
+
+              Text("Features"),
+
+              SizedBox(height: 8),
+
+              Text("• Expense Tracking"),
+              Text("• Budget Management"),
+              Text("• Savings Goals"),
+              Text("• Financial Analytics"),
+              Text("• Smart Insights"),
+              Text("• Secure Account Management"),
+
+              SizedBox(height: 20),
+
+              Text(
+                "Version 2.1.0",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              SizedBox(height: 10),
+
+              Text("© 2026 PesaPulse"),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -243,19 +293,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 30),
 
             _buildSectionTitle('Appearance', Icons.palette),
+            Card(
+              child: Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+                  return SwitchListTile(
+                    title: const Text('Dark Mode'),
+                    secondary: const Icon(Icons.dark_mode),
+                    value: themeProvider.isDarkMode,
 
-            Consumer<ThemeProvider>(
-              builder: (context, themeProvider, child) {
-                return SwitchListTile(
-                  title: const Text('Dark Mode'),
-                  secondary: const Icon(Icons.dark_mode),
-                  value: themeProvider.isDarkMode,
-
-                  onChanged: (value) {
-                    themeProvider.toggleTheme(value);
-                  },
-                );
-              },
+                    onChanged: (value) {
+                      themeProvider.toggleTheme(value);
+                    },
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 30),
             _buildSectionTitle('Security', Icons.lock),
@@ -381,47 +432,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 30),
 
-            _buildSectionTitle('About', Icons.info_outline),
+            _buildSectionTitle("About", Icons.info),
 
             Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.verified),
-                    title: const Text('App Version'),
-                    subtitle: const Text('PesaPulse v2.1.0'),
+                    leading: const Icon(Icons.info_outline),
+                    title: const Text("About PesaPulse"),
+                    subtitle: const Text(
+                      "Version, credits and application information",
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: showAboutPesaPulse,
                   ),
 
                   const Divider(height: 1),
 
                   const ListTile(
-                    leading: Icon(Icons.person_outline),
-                    title: Text('Developer'),
-                    subtitle: Text('Ramson Lonayo'),
-                  ),
-
-                  const Divider(height: 1),
-
-                  ListTile(
-                    leading: const Icon(Icons.code),
-                    title: const Text('GitHub Repository'),
-                    trailing: const Icon(Icons.open_in_new),
-                    onTap: () {
-                      // Open GitHub repository in future
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  ListTile(
-                    leading: const Icon(Icons.privacy_tip),
-                    title: const Text('Privacy Policy'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {},
+                    leading: Icon(Icons.verified_outlined),
+                    title: Text("Version"),
+                    trailing: Text(
+                      "v2.1.0",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
@@ -429,7 +463,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 25),
 
-            _buildSectionTitle('Account', Icons.logout),
+            _buildSectionTitle('Session', Icons.logout),
 
             SizedBox(
               width: double.infinity,
@@ -478,6 +512,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
                 },
+              ),
+            ),
+            const Divider(height: 40),
+            const SizedBox(height: 35),
+
+            Center(
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+
+                  const Text(
+                    "Made with ❤️ in Kenya",
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  Text(
+                    "PesaPulse",
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  const Text("Version 2.1.0"),
+
+                  const SizedBox(height: 4),
+
+                  Text("© 2026", style: TextStyle(color: Colors.grey.shade600)),
+
+                  const SizedBox(height: 30),
+                ],
               ),
             ),
           ],
