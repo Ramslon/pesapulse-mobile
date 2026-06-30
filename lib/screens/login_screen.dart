@@ -5,9 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
-import '../services/settings_service.dart';
-import '../providers/theme_provider.dart';
-import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,34 +43,32 @@ class _LoginScreenState extends State<LoginScreen> {
 
         await prefs.setString('token', response['token']);
 
-        // Sync notification preference
-        await SettingsService.syncFromBackend();
-
-        // Sync theme preference
-        await Provider.of<ThemeProvider>(
-          context,
-          listen: false,
-        ).syncWithBackend();
-
         ApiService.token = response['token'];
+
+        if (!mounted) return;
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
+
+        debugPrint("...");
       } else {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(response['message'])));
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       setState(() {
         isLoading = false;
       });
 
+      print("LOGIN ERROR: $e");
+      print(stackTrace);
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 

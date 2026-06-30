@@ -217,6 +217,18 @@ class ApiService {
     }
   }
 
+  static bool _toBool(dynamic value) {
+    if (value is bool) return value;
+
+    if (value is int) return value == 1;
+
+    if (value is String) {
+      return value == "1" || value.toLowerCase() == "true";
+    }
+
+    return false;
+  }
+
   static Future<Map<String, dynamic>> getPreferences() async {
     final token = await getToken();
 
@@ -233,13 +245,13 @@ class ApiService {
 
     // 🔥 NORMALIZE (MERGE SAFETY LAYER)
     return {
-      'dark_mode': data['dark_mode'] ?? false,
-      'notifications_enabled': data['notifications_enabled'] ?? true,
+      'dark_mode': _toBool(data['dark_mode']),
+      'notifications_enabled': _toBool(data['notifications_enabled']),
 
       // old system fallback
-      'daily_reminder': data['daily_reminder'] ?? false,
-      'expense_alerts': data['expense_alerts'] ?? false,
-      'weekly_summary': data['weekly_summary'] ?? false,
+      'daily_reminder': _toBool(data['daily_reminder']),
+      'expense_alerts': _toBool(data['expense_alerts']),
+      'weekly_summary': _toBool(data['weekly_summary']),
     };
   }
 
@@ -442,5 +454,41 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception(jsonDecode(response.body)['message']);
     }
+  }
+
+  static Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    print("Sending change password request...");
+
+    final token = await getToken();
+    print("TOKEN: $token");
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/change-password'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+      body: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+        'new_password_confirmation': confirmPassword,
+      },
+    );
+
+    print("Status Code: ${response.statusCode}");
+    print("Body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    final body = jsonDecode(response.body);
+
+    if (body['errors'] != null) {
+      throw Exception(body['errors']);
+    }
+
+    throw Exception(body['message'] ?? 'Failed to change password.');
   }
 }

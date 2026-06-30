@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../services/api_services.dart';
-
 import 'dashboard_screen.dart';
 import 'expense_list_screen.dart';
-import 'profile_screen.dart';
+
+import '../services/settings_service.dart';
+import '../providers/theme_provider.dart';
+import 'package:provider/provider.dart';
+
+import 'settings_screen.dart';
 import 'analytics_screen.dart';
-import 'login_screen.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
 
@@ -31,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     const GoalsScreen(),
 
-    const ProfileScreen(),
+    const SettingsScreen(),
   ];
 
   final List<String> titles = [
@@ -40,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Budget',
     'Analytics',
     'Goals',
-    'Profile',
+    'Settings',
   ];
 
   final List<IconData> icons = [
@@ -54,8 +56,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
     Icons.flag,
 
-    Icons.person,
+    Icons.settings,
   ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _syncPreferences();
+  }
+
+  Future<void> _syncPreferences() async {
+    try {
+      await SettingsService.syncFromBackend();
+    } catch (e) {
+      debugPrint("Settings sync failed: $e");
+    }
+
+    try {
+      await Provider.of<ThemeProvider>(
+        context,
+        listen: false,
+      ).syncWithBackend();
+    } catch (e) {
+      debugPrint("Theme sync failed: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,21 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
 
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-
-            onPressed: () async {
-              await ApiService.logoutUser();
-
-              Navigator.pushReplacement(
-                context,
-
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
-            },
-          ),
-        ],
+        actions: const [],
       ),
 
       body: screens[currentIndex],
@@ -137,7 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
           BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Goals'),
 
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
         ],
       ),
     );
