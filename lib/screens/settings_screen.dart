@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
@@ -151,6 +153,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> contactSupport() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'support@pesapulse.app',
+      queryParameters: {'subject': 'PesaPulse Support'},
+    );
+
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open email application')),
+      );
+    }
+  }
+
+  void shareApp() {
+    Share.share('''
+I'm using PesaPulse to manage my expenses, budgets and savings goals.
+
+Download it here:
+
+https://github.com/ramslon/PesaPulse
+''');
+  }
+
+  void rateApp() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Rate PesaPulse"),
+        content: const Text(
+          "Thank you for using PesaPulse!\n\n"
+          "The app will be available on Google Play soon, where you'll be able to leave a rating and review.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
           ),
         ],
       ),
@@ -579,6 +628,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       "v2.1.0",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
+                  ),
+                ],
+              ),
+            ),
+
+            _buildSectionTitle('Support', Icons.support_agent),
+
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.email_outlined),
+                    title: const Text("Contact Support"),
+                    subtitle: const Text("support@pesapulse.app"),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: contactSupport,
+                  ),
+
+                  const Divider(height: 1),
+
+                  ListTile(
+                    leading: const Icon(Icons.star_outline),
+                    title: const Text("Rate PesaPulse"),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: rateApp,
+                  ),
+
+                  const Divider(height: 1),
+
+                  ListTile(
+                    leading: const Icon(Icons.share_outlined),
+                    title: const Text("Share App"),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: shareApp,
                   ),
                 ],
               ),
