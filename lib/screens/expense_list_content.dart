@@ -4,14 +4,14 @@ import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 import '../services/api_services.dart';
 import 'edit_expense_screen.dart';
 
-class ExpenseListScreen extends StatefulWidget {
-  const ExpenseListScreen({super.key});
+class ExpenseListContent extends StatefulWidget {
+  const ExpenseListContent({super.key});
 
   @override
-  State<ExpenseListScreen> createState() => _ExpenseListScreenState();
+  State<ExpenseListContent> createState() => _ExpenseListContentState();
 }
 
-class _ExpenseListScreenState extends State<ExpenseListScreen> {
+class _ExpenseListContentState extends State<ExpenseListContent> {
   List expenses = [];
 
   List filteredExpenses = [];

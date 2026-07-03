@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/screens/expense_screen.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/quick_action_card.dart';
+import '../widgets/recent_expense_tile.dart';
+import '../screens/expense_screen.dart';
 import '../services/api_services.dart';
 import '../screens/add_expense_screen.dart';
 import '../screens/add_goals_screen.dart';
@@ -20,6 +23,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int totalCount = 0;
   int totalCategories = 0;
 
+  List recentExpenses = [];
+
   @override
   void initState() {
     super.initState();
@@ -29,7 +34,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> loadDashboardData() async {
     try {
       final data = await ApiService.getDashboardSummary();
-
+      final expenses = await ApiService.getExpenses();
       setState(() {
         totalExpenses =
             double.tryParse(data['total_expenses'].toString())?.toInt() ?? 0;
@@ -37,6 +42,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         totalCount = int.tryParse(data['total_count'].toString()) ?? 0;
 
         totalCategories = int.tryParse(data['categories'].toString()) ?? 0;
+
+        recentExpenses = expenses.take(3).toList();
 
         isLoading = false;
       });
@@ -93,198 +100,259 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
 
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "${getGreeting()} 👋",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${getGreeting()} 👋",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 6),
+                  const SizedBox(height: 6),
 
-                const Text(
-                  "Welcome Back",
-                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-                ),
+                  const Text(
+                    "Welcome Back",
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                  ),
 
-                const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
 
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(.12),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(.12),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
 
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.insights, size: 16, color: Colors.green),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.insights, size: 16, color: Colors.green),
 
-                          SizedBox(width: 6),
+                            SizedBox(width: 6),
 
-                          Text(
-                            "Today's Overview",
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.w600,
+                            Text(
+                              "Today's Overview",
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
+                          ],
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      Text(
+                        getFormattedDate(),
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 185,
+                      child: DashboardCard(
+                        title: "Expenses",
+                        subtitle: "Total Recorded",
+                        value: totalCount.toString(),
+                        icon: Icons.account_balance_wallet,
+                        iconColor: Colors.green,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 15),
+
+                  Expanded(
+                    child: SizedBox(
+                      height: 185,
+                      child: DashboardCard(
+                        title: 'Budget',
+                        subtitle: "Current Budget",
+                        value: 'KES $totalExpenses',
+                        icon: Icons.savings,
+                        iconColor: Colors.blue,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 185,
+                      child: DashboardCard(
+                        title: 'Categories',
+                        subtitle: "Expense Types",
+                        value: totalCategories.toString(),
+                        icon: Icons.category,
+                        iconColor: Colors.orange,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 15),
+
+                  Expanded(
+                    child: SizedBox(
+                      height: 185,
+                      child: DashboardCard(
+                        title: 'Reports',
+                        subtitle: "Generated",
+                        value: totalCount.toString(),
+                        icon: Icons.bar_chart,
+                        iconColor: Colors.purple,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+
+              const Text(
+                "Quick Actions",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 15),
+
+              Row(
+                children: [
+                  QuickActionCard(
+                    icon: Icons.add,
+                    title: "Expense",
+                    color: Colors.green,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddExpenseScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  QuickActionCard(
+                    icon: Icons.account_balance_wallet,
+                    title: "Budget",
+                    color: Colors.blue,
+                    onTap: () {
+                      // Navigate later
+                    },
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  QuickActionCard(
+                    icon: Icons.flag,
+                    title: "Goal",
+                    color: Colors.orange,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddGoalScreen(),
+                        ),
+                      ); // Navigate later
+                    },
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+
+              Row(
+                children: [
+                  const Text(
+                    "Recent Expenses",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+
+                  const Spacer(),
+
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ExpenseScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text("View All"),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      if (recentExpenses.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text(
+                            "No recent expenses",
+                            style: TextStyle(color: Colors.grey),
                           ),
-                        ],
-                      ),
-                    ),
+                        )
+                      else
+                        ...recentExpenses.map(
+                          (expense) => Column(
+                            children: [
+                              RecentExpenseTile(expense: expense),
 
-                    const Spacer(),
-
-                    Text(
-                      getFormattedDate(),
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 185,
-                    child: DashboardCard(
-                      title: "Expenses",
-                      subtitle: "Total Recorded",
-                      value: totalCount.toString(),
-                      icon: Icons.account_balance_wallet,
-                      iconColor: Colors.green,
-                    ),
+                              if (expense != recentExpenses.last)
+                                const Divider(),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-
-                const SizedBox(width: 15),
-
-                Expanded(
-                  child: SizedBox(
-                    height: 185,
-                    child: DashboardCard(
-                      title: 'Budget',
-                      subtitle: "Current Budget",
-                      value: 'KES $totalExpenses',
-                      icon: Icons.savings,
-                      iconColor: Colors.blue,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 185,
-                    child: DashboardCard(
-                      title: 'Categories',
-                      subtitle: "Expense Types",
-                      value: totalCategories.toString(),
-                      icon: Icons.category,
-                      iconColor: Colors.orange,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 15),
-
-                Expanded(
-                  child: SizedBox(
-                    height: 185,
-                    child: DashboardCard(
-                      title: 'Reports',
-                      subtitle: "Generated",
-                      value: totalCount.toString(),
-                      icon: Icons.bar_chart,
-                      iconColor: Colors.purple,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            const SizedBox(height: 30),
-
-            const Text(
-              "Quick Actions",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 15),
-
-            Row(
-              children: [
-                QuickActionCard(
-                  icon: Icons.add,
-                  title: "Expense",
-                  color: Colors.green,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AddExpenseScreen(),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(width: 12),
-
-                QuickActionCard(
-                  icon: Icons.account_balance_wallet,
-                  title: "Budget",
-                  color: Colors.blue,
-                  onTap: () {
-                    // Navigate later
-                  },
-                ),
-
-                const SizedBox(width: 12),
-
-                QuickActionCard(
-                  icon: Icons.flag,
-                  title: "Goal",
-                  color: Colors.orange,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AddGoalScreen()),
-                    ); // Navigate later
-                  },
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

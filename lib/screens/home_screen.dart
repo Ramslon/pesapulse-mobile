@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'dashboard_screen.dart';
-import 'expense_list_screen.dart';
+import 'expense_list_content.dart';
 
 import '../services/settings_service.dart';
 import '../providers/theme_provider.dart';
@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List screens = [
     const DashboardScreen(),
 
-    const ExpenseListScreen(),
+    const ExpenseListContent(),
 
     const BudgetScreen(),
 
