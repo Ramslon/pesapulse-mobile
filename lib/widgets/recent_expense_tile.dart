@@ -89,7 +89,7 @@ class RecentExpenseTile extends StatelessWidget {
           const SizedBox(height: 2),
 
           Text(
-            expense['expense_date'] ?? '',
+            formatDate(expense['expense_date']),
             style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
         ],
@@ -104,5 +104,17 @@ class RecentExpenseTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String formatDate(String date) {
+    final expenseDate = DateTime.parse(date);
+    final today = DateTime.now();
+
+    final difference = today.difference(expenseDate).inDays;
+
+    if (difference == 0) return "Today";
+    if (difference == 1) return "Yesterday";
+
+    return "${expenseDate.day}/${expenseDate.month}/${expenseDate.year}";
   }
 }
