@@ -51,6 +51,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  String getGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour < 12) {
+      return "Good Morning";
+    } else if (hour < 17) {
+      return "Good Afternoon";
+    } else {
+      return "Good Evening";
+    }
+  }
+
+  String getFormattedDate() {
+    final now = DateTime.now();
+
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    return "${now.day} ${months[now.month - 1]}, ${now.year}";
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -65,16 +98,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-            const Text(
-              'Welcome Back 👋',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "${getGreeting()} 👋",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
 
-            const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
-            const Text(
-              'Manage your expenses easily',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+                const Text(
+                  "Welcome Back",
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 10),
+
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(.12),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.insights, size: 16, color: Colors.green),
+
+                          SizedBox(width: 6),
+
+                          Text(
+                            "Today's Overview",
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    Text(
+                      getFormattedDate(),
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
             ),
 
             const SizedBox(height: 30),
