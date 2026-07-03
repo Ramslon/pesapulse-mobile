@@ -1,8 +1,219 @@
 # Changelog
 
-All notable changes to **PesaPulse** will be documented in this file.
+All notable changes to **PesaPulse** are documented in this file.
 
-The format is based on **Keep a Changelog** and follows **Semantic Versioning (SemVer)**.
+The format is based on **Keep a Changelog** and the project follows **Semantic Versioning (SemVer)**.
+
+---
+
+# [2.1.0] - 2026-07-03
+
+## 🎉 Major Update – Settings & User Experience
+
+This release focuses on improving the overall user experience with a complete redesign of the Profile module into a fully featured **Settings** screen, enhanced account management, improved security, cleaner UI, and better application branding.
+
+---
+
+## ✨ Added
+
+### ⚙️ Settings Module
+- Replaced the Profile screen with a comprehensive **Settings** screen.
+- Added a modern profile overview card displaying:
+  - User avatar
+  - Name
+  - Email
+  - Edit Profile shortcut
+- Added application statistics dashboard including:
+  - Goals Created
+  - Completed Goals
+  - Budgets Created
+  - Expenses Recorded
+
+### 🔐 Security
+- Added secure **Change Password** functionality.
+- Implemented password validation.
+- Automatically redirects users to the login screen after a successful password change.
+- Added secure session confirmation before logout.
+
+### 🎨 Appearance
+- Added Dark Mode synchronization with backend preferences.
+- Improved theme persistence across sessions.
+- Added descriptive appearance settings.
+
+### 🔔 Notifications
+- Added notification preferences for:
+  - Daily Reminders
+  - Expense Alerts
+  - Weekly Financial Summary
+- Synced notification settings with the backend.
+
+### ℹ️ About
+- Added:
+  - About PesaPulse
+  - Privacy Policy
+  - Terms of Service
+  - Application Version
+
+### 💬 Support
+- Added:
+  - Contact Support
+  - Rate App
+  - Share Application
+
+### 🏷 Footer & Branding
+- Added branded Settings footer.
+- Added application version badge.
+- Added copyright information.
+- Added "Designed & Developed with ❤️ in Kenya".
+
+---
+
+## 🎨 UI Improvements
+
+### Settings Screen
+- Completely redesigned the Settings UI.
+- Introduced consistent rounded cards.
+- Added modern icon badges using colored avatars.
+- Improved typography and spacing.
+- Standardized section headers.
+- Improved visual hierarchy throughout the screen.
+
+### Profile Overview
+- Redesigned profile information layout.
+- Added better avatar presentation.
+- Improved edit profile experience.
+
+### Statistics
+- Redesigned statistics cards.
+- Added colored icons.
+- Improved labels and spacing.
+- Better responsive layout.
+
+### Appearance
+- Redesigned Dark Mode tile.
+- Added explanatory subtitles.
+- Improved switch styling.
+
+### Notifications
+- Redesigned notification cards.
+- Added descriptive subtitles.
+- Improved switch appearance.
+- Added consistent icon styling.
+
+### Security
+- Redesigned Change Password section.
+- Added Security Status card.
+- Improved password dialog.
+- Better loading indicators.
+- Improved confirmation dialog.
+
+### About & Support
+- Redesigned About section.
+- Redesigned Support section.
+- Added consistent navigation arrows.
+- Added informative subtitles.
+
+### Session
+- Redesigned Logout section.
+- Added secure session card.
+- Improved logout confirmation dialog.
+
+---
+
+## 📊 Analytics Improvements
+
+- Improved analytics dashboard presentation.
+- Enhanced charts and financial insights.
+- Improved statistics cards.
+- Better layout and responsiveness.
+- Cleaner data visualization.
+
+---
+
+## 💰 Budget Improvements
+
+- Improved Budget Overview interface.
+- Enhanced budget summary presentation.
+- Better progress indicators.
+- Cleaner card layouts.
+- Improved budget insights.
+
+---
+
+## 🎯 Financial Goals Improvements
+
+- Added archived goals support.
+- Added goal restore functionality.
+- Improved completed goals presentation.
+- Redesigned goal cards.
+- Enhanced progress tracking.
+- Improved financial insights.
+- Added forecasting improvements.
+
+---
+
+## 🔔 Notifications
+
+- Integrated notification service.
+- Added backend synchronization.
+- Improved notification preferences.
+- Better persistence across sessions.
+
+---
+
+## 🔄 Backend Integration
+
+### User Preferences
+- Synced Dark Mode with backend.
+- Synced notification preferences.
+- Improved preference loading.
+- Improved error handling.
+
+### Authentication
+- Improved session handling.
+- Better token management.
+- Improved logout workflow.
+- Better password update flow.
+
+---
+
+## 🛠 Improved
+
+- Improved navigation flow.
+- Improved responsiveness across screens.
+- Better loading states.
+- Better snackbar messages.
+- Improved dialogs.
+- Improved form validation.
+- Cleaner application branding.
+- Better overall UX consistency.
+
+---
+
+## 🐛 Fixed
+
+- Fixed login flow after password updates.
+- Fixed notification preference synchronization.
+- Fixed Dark Mode synchronization.
+- Fixed archived goals display.
+- Fixed goal restore workflow.
+- Fixed session management issues.
+- Fixed backend authentication handling.
+- Fixed boolean preference conversion.
+- Fixed various UI spacing inconsistencies.
+- Fixed multiple visual alignment issues.
+
+---
+
+## 📦 Internal
+
+- Refactored Settings module.
+- Refactored reusable UI widgets.
+- Improved API integration.
+- Improved code organization.
+- Cleaned project structure.
+- Removed debugging code.
+- Prepared project for future v2.2.0 development.
 
 ---
 

@@ -3,7 +3,7 @@
 ![PHP](https://img.shields.io/badge/PHP-8.x-purple?logo=php)
 ![MySQL](https://img.shields.io/badge/MySQL-Database-blue?logo=mysql)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/badge/Version-2.0.0-orange)
+![Version](https://img.shields.io/badge/Version-2.1.0-brightgreen)
 
 # 💰 PesaPulse
 
@@ -11,6 +11,18 @@
 
 PesaPulse is a modern personal finance application built with **Flutter** and **Laravel** that helps users manage expenses, budgets, savings goals, and financial insights through intelligent analytics and forecasting.
 
+
+---
+## 🚀 What's New in v2.1.0
+
+- ⚙ Complete Settings redesign
+- 🔐 Secure password management
+- 🎨 Improved Dark Mode synchronization
+- 🔔 Notification preferences
+- 📊 Modern statistics dashboard
+- ℹ About & Support center
+- 🏷 Professional application branding
+- ✨ Refined user experience throughout the app
 
 
 ---
@@ -33,8 +45,8 @@ PesaPulse is a modern personal finance application built with **Flutter** and **
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/profile-overview.jpeg" width="240"/>
-  <img src="docs/screenshots/profile-settings.jpeg" width="240"/>
+  <img src="docs/screenshots/settings-overview.jpeg" width="240"/>
+  <img src="docs/screenshots/settings-profile.jpeg" width="240"/>
 </p>
 
 ---
@@ -102,22 +114,42 @@ PesaPulse is a modern personal finance application built with **Flutter** and **
 
 ---
 
-## 👤 User Profile
+## 🔐 Security
 
-* Edit profile
-* User statistics
-* Notification preferences
-* Dark mode
+- Secure authentication
+- Password change
+- Laravel Sanctum
+- Session management
+- Protected API routes
+
+---
+
+ ## ⚙ Settings & Account
+
+- Edit profile
+- Change password
+- User statistics dashboard
+- Notification preferences
+- Dark mode
+- Session management
+- About PesaPulse
+- Privacy Policy
+- Terms of Service
+- Contact Support
+- Rate App
+- Share App
 
 ---
 
 # 🧠 Smart Features
 
-* Goal Forecasting
-* Goal Completion Prediction
-* Smart Budget Recommendations
-* Financial Health Analysis
-* Intelligent Savings Suggestions
+- Financial Health Analysis
+- Smart Budget Recommendations
+- Goal Forecasting
+- Goal Completion Prediction
+- Savings Progress Insights
+- Spending Trend Analysis
+- Intelligent Savings Suggestions
 
 ---
 
@@ -130,6 +162,23 @@ Flutter Mobile App
         │
     MySQL Database
 ```
+
+---
+
+## 🌐 Backend API
+
+RESTful API built using Laravel.
+
+### Main Modules
+
+- Authentication
+- Expenses
+- Budgets
+- Goals
+- Analytics
+- Notifications
+- User Preferences
+- Settings
 
 ---
 
@@ -207,6 +256,23 @@ flutter pub get
 
 flutter run
 ```
+---
+
+# 📦 Releases
+
+Latest Stable Release
+
+**PesaPulse v2.1.0**
+
+Download from the GitHub Releases page.
+
+---
+
+# 🎥 Demo
+
+Watch the application demo on YouTube.
+
+Coming Soon...
 
 ---
 
@@ -227,8 +293,8 @@ flutter run
     <img src="docs/screenshots/analytics-dashboard.jpeg" alt="Analytics Dashboard" width="280"/>
   </a>
 
-  <a href="docs/screenshots/profile-overview.jpeg">
-    <img src="docs/screenshots/profile-overview.jpeg" alt="Profile Overview" width="280"/>
+  <a href="docs/screenshots/settings-overview.jpeg">
+    <img src="docs/screenshots/settings-profile.jpeg" alt="Profile Overview" width="280"/>
   </a>
 </p>
 
@@ -248,10 +314,11 @@ flutter run
 
 # 📊 Version History
 
-| Version | Description                     |
-| ------- | ------------------------------- |
-| v2.0.0  | Smart Financial Planning Update |
-| v1.0.0  | Initial Public Release          |
+| Version | Release | Highlights |
+|---------|---------|------------|
+| **v2.1.0** | Latest | Settings redesign, Password Management, Notifications, Branding |
+| **v2.0.0** | Stable | Smart Goals, Advanced Analytics, Budget Insights |
+| **v1.0.0** | Initial | Expense Tracking, Budgets, Authentication |
 
 ---
 
@@ -279,13 +346,28 @@ flutter run
 
 ---
 
-## 🚧 Planned (v2.1)
+## ✅ Version 2.1
 
-* Recurring Transactions
-* Subscription Tracking
-* AI Spending Predictions
-* Financial Health Improvements
-* Enhanced Dashboard
+- Complete Settings Module
+- Secure Password Management
+- Notification Preferences
+- Theme Synchronization
+- About & Support Center
+- UI/UX Improvements
+- Session Management
+- Branding Improvements
+
+---
+
+## 🚧 Planned (v2.2)
+
+- Recurring Transactions
+- Subscription Manager
+- AI Spending Predictions
+- Monthly Financial Reports
+- Financial Calendar
+- Savings Challenges
+- Personalized Financial Tips
 
 ---
 
@@ -303,13 +385,15 @@ This project is licensed under the MIT License.
 
 ---
 
-# 👨‍💻 Developer
+## 👨‍💻 Developer
 
 **Ramson Lonayo**
 
-Third-Year Software Engineering Student
+Software Engineering Student
 
 Kirinyaga University
+
+Passionate about Flutter, Laravel, Mobile Development and Financial Technology.
 
 ---
 
