@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/loading_widget.dart';
+import '../widgets/quick_action_card.dart';
 import '../services/api_services.dart';
 import '../screens/add_expense_screen.dart';
+import '../screens/add_goals_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -231,20 +233,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             const SizedBox(height: 30),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddExpenseScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Add Expense'),
-              ),
+            const SizedBox(height: 30),
+
+            const Text(
+              "Quick Actions",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 15),
+
+            Row(
+              children: [
+                QuickActionCard(
+                  icon: Icons.add,
+                  title: "Expense",
+                  color: Colors.green,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AddExpenseScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(width: 12),
+
+                QuickActionCard(
+                  icon: Icons.account_balance_wallet,
+                  title: "Budget",
+                  color: Colors.blue,
+                  onTap: () {
+                    // Navigate later
+                  },
+                ),
+
+                const SizedBox(width: 12),
+
+                QuickActionCard(
+                  icon: Icons.flag,
+                  title: "Goal",
+                  color: Colors.orange,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AddGoalScreen()),
+                    ); // Navigate later
+                  },
+                ),
+              ],
             ),
           ],
         ),
