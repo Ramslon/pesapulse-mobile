@@ -166,20 +166,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               children: [
                 Expanded(
-                  child: DashboardCard(
-                    title: 'Expenses',
-                    value: totalCount.toString(),
-                    icon: Icons.account_balance_wallet,
+                  child: SizedBox(
+                    height: 185,
+                    child: DashboardCard(
+                      title: "Expenses",
+                      subtitle: "Total Recorded",
+                      value: totalCount.toString(),
+                      icon: Icons.account_balance_wallet,
+                      iconColor: Colors.green,
+                    ),
                   ),
                 ),
 
                 const SizedBox(width: 15),
 
                 Expanded(
-                  child: DashboardCard(
-                    title: 'Budget',
-                    value: 'KES $totalExpenses',
-                    icon: Icons.savings,
+                  child: SizedBox(
+                    height: 185,
+                    child: DashboardCard(
+                      title: 'Budget',
+                      subtitle: "Current Budget",
+                      value: 'KES $totalExpenses',
+                      icon: Icons.savings,
+                      iconColor: Colors.blue,
+                    ),
                   ),
                 ),
               ],
@@ -190,20 +200,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               children: [
                 Expanded(
-                  child: DashboardCard(
-                    title: 'Categories',
-                    value: totalCategories.toString(),
-                    icon: Icons.category,
+                  child: SizedBox(
+                    height: 185,
+                    child: DashboardCard(
+                      title: 'Categories',
+                      subtitle: "Expense Types",
+                      value: totalCategories.toString(),
+                      icon: Icons.category,
+                      iconColor: Colors.orange,
+                    ),
                   ),
                 ),
 
                 const SizedBox(width: 15),
 
                 Expanded(
-                  child: DashboardCard(
-                    title: 'Reports',
-                    value: totalCount.toString(),
-                    icon: Icons.bar_chart,
+                  child: SizedBox(
+                    height: 185,
+                    child: DashboardCard(
+                      title: 'Reports',
+                      subtitle: "Generated",
+                      value: totalCount.toString(),
+                      icon: Icons.bar_chart,
+                      iconColor: Colors.purple,
+                    ),
                   ),
                 ),
               ],
