@@ -17,9 +17,11 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
   List filteredExpenses = [];
 
-  String selectedFilter = 'All';
+  String selectedDateFilter = 'All';
 
   String selectedSort = 'Newest';
+
+  String selectedCategory = 'All';
 
   final List<String> filterCategories = [
     'All',
@@ -133,29 +135,29 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
   }
 
   void filterExpenses() {
-    List results = expenses;
+    List temp = expenses;
 
-    // Apply category filter
-    if (selectedFilter != 'All') {
-      results = results.where((expense) {
-        return expense['category'] == selectedFilter;
+    // Search
+    if (searchController.text.isNotEmpty) {
+      temp = temp.where((expense) {
+        return expense['title'].toString().toLowerCase().contains(
+          searchController.text.toLowerCase(),
+        );
       }).toList();
     }
 
-    // Apply search filter
-    final query = searchController.text.trim().toLowerCase();
-
-    if (query.isNotEmpty) {
-      results = results.where((expense) {
-        return expense['title'].toString().toLowerCase().contains(query);
+    // Category
+    if (selectedCategory != 'All') {
+      temp = temp.where((expense) {
+        return expense['category'] == selectedCategory;
       }).toList();
     }
+
+    applyDateFilter(temp);
 
     sortExpenses();
 
-    setState(() {
-      filteredExpenses = results;
-    });
+    setState(() {});
   }
 
   void sortExpenses() {
@@ -244,9 +246,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
                       selectedSort = value!;
                     });
 
-                    sortExpenses();
-
-                    setState(() {});
+                    filterExpenses();
 
                     Navigator.pop(context);
                   },
@@ -257,6 +257,33 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
         );
       },
     );
+  }
+
+  void applyDateFilter(List source) {
+    final now = DateTime.now();
+
+    filteredExpenses = source.where((expense) {
+      final date = DateTime.parse(expense['expense_date']);
+
+      switch (selectedDateFilter) {
+        case 'Today':
+          return date.year == now.year &&
+              date.month == now.month &&
+              date.day == now.day;
+
+        case 'This Week':
+          final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+
+          return date.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
+              date.isBefore(now.add(const Duration(days: 1)));
+
+        case 'This Month':
+          return date.year == now.year && date.month == now.month;
+
+        default:
+          return true;
+      }
+    }).toList();
   }
 
   String formatDate(String date) {
@@ -287,377 +314,454 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
     if (isLoading) {
       return const ExpenseLoadingWidget();
     }
-    if (isLoading) {
+
+    if (filteredExpenses.isEmpty) {
       return const EmptyExpenseState();
     }
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 5),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+
+    return CustomScrollView(
+      controller: scrollController,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      slivers: [
+        SliverToBoxAdapter(child: _buildHeader()),
+
+        SliverToBoxAdapter(child: _buildSummaryCard()),
+
+        SliverToBoxAdapter(child: _buildSearchBar()),
+
+        SliverToBoxAdapter(child: _buildDateFilters()),
+
+        SliverToBoxAdapter(child: const SizedBox(height: 15)),
+
+        SliverToBoxAdapter(child: _buildCategoryFilters()),
+
+        SliverToBoxAdapter(child: const SizedBox(height: 20)),
+
+        _buildExpenseList(),
+
+        if (hasMore)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Expenses",
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          ),
+
+          SizedBox(height: 6),
+
+          Text(
+            "Track and manage your spending",
+            style: TextStyle(color: Colors.grey, fontSize: 15),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
             children: [
-              Text(
-                "Expenses",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              CircleAvatar(
+                radius: 26,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withOpacity(.12),
+                child: Icon(
+                  Icons.account_balance_wallet,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
 
-              SizedBox(height: 6),
+              const SizedBox(width: 18),
 
-              Text(
-                "Track and manage your spending",
-                style: TextStyle(color: Colors.grey, fontSize: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "KES ${totalAmount.toStringAsFixed(0)}",
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Text(
+                      "${expenses.length} Transactions",
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
 
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(.12),
-                    child: Icon(
-                      Icons.account_balance_wallet,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: searchController,
+              onChanged: (_) => filterExpenses(),
+              decoration: InputDecoration(
+                hintText: "Search expenses...",
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-
-                  const SizedBox(width: 18),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "KES ${totalAmount.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        Text(
-                          "${expenses.length} Transactions",
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
 
-        Row(
+          const SizedBox(width: 10),
+
+          IconButton(onPressed: showSortSheet, icon: const Icon(Icons.tune)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateFilters() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20, top: 15),
+      child: SizedBox(
+        height: 40,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
           children: [
-            Expanded(
-              child: TextField(
-                controller: searchController,
-                onChanged: (_) => filterExpenses(),
-                decoration: InputDecoration(
-                  hintText: "Search expenses...",
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Theme.of(
+            buildDateChip('All'),
+            buildDateChip('Today'),
+            buildDateChip('This Week'),
+            buildDateChip('This Month'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilters() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Category",
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+
+          const SizedBox(height: 10),
+
+          SizedBox(
+            height: 45,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: filterCategories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final category = filterCategories[index];
+
+                final selected = category == selectedCategory;
+
+                return ChoiceChip(
+                  label: Text(category),
+
+                  selected: selected,
+
+                  selectedColor: Theme.of(context).colorScheme.primary,
+
+                  backgroundColor: Theme.of(
                     context,
                   ).colorScheme.surfaceContainerHighest,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+
+                  labelStyle: TextStyle(
+                    color: selected ? Colors.white : null,
+                    fontWeight: FontWeight.w600,
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+
+                  showCheckmark: false,
+
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
 
-            IconButton(onPressed: showSortSheet, icon: const Icon(Icons.tune)),
+                  onSelected: (_) {
+                    setState(() {
+                      selectedCategory = category;
+                    });
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: SizedBox(
-                height: 45,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: filterCategories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final category = filterCategories[index];
-
-                    final selected = category == selectedFilter;
-
-                    return ChoiceChip(
-                      label: Text(category),
-
-                      selected: selected,
-
-                      selectedColor: Theme.of(context).colorScheme.primary,
-
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-
-                      labelStyle: TextStyle(
-                        color: selected ? Colors.white : null,
-                        fontWeight: FontWeight.w600,
-                      ),
-
-                      showCheckmark: false,
-
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-
-                      onSelected: (_) {
-                        setState(() {
-                          selectedFilter = category;
-                        });
-
-                        filterExpenses();
-                      },
-                    );
+                    filterExpenses();
                   },
-                ),
-              ),
+                );
+              },
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 10),
+  Widget _buildExpenseList() {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        final expense = filteredExpenses[index];
 
-            Expanded(
-              child: ListView.builder(
-                controller: scrollController,
+        return _buildExpenseCard(expense);
+      }, childCount: filteredExpenses.length),
+    );
+  }
 
-                itemCount: filteredExpenses.length + (hasMore ? 1 : 0),
+  Widget _buildExpenseCard(Map<String, dynamic> expense) {
+    return Dismissible(
+      key: ValueKey(expense['id']),
 
-                itemBuilder: (context, index) {
-                  if (index == filteredExpenses.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(20),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EditExpenseScreen(expense: expense),
+            ),
+          );
 
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
+          if (result == true) {
+            expenses.clear();
+            filteredExpenses.clear();
+            currentPage = 1;
+            hasMore = true;
 
-                  final expense = filteredExpenses[index];
+            fetchExpenses();
+          }
 
-                  return Dismissible(
-                    key: ValueKey(expense['id']),
+          return false;
+        }
 
-                    confirmDismiss: (direction) async {
-                      if (direction == DismissDirection.startToEnd) {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => EditExpenseScreen(expense: expense),
-                          ),
-                        );
+        return await showDialog<bool>(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text("Delete Expense"),
+                content: const Text(
+                  "Are you sure you want to delete this expense?",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text("Cancel"),
+                  ),
 
-                        if (result == true) {
-                          expenses.clear();
-                          filteredExpenses.clear();
-                          currentPage = 1;
-                          hasMore = true;
+                  FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text("Delete"),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+      },
 
-                          fetchExpenses();
-                        }
+      onDismissed: (_) async {
+        await ApiService.deleteExpense(expense['id']);
 
-                        return false;
-                      }
+        expenses.removeWhere((e) => e['id'] == expense['id']);
 
-                      return await showDialog<bool>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: const Text("Delete Expense"),
-                          content: const Text(
-                            "Are you sure you want to delete this expense?",
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text("Cancel"),
-                            ),
+        filterExpenses();
 
-                            FilledButton(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.red,
-                              ),
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text("Delete"),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+        setState(() {});
 
-                    onDismissed: (_) async {
-                      await ApiService.deleteExpense(expense['id']);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Expense deleted")));
+      },
 
-                      expenses.removeWhere((e) => e['id'] == expense['id']);
-
-                      filterExpenses();
-
-                      setState(() {});
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Expense deleted")),
-                      );
-                    },
-
-                    background: Container(
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.edit, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text(
-                            "Edit",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    secondaryBackground: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            "Delete",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(Icons.delete, color: Colors.white),
-                        ],
-                      ),
-                    ),
-
-                    child: Card(
-                      elevation: 1.5,
-
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 8,
-                      ),
-
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: categoryColor(
-                                    expense['category'],
-                                  ).withOpacity(.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  expense['category'],
-                                  style: TextStyle(
-                                    color: categoryColor(expense['category']),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              Text(
-                                expense['title'],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-
-                              const SizedBox(height: 5),
-
-                              Text(
-                                formatDate(expense['expense_date']),
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-
-                              const SizedBox(height: 18),
-
-                              Row(
-                                children: [
-                                  Text(
-                                    "KES ${expense['amount']}",
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.blue,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.edit, color: Colors.white),
+            SizedBox(width: 8),
+            Text(
+              "Edit",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-      ],
+      ),
+
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              "Delete",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 8),
+            Icon(Icons.delete, color: Colors.white),
+          ],
+        ),
+      ),
+
+      child: Card(
+        elevation: 1.5,
+
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: categoryColor(expense['category']).withOpacity(.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    expense['category'],
+                    style: TextStyle(
+                      color: categoryColor(expense['category']),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  expense['title'],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                Text(
+                  formatDate(expense['expense_date']),
+                  style: const TextStyle(color: Colors.grey),
+                ),
+
+                const SizedBox(height: 18),
+
+                Row(
+                  children: [
+                    Text(
+                      "KES ${expense['amount']}",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildDateChip(String label) {
+    final selected = selectedDateFilter == label;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selectedColor: Theme.of(context).colorScheme.primary,
+
+        labelStyle: TextStyle(
+          color: selected ? Colors.white : null,
+          fontWeight: FontWeight.w600,
+        ),
+
+        selected: selected,
+
+        onSelected: (_) {
+          setState(() {
+            selectedDateFilter = label;
+          });
+
+          filterExpenses();
+        },
+      ),
     );
   }
 }
