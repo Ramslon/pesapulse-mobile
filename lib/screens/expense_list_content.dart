@@ -135,6 +135,16 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
     }
   }
 
+  Future<void> refreshExpenses() async {
+    expenses.clear();
+    filteredExpenses.clear();
+
+    currentPage = 1;
+    hasMore = true;
+
+    await fetchExpenses();
+  }
+
   void filterExpenses() {
     List temp = expenses;
 
@@ -155,25 +165,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
       }).toList();
     }
 
-    print('-------------------------');
-    print('Selected category: $selectedCategory');
-    print('Selected date: $selectedDateFilter');
-
-    for (var expense in expenses) {
-      print(
-        'Title: ${expense['title']} | '
-        'Category: ${expense['category']} | '
-        'Date: ${expense['expense_date']}',
-      );
-    }
-
     applyDateFilter(temp);
-
-    print('Before date filter: ${temp.length}');
-
-    applyDateFilter(temp);
-
-    print('After date filter: ${filteredExpenses.length}');
 
     sortExpenses();
 
@@ -342,37 +334,37 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
       return const EmptyExpenseState();
     }
 
-    print('Expenses: ${expenses.length}');
-    print('Filtered: ${filteredExpenses.length}');
+    return RefreshIndicator(
+      onRefresh: refreshExpenses,
+      child: CustomScrollView(
+        controller: scrollController,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        slivers: [
+          SliverToBoxAdapter(child: _buildHeader()),
 
-    return CustomScrollView(
-      controller: scrollController,
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      slivers: [
-        SliverToBoxAdapter(child: _buildHeader()),
+          SliverToBoxAdapter(child: _buildSummaryCard()),
 
-        SliverToBoxAdapter(child: _buildSummaryCard()),
+          SliverToBoxAdapter(child: _buildSearchBar()),
 
-        SliverToBoxAdapter(child: _buildSearchBar()),
+          SliverToBoxAdapter(child: _buildDateFilters()),
 
-        SliverToBoxAdapter(child: _buildDateFilters()),
+          SliverToBoxAdapter(child: const SizedBox(height: 15)),
 
-        SliverToBoxAdapter(child: const SizedBox(height: 15)),
+          SliverToBoxAdapter(child: _buildCategoryFilters()),
 
-        SliverToBoxAdapter(child: _buildCategoryFilters()),
+          SliverToBoxAdapter(child: const SizedBox(height: 20)),
 
-        SliverToBoxAdapter(child: const SizedBox(height: 20)),
+          _buildExpenseList(),
 
-        _buildExpenseList(),
-
-        if (hasMore)
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator()),
+          if (hasMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: CircularProgressIndicator()),
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
