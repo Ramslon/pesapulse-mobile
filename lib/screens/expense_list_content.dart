@@ -361,7 +361,15 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
           SliverToBoxAdapter(child: const SizedBox(height: 20)),
 
-          _buildExpenseList(),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+
+            switchInCurve: Curves.easeOut,
+
+            switchOutCurve: Curves.easeIn,
+
+            child: _buildExpenseList(),
+          ),
 
           if (hasMore)
             const SliverToBoxAdapter(
@@ -589,179 +597,205 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
   }
 
   Widget _buildExpenseCard(Map<String, dynamic> expense) {
-    return Dismissible(
-      key: ValueKey(expense['id']),
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 350),
 
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => EditExpenseScreen(expense: expense),
-            ),
-          );
+      tween: Tween(begin: 0, end: 1),
 
-          if (result == true) {
-            expenses.clear();
-            filteredExpenses.clear();
-            currentPage = 1;
-            hasMore = true;
+      curve: Curves.easeOut,
 
-            fetchExpenses();
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+
+            child: child,
+          ),
+        );
+      },
+
+      child: Dismissible(
+        key: ValueKey(expense['id']),
+
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.startToEnd) {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EditExpenseScreen(expense: expense),
+              ),
+            );
+
+            if (result == true) {
+              expenses.clear();
+              filteredExpenses.clear();
+              currentPage = 1;
+              hasMore = true;
+
+              fetchExpenses();
+            }
+
+            return false;
           }
 
-          return false;
-        }
-
-        return await showDialog<bool>(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: const Text("Delete Expense"),
-                content: const Text(
-                  "Are you sure you want to delete this expense?",
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text("Cancel"),
+          return await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text("Delete Expense"),
+                  content: const Text(
+                    "Are you sure you want to delete this expense?",
                   ),
-
-                  FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text("Delete"),
-                  ),
-                ],
-              ),
-            ) ??
-            false;
-      },
-
-      onDismissed: (_) async {
-        await ApiService.deleteExpense(expense['id']);
-
-        expenses.removeWhere((e) => e['id'] == expense['id']);
-
-        filterExpenses();
-
-        setState(() {});
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Expense deleted")));
-      },
-
-      background: Container(
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.edit, color: Colors.white),
-            SizedBox(width: 8),
-            Text(
-              "Edit",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      secondaryBackground: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              "Delete",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(width: 8),
-            Icon(Icons.delete, color: Colors.white),
-          ],
-        ),
-      ),
-
-      child: Card(
-        elevation: 1.5,
-
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: categoryColor(expense['category']).withOpacity(.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    expense['category'],
-                    style: TextStyle(
-                      color: categoryColor(expense['category']),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("Cancel"),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: 12),
-
-                Text(
-                  expense['title'],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-
-                const SizedBox(height: 5),
-
-                Text(
-                  formatDate(expense['expense_date']),
-                  style: const TextStyle(color: Colors.grey),
-                ),
-
-                const SizedBox(height: 18),
-
-                Row(
-                  children: [
-                    Text(
-                      "KES ${expense['amount']}",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.red,
                       ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Delete"),
                     ),
                   ],
                 ),
-              ],
+              ) ??
+              false;
+        },
+
+        onDismissed: (_) async {
+          await ApiService.deleteExpense(expense['id']);
+
+          expenses.removeWhere((e) => e['id'] == expense['id']);
+
+          filterExpenses();
+
+          setState(() {});
+
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Expense deleted")));
+        },
+
+        background: Container(
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: Colors.blue,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.edit, color: Colors.white),
+              SizedBox(width: 8),
+              Text(
+                "Edit",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        secondaryBackground: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                "Delete",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(Icons.delete, color: Colors.white),
+            ],
+          ),
+        ),
+
+        child: Card(
+          elevation: 1.5,
+
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: categoryColor(
+                        expense['category'],
+                      ).withOpacity(.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      expense['category'],
+                      style: TextStyle(
+                        color: categoryColor(expense['category']),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Text(
+                    expense['title'],
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  Text(
+                    formatDate(expense['expense_date']),
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  Row(
+                    children: [
+                      Text(
+                        "KES ${expense['amount']}",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
