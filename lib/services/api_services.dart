@@ -199,6 +199,21 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<Map<String, dynamic>> getDashboard() async {
+    final token = await getToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/dashboard'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load dashboard');
+    }
+
+    return jsonDecode(response.body);
+  }
+
   static Future<void> updatePreferences(Map<String, dynamic> data) async {
     final token = await getToken();
 

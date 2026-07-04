@@ -42,17 +42,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> loadDashboardData() async {
     try {
-      final data = await ApiService.getDashboardSummary();
-      final expenses = await ApiService.getExpenses();
+      final data = await ApiService.getDashboard();
+      final summary = data['summary'];
+
       setState(() {
         totalExpenses =
-            double.tryParse(data['total_expenses'].toString())?.toInt() ?? 0;
+            double.tryParse(summary['total_expenses'].toString())?.toInt() ?? 0;
 
-        totalCount = int.tryParse(data['total_count'].toString()) ?? 0;
+        totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
 
-        totalCategories = int.tryParse(data['categories'].toString()) ?? 0;
+        totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
 
-        recentExpenses = expenses.take(3).toList();
+        recentExpenses = List<Map<String, dynamic>>.from(
+          data['recent_expenses'],
+        );
 
         isLoading = false;
       });
