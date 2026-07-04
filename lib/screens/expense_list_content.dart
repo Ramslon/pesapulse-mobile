@@ -16,6 +16,20 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
   List filteredExpenses = [];
 
+  String selectedFilter = 'All';
+
+  final List<String> filterCategories = [
+    'All',
+    'Food',
+    'Transport',
+    'Shopping',
+    'Bills',
+    'Entertainment',
+    'Health',
+    'Education',
+    'Other',
+  ];
+
   TextEditingController searchController = TextEditingController();
 
   final ScrollController scrollController = ScrollController();
@@ -65,7 +79,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
               sum + (double.tryParse(item['amount'].toString()) ?? 0),
         );
 
-        filteredExpenses = expenses;
+        filterExpenses();
 
         currentPage++;
 
@@ -87,12 +101,24 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
     }
   }
 
-  void searchExpenses(String query) {
-    final results = expenses.where((expense) {
-      final title = expense['title'].toString().toLowerCase();
+  void filterExpenses() {
+    List results = expenses;
 
-      return title.contains(query.toLowerCase());
-    }).toList();
+    // Apply category filter
+    if (selectedFilter != 'All') {
+      results = results.where((expense) {
+        return expense['category'] == selectedFilter;
+      }).toList();
+    }
+
+    // Apply search filter
+    final query = searchController.text.trim().toLowerCase();
+
+    if (query.isNotEmpty) {
+      results = results.where((expense) {
+        return expense['title'].toString().toLowerCase().contains(query);
+      }).toList();
+    }
 
     setState(() {
       filteredExpenses = results;
@@ -200,7 +226,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
                 ),
                 child: TextField(
                   controller: searchController,
-                  onChanged: searchExpenses,
+                  onChanged: (_) => filterExpenses(),
                   decoration: InputDecoration(
                     hintText: "Search expenses...",
                     prefixIcon: const Icon(Icons.search),
@@ -222,6 +248,54 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: SizedBox(
+                  height: 45,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: filterCategories.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final category = filterCategories[index];
+
+                      final selected = category == selectedFilter;
+
+                      return ChoiceChip(
+                        label: Text(category),
+
+                        selected: selected,
+
+                        selectedColor: Theme.of(context).colorScheme.primary,
+
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+
+                        labelStyle: TextStyle(
+                          color: selected ? Colors.white : null,
+                          fontWeight: FontWeight.w600,
+                        ),
+
+                        showCheckmark: false,
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+
+                        onSelected: (_) {
+                          setState(() {
+                            selectedFilter = category;
+                          });
+
+                          filterExpenses();
+                        },
+                      );
+                    },
                   ),
                 ),
               ),
