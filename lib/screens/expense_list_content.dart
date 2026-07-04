@@ -136,13 +136,19 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
   }
 
   Future<void> refreshExpenses() async {
-    expenses.clear();
-    filteredExpenses.clear();
+    setState(() {
+      isLoading = true;
 
-    currentPage = 1;
-    hasMore = true;
+      expenses.clear();
+      filteredExpenses.clear();
+
+      currentPage = 1;
+      hasMore = true;
+    });
 
     await fetchExpenses();
+
+    filterExpenses();
   }
 
   void filterExpenses() {
@@ -336,6 +342,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
     return RefreshIndicator(
       onRefresh: refreshExpenses,
+      color: Theme.of(context).colorScheme.primary,
       child: CustomScrollView(
         controller: scrollController,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
