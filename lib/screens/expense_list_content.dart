@@ -19,6 +19,8 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
   String selectedFilter = 'All';
 
+  String selectedSort = 'Newest';
+
   final List<String> filterCategories = [
     'All',
     'Food',
@@ -149,9 +151,112 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
       }).toList();
     }
 
+    sortExpenses();
+
     setState(() {
       filteredExpenses = results;
     });
+  }
+
+  void sortExpenses() {
+    switch (selectedSort) {
+      case 'Newest':
+        filteredExpenses.sort(
+          (a, b) => DateTime.parse(
+            b['expense_date'],
+          ).compareTo(DateTime.parse(a['expense_date'])),
+        );
+        break;
+
+      case 'Oldest':
+        filteredExpenses.sort(
+          (a, b) => DateTime.parse(
+            a['expense_date'],
+          ).compareTo(DateTime.parse(b['expense_date'])),
+        );
+        break;
+
+      case 'Highest Amount':
+        filteredExpenses.sort(
+          (a, b) => (double.tryParse(b['amount'].toString()) ?? 0).compareTo(
+            double.tryParse(a['amount'].toString()) ?? 0,
+          ),
+        );
+        break;
+
+      case 'Lowest Amount':
+        filteredExpenses.sort(
+          (a, b) => (double.tryParse(a['amount'].toString()) ?? 0).compareTo(
+            double.tryParse(b['amount'].toString()) ?? 0,
+          ),
+        );
+        break;
+
+      case 'A-Z':
+        filteredExpenses.sort(
+          (a, b) => a['title'].toString().compareTo(b['title'].toString()),
+        );
+        break;
+
+      case 'Z-A':
+        filteredExpenses.sort(
+          (a, b) => b['title'].toString().compareTo(a['title'].toString()),
+        );
+        break;
+    }
+  }
+
+  void showSortSheet() {
+    final options = [
+      'Newest',
+      'Oldest',
+      'Highest Amount',
+      'Lowest Amount',
+      'A-Z',
+      'Z-A',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const ListTile(
+                title: Text(
+                  "Sort Expenses",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+
+              ...options.map((option) {
+                return RadioListTile<String>(
+                  value: option,
+                  groupValue: selectedSort,
+                  title: Text(option),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedSort = value!;
+                    });
+
+                    sortExpenses();
+
+                    setState(() {});
+
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   String formatDate(String date) {
@@ -258,289 +363,299 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
           ),
         ),
 
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: TextField(
-            controller: searchController,
-            onChanged: (_) => filterExpenses(),
-            decoration: InputDecoration(
-              hintText: "Search expenses...",
-              prefixIcon: const Icon(Icons.search),
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: SizedBox(
-            height: 45,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: filterCategories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final category = filterCategories[index];
-
-                final selected = category == selectedFilter;
-
-                return ChoiceChip(
-                  label: Text(category),
-
-                  selected: selected,
-
-                  selectedColor: Theme.of(context).colorScheme.primary,
-
-                  backgroundColor: Theme.of(
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: searchController,
+                onChanged: (_) => filterExpenses(),
+                decoration: InputDecoration(
+                  hintText: "Search expenses...",
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Theme.of(
                     context,
                   ).colorScheme.surfaceContainerHighest,
-
-                  labelStyle: TextStyle(
-                    color: selected ? Colors.white : null,
-                    fontWeight: FontWeight.w600,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
                   ),
-
-                  showCheckmark: false,
-
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
                   ),
-
-                  onSelected: (_) {
-                    setState(() {
-                      selectedFilter = category;
-                    });
-
-                    filterExpenses();
-                  },
-                );
-              },
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
+            const SizedBox(width: 10),
 
-        const SizedBox(height: 10),
+            IconButton(onPressed: showSortSheet, icon: const Icon(Icons.tune)),
 
-        Expanded(
-          child: ListView.builder(
-            controller: scrollController,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SizedBox(
+                height: 45,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: filterCategories.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final category = filterCategories[index];
 
-            itemCount: filteredExpenses.length + (hasMore ? 1 : 0),
+                    final selected = category == selectedFilter;
 
-            itemBuilder: (context, index) {
-              if (index == filteredExpenses.length) {
-                return const Padding(
-                  padding: EdgeInsets.all(20),
+                    return ChoiceChip(
+                      label: Text(category),
 
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
+                      selected: selected,
 
-              final expense = filteredExpenses[index];
+                      selectedColor: Theme.of(context).colorScheme.primary,
 
-              return Dismissible(
-                key: ValueKey(expense['id']),
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
 
-                confirmDismiss: (direction) async {
-                  if (direction == DismissDirection.startToEnd) {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EditExpenseScreen(expense: expense),
+                      labelStyle: TextStyle(
+                        color: selected ? Colors.white : null,
+                        fontWeight: FontWeight.w600,
                       ),
+
+                      showCheckmark: false,
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+
+                      onSelected: (_) {
+                        setState(() {
+                          selectedFilter = category;
+                        });
+
+                        filterExpenses();
+                      },
                     );
+                  },
+                ),
+              ),
+            ),
 
-                    if (result == true) {
-                      expenses.clear();
-                      filteredExpenses.clear();
-                      currentPage = 1;
-                      hasMore = true;
+            const SizedBox(height: 10),
 
-                      fetchExpenses();
-                    }
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
 
-                    return false;
+                itemCount: filteredExpenses.length + (hasMore ? 1 : 0),
+
+                itemBuilder: (context, index) {
+                  if (index == filteredExpenses.length) {
+                    return const Padding(
+                      padding: EdgeInsets.all(20),
+
+                      child: Center(child: CircularProgressIndicator()),
+                    );
                   }
 
-                  return await showDialog<bool>(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text("Delete Expense"),
-                      content: const Text(
-                        "Are you sure you want to delete this expense?",
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text("Cancel"),
-                        ),
+                  final expense = filteredExpenses[index];
 
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.red,
+                  return Dismissible(
+                    key: ValueKey(expense['id']),
+
+                    confirmDismiss: (direction) async {
+                      if (direction == DismissDirection.startToEnd) {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditExpenseScreen(expense: expense),
                           ),
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text("Delete"),
+                        );
+
+                        if (result == true) {
+                          expenses.clear();
+                          filteredExpenses.clear();
+                          currentPage = 1;
+                          hasMore = true;
+
+                          fetchExpenses();
+                        }
+
+                        return false;
+                      }
+
+                      return await showDialog<bool>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text("Delete Expense"),
+                          content: const Text(
+                            "Are you sure you want to delete this expense?",
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel"),
+                            ),
+
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.red,
+                              ),
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text("Delete"),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  );
-                },
+                      );
+                    },
 
-                onDismissed: (_) async {
-                  await ApiService.deleteExpense(expense['id']);
+                    onDismissed: (_) async {
+                      await ApiService.deleteExpense(expense['id']);
 
-                  expenses.removeWhere((e) => e['id'] == expense['id']);
+                      expenses.removeWhere((e) => e['id'] == expense['id']);
 
-                  filterExpenses();
+                      filterExpenses();
 
-                  setState(() {});
+                      setState(() {});
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Expense deleted")),
-                  );
-                },
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Expense deleted")),
+                      );
+                    },
 
-                background: Container(
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.edit, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text(
-                        "Edit",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    background: Container(
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                    ],
-                  ),
-                ),
-
-                secondaryBackground: Container(
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        "Delete",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Icon(Icons.delete, color: Colors.white),
-                    ],
-                  ),
-                ),
-
-                child: Card(
-                  elevation: 1.5,
-
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
-                  ),
-
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: const Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: categoryColor(
-                                expense['category'],
-                              ).withOpacity(.12),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              expense['category'],
-                              style: TextStyle(
-                                color: categoryColor(expense['category']),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 12),
-
+                          Icon(Icons.edit, color: Colors.white),
+                          SizedBox(width: 8),
                           Text(
-                            expense['title'],
-                            style: const TextStyle(
+                            "Edit",
+                            style: TextStyle(
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 18,
                             ),
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          Text(
-                            formatDate(expense['expense_date']),
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          Row(
-                            children: [
-                              Text(
-                                "KES ${expense['amount']}",
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-              );
-            },
-          ),
+
+                    secondaryBackground: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            "Delete",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.delete, color: Colors.white),
+                        ],
+                      ),
+                    ),
+
+                    child: Card(
+                      elevation: 1.5,
+
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: categoryColor(
+                                    expense['category'],
+                                  ).withOpacity(.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  expense['category'],
+                                  style: TextStyle(
+                                    color: categoryColor(expense['category']),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              Text(
+                                expense['title'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Text(
+                                formatDate(expense['expense_date']),
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+
+                              const SizedBox(height: 18),
+
+                              Row(
+                                children: [
+                                  Text(
+                                    "KES ${expense['amount']}",
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ],
     );
