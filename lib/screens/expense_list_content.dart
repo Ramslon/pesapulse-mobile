@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:pesapulse_mobile/widgets/expense_loading_widget.dart';
 
 import '../services/api_services.dart';
 import 'edit_expense_screen.dart';
 import '../widgets/empty_expense_state.dart';
 import '../widgets/no_filter_results_widget.dart';
+import '../widgets/expense_loading_skeleton.dart';
 
 class ExpenseListContent extends StatefulWidget {
   const ExpenseListContent({super.key});
@@ -333,7 +333,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const ExpenseLoadingWidget();
+      return const ExpenseLoadingSkeleton();
     }
 
     if (expenses.isEmpty) {
