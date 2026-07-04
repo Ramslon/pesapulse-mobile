@@ -361,131 +361,191 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
                     final expense = filteredExpenses[index];
 
-                    return Card(
-                      elevation: 1.5,
+                    return Dismissible(
+                      key: ValueKey(expense['id']),
 
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 8,
-                      ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  EditExpenseScreen(expense: expense),
+                            ),
+                          );
 
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
+                          if (result == true) {
+                            expenses.clear();
+                            filteredExpenses.clear();
+                            currentPage = 1;
+                            hasMore = true;
 
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
+                            fetchExpenses();
+                          }
 
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: categoryColor(
-                                    expense['category'],
-                                  ).withOpacity(.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  expense['category'],
-                                  style: TextStyle(
-                                    color: categoryColor(expense['category']),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
+                          return false;
+                        }
+
+                        return await showDialog<bool>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text("Delete Expense"),
+                            content: const Text(
+                              "Are you sure you want to delete this expense?",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text("Cancel"),
                               ),
 
-                              const SizedBox(height: 12),
-
-                              Text(
-                                expense['title'],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.red,
                                 ),
-                              ),
-
-                              const SizedBox(height: 5),
-
-                              Text(
-                                formatDate(expense['expense_date']),
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-
-                              const SizedBox(height: 18),
-
-                              Row(
-                                children: [
-                                  Text(
-                                    "KES ${expense['amount']}",
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                    ),
-                                  ),
-
-                                  const Spacer(),
-
-                                  IconButton(
-                                    icon: const Icon(Icons.edit_outlined),
-                                    onPressed: () async {
-                                      final result = await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => EditExpenseScreen(
-                                            expense: expense,
-                                          ),
-                                        ),
-                                      );
-
-                                      if (result == true) {
-                                        expenses.clear();
-                                        filteredExpenses.clear();
-                                        currentPage = 1;
-                                        hasMore = true;
-                                        fetchExpenses();
-                                      }
-                                    },
-                                  ),
-
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () async {
-                                      await ApiService.deleteExpense(
-                                        expense['id'],
-                                      );
-
-                                      expenses.removeAt(index);
-
-                                      filterExpenses();
-
-                                      setState(() {});
-
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text("Expense deleted"),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text("Delete"),
                               ),
                             ],
+                          ),
+                        );
+                      },
+
+                      onDismissed: (_) async {
+                        await ApiService.deleteExpense(expense['id']);
+
+                        expenses.removeWhere((e) => e['id'] == expense['id']);
+
+                        filterExpenses();
+
+                        setState(() {});
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Expense deleted")),
+                        );
+                      },
+
+                      background: Container(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.edit, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text(
+                              "Edit",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      secondaryBackground: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              "Delete",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(Icons.delete, color: Colors.white),
+                          ],
+                        ),
+                      ),
+
+                      child: Card(
+                        elevation: 1.5,
+
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: categoryColor(
+                                      expense['category'],
+                                    ).withOpacity(.12),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    expense['category'],
+                                    style: TextStyle(
+                                      color: categoryColor(expense['category']),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                Text(
+                                  expense['title'],
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 5),
+
+                                Text(
+                                  formatDate(expense['expense_date']),
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+
+                                const SizedBox(height: 18),
+
+                                Row(
+                                  children: [
+                                    Text(
+                                      "KES ${expense['amount']}",
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
