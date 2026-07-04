@@ -28,6 +28,8 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
   bool isFetchingMore = false;
 
+  double totalAmount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +58,12 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
       setState(() {
         expenses.addAll(newExpenses);
+
+        totalAmount = expenses.fold(
+          0,
+          (sum, item) =>
+              sum + (double.tryParse(item['amount'].toString()) ?? 0),
+        );
 
         filteredExpenses = expenses;
 
@@ -108,23 +116,117 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
         ? const Center(child: Text('No expenses found'))
         : Column(
             children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 20, 20, 5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Expenses",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    SizedBox(height: 6),
+
+                    Text(
+                      "Track and manage your spending",
+                      style: TextStyle(color: Colors.grey, fontSize: 15),
+                    ),
+                  ],
+                ),
+              ),
+
               Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 26,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(.12),
+                          child: Icon(
+                            Icons.account_balance_wallet,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
 
-                child: TextField(
-                  controller: searchController,
+                        const SizedBox(width: 18),
 
-                  onChanged: searchExpenses,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "KES ${totalAmount.toStringAsFixed(0)}",
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
 
-                  decoration: const InputDecoration(
-                    hintText: 'Search expenses...',
+                              const SizedBox(height: 4),
 
-                    prefixIcon: Icon(Icons.search),
-
-                    border: OutlineInputBorder(),
+                              Text(
+                                "${expenses.length} Transactions",
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
+                child: TextField(
+                  controller: searchController,
+                  onChanged: searchExpenses,
+                  decoration: InputDecoration(
+                    hintText: "Search expenses...",
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
 
               Expanded(
                 child: ListView.builder(
