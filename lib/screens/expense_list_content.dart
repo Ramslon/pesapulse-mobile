@@ -4,6 +4,7 @@ import 'package:pesapulse_mobile/widgets/expense_loading_widget.dart';
 import '../services/api_services.dart';
 import 'edit_expense_screen.dart';
 import '../widgets/empty_expense_state.dart';
+import '../widgets/no_filter_results_widget.dart';
 
 class ExpenseListContent extends StatefulWidget {
   const ExpenseListContent({super.key});
@@ -149,11 +150,30 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
     // Category
     if (selectedCategory != 'All') {
       temp = temp.where((expense) {
-        return expense['category'] == selectedCategory;
+        return expense['category'].toString().toLowerCase() ==
+            selectedCategory.toLowerCase();
       }).toList();
     }
 
+    print('-------------------------');
+    print('Selected category: $selectedCategory');
+    print('Selected date: $selectedDateFilter');
+
+    for (var expense in expenses) {
+      print(
+        'Title: ${expense['title']} | '
+        'Category: ${expense['category']} | '
+        'Date: ${expense['expense_date']}',
+      );
+    }
+
     applyDateFilter(temp);
+
+    print('Before date filter: ${temp.length}');
+
+    applyDateFilter(temp);
+
+    print('After date filter: ${filteredExpenses.length}');
 
     sortExpenses();
 
@@ -262,23 +282,26 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
   void applyDateFilter(List source) {
     final now = DateTime.now();
 
+    final today = DateTime(now.year, now.month, now.day);
+
     filteredExpenses = source.where((expense) {
-      final date = DateTime.parse(expense['expense_date']);
+      final rawDate = DateTime.parse(expense['expense_date']);
+
+      final date = DateTime(rawDate.year, rawDate.month, rawDate.day);
 
       switch (selectedDateFilter) {
         case 'Today':
-          return date.year == now.year &&
-              date.month == now.month &&
-              date.day == now.day;
+          return date == today;
 
         case 'This Week':
-          final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+          final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
 
-          return date.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
-              date.isBefore(now.add(const Duration(days: 1)));
+          final endOfWeek = startOfWeek.add(const Duration(days: 6));
+
+          return !date.isBefore(startOfWeek) && !date.isAfter(endOfWeek);
 
         case 'This Month':
-          return date.year == now.year && date.month == now.month;
+          return date.year == today.year && date.month == today.month;
 
         default:
           return true;
@@ -315,9 +338,12 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
       return const ExpenseLoadingWidget();
     }
 
-    if (filteredExpenses.isEmpty) {
+    if (expenses.isEmpty) {
       return const EmptyExpenseState();
     }
+
+    print('Expenses: ${expenses.length}');
+    print('Filtered: ${filteredExpenses.length}');
 
     return CustomScrollView(
       controller: scrollController,
@@ -548,6 +574,12 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
   }
 
   Widget _buildExpenseList() {
+    if (filteredExpenses.isEmpty) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: NoFilterResultsWidget(),
+      );
+    }
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         final expense = filteredExpenses[index];
