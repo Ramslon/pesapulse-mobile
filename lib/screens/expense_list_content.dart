@@ -44,6 +44,34 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
   double totalAmount = 0;
 
+  Color categoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Colors.orange;
+
+      case 'transport':
+        return Colors.blue;
+
+      case 'shopping':
+        return Colors.purple;
+
+      case 'bills':
+        return Colors.red;
+
+      case 'health':
+        return Colors.green;
+
+      case 'education':
+        return Colors.indigo;
+
+      case 'entertainment':
+        return Colors.pink;
+
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -123,6 +151,20 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
     setState(() {
       filteredExpenses = results;
     });
+  }
+
+  String formatDate(String date) {
+    final expenseDate = DateTime.parse(date);
+
+    final today = DateTime.now();
+
+    final difference = today.difference(expenseDate).inDays;
+
+    if (difference == 0) return "Today";
+
+    if (difference == 1) return "Yesterday";
+
+    return "${expenseDate.day}/${expenseDate.month}/${expenseDate.year}";
   }
 
   @override
@@ -320,78 +362,128 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
                     final expense = filteredExpenses[index];
 
                     return Card(
-                      elevation: 3,
+                      elevation: 1.5,
+
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
 
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                      margin: const EdgeInsets.all(10),
 
                       child: Padding(
                         padding: const EdgeInsets.all(10),
 
-                        child: ListTile(
-                          title: Text(expense['title']),
-
-                          subtitle: Column(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-
                             children: [
-                              Text('Category: ${expense['category']}'),
-
-                              Text('Date: ${expense['expense_date']}'),
-                            ],
-                          ),
-
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-
-                                onPressed: () async {
-                                  final result = await Navigator.push(
-                                    context,
-
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          EditExpenseScreen(expense: expense),
-                                    ),
-                                  );
-
-                                  if (result == true) {
-                                    expenses.clear();
-
-                                    filteredExpenses.clear();
-
-                                    currentPage = 1;
-
-                                    hasMore = true;
-
-                                    fetchExpenses();
-                                  }
-                                },
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: categoryColor(
+                                    expense['category'],
+                                  ).withOpacity(.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  expense['category'],
+                                  style: TextStyle(
+                                    color: categoryColor(expense['category']),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
 
-                              IconButton(
-                                icon: const Icon(Icons.delete),
+                              const SizedBox(height: 12),
 
-                                onPressed: () async {
-                                  await ApiService.deleteExpense(expense['id']);
+                              Text(
+                                expense['title'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
 
-                                  expenses.removeAt(index);
+                              const SizedBox(height: 5),
 
-                                  filteredExpenses = expenses;
+                              Text(
+                                formatDate(expense['expense_date']),
+                                style: const TextStyle(color: Colors.grey),
+                              ),
 
-                                  setState(() {});
+                              const SizedBox(height: 18),
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Expense deleted'),
+                              Row(
+                                children: [
+                                  Text(
+                                    "KES ${expense['amount']}",
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                     ),
-                                  );
-                                },
+                                  ),
+
+                                  const Spacer(),
+
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined),
+                                    onPressed: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => EditExpenseScreen(
+                                            expense: expense,
+                                          ),
+                                        ),
+                                      );
+
+                                      if (result == true) {
+                                        expenses.clear();
+                                        filteredExpenses.clear();
+                                        currentPage = 1;
+                                        hasMore = true;
+                                        fetchExpenses();
+                                      }
+                                    },
+                                  ),
+
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () async {
+                                      await ApiService.deleteExpense(
+                                        expense['id'],
+                                      );
+
+                                      expenses.removeAt(index);
+
+                                      filterExpenses();
+
+                                      setState(() {});
+
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Expense deleted"),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                             ],
                           ),
