@@ -21,6 +21,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   final TextEditingController dateController = TextEditingController();
 
+  final _formKey = GlobalKey<FormState>();
+
   List<String> categories = [
     'Food',
     'Transport',
@@ -37,6 +39,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   bool isLoading = false;
 
   void addExpense() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
     String title = titleController.text.trim();
 
     String amount = amountController.text.trim();
@@ -46,6 +51,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     String description = descriptionController.text.trim();
 
     String expenseDate = dateController.text.trim();
+
+    if (isLoading) return;
 
     setState(() {
       isLoading = true;
@@ -70,7 +77,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           const SnackBar(content: Text('Expense added successfully')),
         );
 
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -172,189 +179,251 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                   const SizedBox(height: 25),
 
-                  Card(
-                    elevation: 1.5,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: titleController,
-                            decoration: InputDecoration(
-                              labelText: "Expense Title",
-                              prefixIcon: const Icon(Icons.title),
-                              filled: true,
-                              fillColor: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
+                  Form(
+                    key: _formKey,
+                    child: Card(
+                      elevation: 1.5,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return "Please enter an expense title";
+                                }
+
+                                if (value.trim().length < 3) {
+                                  return "Title is too short";
+                                }
+
+                                return null;
+                              },
+                              textInputAction: TextInputAction.next,
+                              controller: titleController,
+                              decoration: InputDecoration(
+                                labelText: "Expense Title",
+                                prefixIcon: const Icon(Icons.title),
+                                filled: true,
+                                fillColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
                                 ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 22),
-
-                          TextField(
-                            controller: amountController,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              labelText: "Amount",
-                              prefixIcon: const Icon(Icons.payment_outlined),
-                              filled: true,
-                              fillColor: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
                                 ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 22),
-
-                          DropdownButtonFormField<String>(
-                            value: selectedCategory,
-
-                            decoration: InputDecoration(
-                              labelText: "Category",
-                              prefixIcon: const Icon(Icons.category_outlined),
-                              filled: true,
-                              fillColor: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
                                 ),
                               ),
                             ),
 
-                            items: categories.map((category) {
-                              return DropdownMenuItem(
-                                value: category,
-                                child: Text(category),
-                              );
-                            }).toList(),
+                            const SizedBox(height: 22),
 
-                            onChanged: (value) {
-                              setState(() {
-                                selectedCategory = value!;
-                              });
-                            },
-                          ),
-
-                          const SizedBox(height: 22),
-
-                          TextField(
-                            controller: dateController,
-                            readOnly: true,
-                            onTap: pickExpenseDate,
-                            decoration: InputDecoration(
-                              labelText: "Expense Date",
-                              hintText: "Select date",
-                              prefixIcon: const Icon(
-                                Icons.calendar_today_outlined,
-                              ),
-                              suffixIcon: const Icon(Icons.arrow_drop_down),
-                              filled: true,
-                              fillColor: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
+                            TextFormField(
+                              controller: amountController,
+                              textInputAction: TextInputAction.next,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              decoration: InputDecoration(
+                                labelText: "Amount",
+                                prefixIcon: const Icon(Icons.payment_outlined),
+                                filled: true,
+                                fillColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 22),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return "Please enter an amount";
+                                }
 
-                          TextField(
-                            controller: descriptionController,
-                            maxLines: 4,
-                            decoration: InputDecoration(
-                              labelText: "Description",
-                              prefixIcon: const Icon(Icons.notes_outlined),
-                              alignLabelWithHint: true,
-                              filled: true,
-                              fillColor: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
+                                final amount = double.tryParse(value);
+
+                                if (amount == null) {
+                                  return "Enter a valid number";
+                                }
+
+                                if (amount <= 0) {
+                                  return "Amount must be greater than zero";
+                                }
+
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 22),
+
+                            DropdownButtonFormField<String>(
+                              value: selectedCategory,
+
+                              decoration: InputDecoration(
+                                labelText: "Category",
+                                prefixIcon: const Icon(Icons.category_outlined),
+                                filled: true,
+                                fillColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
                                 ),
                               ),
+
+                              items: categories.map((category) {
+                                return DropdownMenuItem(
+                                  value: category,
+                                  child: Text(category),
+                                );
+                              }).toList(),
+
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedCategory = value!;
+                                });
+                              },
                             ),
-                          ),
 
-                          const SizedBox(height: 30),
+                            const SizedBox(height: 22),
 
-                          SizedBox(
-                            width: double.infinity,
-                            height: 56,
+                            TextFormField(
+                              textInputAction: TextInputAction.next,
+                              controller: dateController,
+                              readOnly: true,
+                              onTap: pickExpenseDate,
+                              decoration: InputDecoration(
+                                labelText: "Expense Date",
+                                hintText: "Select date",
+                                prefixIcon: const Icon(
+                                  Icons.calendar_today_outlined,
+                                ),
+                                suffixIcon: const Icon(Icons.arrow_drop_down),
+                                filled: true,
+                                fillColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return "Select an expense date";
+                                }
 
-                            child: CustomButton(
-                              text: 'Save Expense',
-                              isLoading: isLoading,
-                              onPressed: addExpense,
+                                return null;
+                              },
                             ),
-                          ),
-                          const SizedBox(height: 25),
-                        ],
+                            const SizedBox(height: 22),
+
+                            TextFormField(
+                              textInputAction: TextInputAction.done,
+                              controller: descriptionController,
+                              maxLines: 4,
+                              decoration: InputDecoration(
+                                labelText: "Description",
+                                prefixIcon: const Icon(Icons.notes_outlined),
+                                alignLabelWithHint: true,
+                                filled: true,
+                                fillColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value != null && value.length > 250) {
+                                  return "Maximum 250 characters";
+                                }
+
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            SizedBox(
+                              width: double.infinity,
+                              height: 56,
+
+                              child: CustomButton(
+                                text: 'Save Expense',
+                                isLoading: isLoading,
+                                onPressed: addExpense,
+                              ),
+                            ),
+                            const SizedBox(height: 25),
+                          ],
+                        ),
                       ),
                     ),
                   ),
