@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class CustomButton extends StatelessWidget {
-
   final String text;
 
   final VoidCallback onPressed;
@@ -11,7 +10,6 @@ class CustomButton extends StatelessWidget {
   final bool isLoading;
 
   const CustomButton({
-
     super.key,
 
     required this.text,
@@ -25,27 +23,17 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return SizedBox(
-
       width: double.infinity,
 
       height: 50,
 
       child: ElevatedButton.icon(
+        onPressed: isLoading ? null : onPressed,
 
-        onPressed:
-            isLoading ? null : onPressed,
+        icon: icon != null ? Icon(icon) : const SizedBox(),
 
-        icon: icon != null
-            ? Icon(icon)
-            : const SizedBox(),
-
-        label: isLoading
-
-            ? const CircularProgressIndicator()
-
-            : Text(text),
+        label: isLoading ? const CircularProgressIndicator() : Text(text),
       ),
     );
   }

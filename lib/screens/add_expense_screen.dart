@@ -34,6 +34,28 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     'Other',
   ];
 
+  final Map<String, IconData> categoryIcons = {
+    'Food': Icons.restaurant,
+    'Transport': Icons.directions_car,
+    'Shopping': Icons.shopping_bag,
+    'Bills': Icons.receipt_long,
+    'Entertainment': Icons.movie,
+    'Health': Icons.favorite,
+    'Education': Icons.school,
+    'Other': Icons.category,
+  };
+
+  final Map<String, Color> categoryColors = {
+    'Food': Colors.orange,
+    'Transport': Colors.blue,
+    'Shopping': Colors.purple,
+    'Bills': Colors.red,
+    'Entertainment': Colors.pink,
+    'Health': Colors.green,
+    'Education': Colors.indigo,
+    'Other': Colors.grey,
+  };
+
   String selectedCategory = 'Food';
 
   bool isLoading = false;
@@ -179,6 +201,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                   const SizedBox(height: 25),
 
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Expense Details",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
                   Form(
                     key: _formKey,
                     child: Card(
@@ -241,6 +275,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                   ),
                               decoration: InputDecoration(
                                 labelText: "Amount",
+                                prefixText: "KES ",
                                 prefixIcon: const Icon(Icons.payment_outlined),
                                 filled: true,
                                 fillColor: Theme.of(
@@ -282,6 +317,23 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               },
                             ),
 
+                            const SizedBox(height: 12),
+
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [100, 200, 500, 1000, 2000].map((
+                                amount,
+                              ) {
+                                return ActionChip(
+                                  label: Text("KES $amount"),
+                                  onPressed: () {
+                                    amountController.text = amount.toString();
+                                  },
+                                );
+                              }).toList(),
+                            ),
+
                             const SizedBox(height: 22),
 
                             DropdownButtonFormField<String>(
@@ -289,7 +341,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                               decoration: InputDecoration(
                                 labelText: "Category",
-                                prefixIcon: const Icon(Icons.category_outlined),
+
+                                prefixIcon: Icon(
+                                  categoryIcons[selectedCategory],
+                                  color: categoryColors[selectedCategory],
+                                ),
                                 filled: true,
                                 fillColor: Theme.of(
                                   context,
@@ -315,7 +371,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               items: categories.map((category) {
                                 return DropdownMenuItem(
                                   value: category,
-                                  child: Text(category),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        categoryIcons[category],
+                                        color: categoryColors[category],
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(category),
+                                    ],
+                                  ),
                                 );
                               }).toList(),
 
@@ -371,10 +437,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             ),
                             const SizedBox(height: 22),
 
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "Additional Notes",
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
                             TextFormField(
                               textInputAction: TextInputAction.done,
                               controller: descriptionController,
-                              maxLines: 4,
+                              maxLines: 5,
+                              maxLength: 250,
                               decoration: InputDecoration(
                                 labelText: "Description",
                                 prefixIcon: const Icon(Icons.notes_outlined),
@@ -416,7 +494,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               height: 56,
 
                               child: CustomButton(
-                                text: 'Save Expense',
+                                text: "Save Expense",
                                 isLoading: isLoading,
                                 onPressed: addExpense,
                               ),
