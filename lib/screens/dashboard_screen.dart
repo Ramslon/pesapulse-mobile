@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pesapulse_mobile/screens/expense_screen.dart';
 import '../widgets/dashboard_card.dart';
-import '../widgets/loading_widget.dart';
+import '../widgets/dashboard_loading_skeleton.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/recent_expense_tile.dart';
 
@@ -108,7 +108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const LoadingWidget();
+      return const DashboardLoadingSkeleton();
     }
 
     return Scaffold(
