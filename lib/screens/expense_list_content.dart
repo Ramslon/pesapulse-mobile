@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../services/api_services.dart';
 import 'edit_expense_screen.dart';
@@ -15,6 +16,8 @@ class ExpenseListContent extends StatefulWidget {
 
 class _ExpenseListContentState extends State<ExpenseListContent> {
   List expenses = [];
+
+  final NumberFormat currencyFormatter = NumberFormat("#,##0");
 
   List filteredExpenses = [];
 
@@ -149,6 +152,22 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
     await fetchExpenses();
 
     filterExpenses();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 1),
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 8),
+            Text("Expenses updated"),
+          ],
+        ),
+      ),
+    );
   }
 
   void filterExpenses() {
@@ -345,6 +364,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
       color: Theme.of(context).colorScheme.primary,
       child: CustomScrollView(
         controller: scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: [
           SliverToBoxAdapter(child: _buildHeader()),
@@ -361,15 +381,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
           SliverToBoxAdapter(child: const SizedBox(height: 20)),
 
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-
-            switchInCurve: Curves.easeOut,
-
-            switchOutCurve: Curves.easeIn,
-
-            child: _buildExpenseList(),
-          ),
+          _buildExpenseList(),
 
           if (hasMore)
             const SliverToBoxAdapter(
@@ -433,7 +445,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "KES ${totalAmount.toStringAsFixed(0)}",
+                      "KES ${currencyFormatter.format(totalAmount)}",
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -443,7 +455,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
                     const SizedBox(height: 4),
 
                     Text(
-                      "${expenses.length} Transactions",
+                      "${expenses.length} ${expenses.length == 1 ? "Transaction" : "Transactions"}",
                       style: const TextStyle(color: Colors.grey),
                     ),
                   ],
@@ -464,22 +476,41 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
           Expanded(
             child: TextField(
               controller: searchController,
+              textInputAction: TextInputAction.search,
               onChanged: (_) => filterExpenses(),
+
               decoration: InputDecoration(
                 hintText: "Search expenses...",
+
                 prefixIcon: const Icon(Icons.search),
+
+                suffixIcon: searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          searchController.clear();
+                          filterExpenses();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+
                 filled: true,
+
                 fillColor: Theme.of(
                   context,
                 ).colorScheme.surfaceContainerHighest,
+
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
+
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
+
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide(
@@ -492,7 +523,16 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
           const SizedBox(width: 10),
 
-          IconButton(onPressed: showSortSheet, icon: const Icon(Icons.tune)),
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: IconButton(
+              onPressed: showSortSheet,
+              icon: const Icon(Icons.tune),
+            ),
+          ),
         ],
       ),
     );
@@ -598,7 +638,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
 
   Widget _buildExpenseCard(Map<String, dynamic> expense) {
     return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 250),
 
       tween: Tween(begin: 0, end: 1),
 
@@ -726,7 +766,9 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
         ),
 
         child: Card(
-          elevation: 1.5,
+          elevation: 0,
+
+          color: Theme.of(context).colorScheme.surface,
 
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
 
@@ -734,11 +776,24 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
             borderRadius: BorderRadius.circular(18),
           ),
 
-          child: Padding(
-            padding: const EdgeInsets.all(10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditExpenseScreen(expense: expense),
+                ),
+              );
+
+              if (result == true) {
+                refreshExpenses();
+              }
+            },
 
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -816,6 +871,9 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
           color: selected ? Colors.white : null,
           fontWeight: FontWeight.w600,
         ),
+
+        showCheckmark: false,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
 
         selected: selected,
 
