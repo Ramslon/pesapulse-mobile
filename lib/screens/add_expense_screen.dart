@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/input_icon_badge.dart';
 import '../services/notification_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
@@ -203,11 +204,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Expense Details",
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Row(
+                      children: [
+                        InputIconBadge(
+                          icon: Icons.receipt_long_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Expense Details",
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -240,7 +249,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               controller: titleController,
                               decoration: InputDecoration(
                                 labelText: "Expense Title",
-                                prefixIcon: const Icon(Icons.title),
+                                hintText: "e.g. Grocery Shopping",
+                                prefixIcon: InputIconBadge(
+                                  icon: Icons.edit_note_rounded,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                                 filled: true,
                                 fillColor: Theme.of(
                                   context,
@@ -259,12 +272,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                     color: Theme.of(
                                       context,
                                     ).colorScheme.primary,
+                                    width: 1.5,
                                   ),
                                 ),
                               ),
                             ),
 
-                            const SizedBox(height: 22),
+                            const SizedBox(height: 24),
 
                             TextFormField(
                               controller: amountController,
@@ -275,8 +289,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                   ),
                               decoration: InputDecoration(
                                 labelText: "Amount",
+                                hintText: "Enter amount",
                                 prefixText: "KES ",
-                                prefixIcon: const Icon(Icons.payment_outlined),
+                                prefixIcon: const InputIconBadge(
+                                  icon: Icons.payments_rounded,
+                                  color: Colors.green,
+                                ),
                                 filled: true,
                                 fillColor: Theme.of(
                                   context,
@@ -334,7 +352,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               }).toList(),
                             ),
 
-                            const SizedBox(height: 22),
+                            const SizedBox(height: 24),
 
                             DropdownButtonFormField<String>(
                               value: selectedCategory,
@@ -342,9 +360,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               decoration: InputDecoration(
                                 labelText: "Category",
 
-                                prefixIcon: Icon(
-                                  categoryIcons[selectedCategory],
-                                  color: categoryColors[selectedCategory],
+                                prefixIcon: InputIconBadge(
+                                  icon: categoryIcons[selectedCategory]!,
+                                  color: categoryColors[selectedCategory]!,
                                 ),
                                 filled: true,
                                 fillColor: Theme.of(
@@ -373,10 +391,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                   value: category,
                                   child: Row(
                                     children: [
-                                      Icon(
-                                        categoryIcons[category],
-                                        color: categoryColors[category],
-                                        size: 20,
+                                      InputIconBadge(
+                                        icon: categoryIcons[category]!,
+                                        color: categoryColors[category]!,
                                       ),
                                       const SizedBox(width: 10),
                                       Text(category),
@@ -392,7 +409,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               },
                             ),
 
-                            const SizedBox(height: 22),
+                            const SizedBox(height: 24),
 
                             TextFormField(
                               textInputAction: TextInputAction.next,
@@ -402,10 +419,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               decoration: InputDecoration(
                                 labelText: "Expense Date",
                                 hintText: "Select date",
-                                prefixIcon: const Icon(
-                                  Icons.calendar_today_outlined,
+                                prefixIcon: const InputIconBadge(
+                                  icon: Icons.calendar_month_rounded,
+                                  color: Colors.orange,
                                 ),
-                                suffixIcon: const Icon(Icons.arrow_drop_down),
+                                suffixIcon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                ),
                                 filled: true,
                                 fillColor: Theme.of(
                                   context,
@@ -435,14 +455,25 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 22),
+                            const SizedBox(height: 24),
 
                             Align(
                               alignment: Alignment.centerLeft,
-                              child: Text(
-                                "Additional Notes",
-                                style: Theme.of(context).textTheme.titleSmall
-                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              child: Row(
+                                children: [
+                                  const InputIconBadge(
+                                    icon: Icons.sticky_note_2_rounded,
+                                    color: Colors.blue,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Additional Notes",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                ],
                               ),
                             ),
 
@@ -455,7 +486,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               maxLength: 250,
                               decoration: InputDecoration(
                                 labelText: "Description",
-                                prefixIcon: const Icon(Icons.notes_outlined),
+                                hintText: "Optional notes...",
+                                prefixIcon: const Padding(
+                                  padding: EdgeInsets.only(bottom: 60),
+                                  child: InputIconBadge(
+                                    icon: Icons.notes_rounded,
+                                    color: Colors.blue,
+                                  ),
+                                ),
                                 alignLabelWithHint: true,
                                 filled: true,
                                 fillColor: Theme.of(
@@ -487,7 +525,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               },
                             ),
 
-                            const SizedBox(height: 30),
+                            const SizedBox(height: 36),
 
                             SizedBox(
                               width: double.infinity,
