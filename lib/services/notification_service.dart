@@ -84,24 +84,6 @@ class NotificationService {
           priority: Priority.high,
         );
 
-    await showNotification(
-      title: 'Budget Warning',
-      body: '82.4% of budget used',
-      color: const Color.fromARGB(255, 255, 0, 13),
-    );
-
-    await showNotification(
-      title: 'Budget Warning',
-      body: '82.4% of budget used',
-      color: const Color(0xFFFF9800),
-    );
-
-    await showNotification(
-      title: 'Budget Exceeded',
-      body: '114.7% of budget used',
-      color: const Color(0xFFD32F2F),
-    );
-
     const NotificationDetails notificationDetails = NotificationDetails(
       android: androidNotificationDetails,
     );

@@ -96,6 +96,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
       if (response.containsKey('id')) {
         await NotificationService.checkBudgetAlerts();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
