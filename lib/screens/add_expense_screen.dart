@@ -97,10 +97,35 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       if (response.containsKey('id')) {
         await NotificationService.checkBudgetAlerts();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Expense added successfully')),
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(20),
+            duration: const Duration(seconds: 2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            backgroundColor: Colors.green.shade600,
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Expense saved successfully!",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
 
-        Navigator.pop(context, true);
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
+        Navigator.pop(context, response);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -138,6 +163,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           "${pickedDate.month.toString().padLeft(2, '0')}-"
           "${pickedDate.day.toString().padLeft(2, '0')}";
     }
+  }
+
+  void clearForm() {
+    titleController.clear();
+
+    amountController.clear();
+
+    descriptionController.clear();
+
+    dateController.clear();
+
+    selectedCategory = "Food";
   }
 
   @override
@@ -527,14 +564,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                             const SizedBox(height: 36),
 
-                            SizedBox(
-                              width: double.infinity,
-                              height: 56,
-
-                              child: CustomButton(
-                                text: "Save Expense",
-                                isLoading: isLoading,
-                                onPressed: addExpense,
+                            AnimatedScale(
+                              duration: const Duration(milliseconds: 180),
+                              scale: isLoading ? 0.97 : 1,
+                              curve: Curves.easeOut,
+                              child: SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: CustomButton(
+                                  text: "Save Expense",
+                                  isLoading: isLoading,
+                                  onPressed: addExpense,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 25),
