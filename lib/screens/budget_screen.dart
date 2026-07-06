@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 import '../widgets/budget_stat_card.dart';
 import '../widgets/spending_pie_chart.dart';
+import '../widgets/spending_trend_chart.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -18,6 +19,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
   double remaining = 0;
 
   Map<String, double> categoryTotals = {};
+
+  Map<String, double> dailySpending = {};
 
   String recommendation = '';
   String categoryAdvice = '';
@@ -102,6 +105,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
         categoryAdvice = insights['category_advice'] ?? '';
 
         categoryTotals.clear();
+
+        dailySpending.clear();
+
+        if (insights['daily_spending'] != null) {
+          insights['daily_spending'].forEach((day, value) {
+            dailySpending[day] = (value as num).toDouble();
+          });
+        }
 
         if (insights['category_breakdown'] != null) {
           for (final item in insights['category_breakdown']) {
@@ -201,7 +212,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.2,
+            childAspectRatio: 0.8,
 
             children: [
               BudgetStatCard(
@@ -233,7 +244,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ],
           ),
-
+          const SizedBox(height: 24),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -491,6 +502,28 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   }),
                 ],
               ),
+            ),
+          ),
+
+          const SizedBox(height: 28),
+
+          Text(
+            "Daily Spending Trend",
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 16),
+
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: SpendingTrendChart(dailySpending: dailySpending),
             ),
           ),
 
