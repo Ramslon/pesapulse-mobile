@@ -25,6 +25,52 @@ class _BudgetScreenState extends State<BudgetScreen> {
     return (spent / budget) * 100;
   }
 
+  int get daysRemaining {
+    final now = DateTime.now();
+
+    final lastDay = DateTime(now.year, now.month + 1, 0);
+
+    return lastDay.day - now.day;
+  }
+
+  Color get statusColor {
+    switch (budgetStatus) {
+      case 'healthy':
+        return Colors.green;
+
+      case 'warning':
+        return Colors.orange;
+
+      case 'critical':
+        return Colors.red;
+
+      case 'overspent':
+        return Colors.deepOrange;
+
+      default:
+        return Theme.of(context).colorScheme.primary;
+    }
+  }
+
+  String get statusText {
+    switch (budgetStatus) {
+      case 'healthy':
+        return 'Healthy';
+
+      case 'warning':
+        return 'Warning';
+
+      case 'critical':
+        return 'Critical';
+
+      case 'overspent':
+        return 'Exceeded';
+
+      default:
+        return 'Unknown';
+    }
+  }
+
   final TextEditingController budgetController = TextEditingController();
 
   @override
@@ -115,8 +161,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Monthly Budget',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            "Monthly Budget",
+            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            "Manage your monthly spending",
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
           ),
 
           Card(
@@ -157,33 +210,116 @@ class _BudgetScreenState extends State<BudgetScreen> {
           const SizedBox(height: 30),
 
           Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(20),
-
+              padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.account_balance_wallet),
-
-                    title: const Text('Budget'),
-
-                    trailing: Text('KES ${budget.toStringAsFixed(0)}'),
+                  Text(
+                    "KES ${budget.toStringAsFixed(0)}",
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
 
-                  ListTile(
-                    leading: const Icon(Icons.money_off),
+                  const SizedBox(height: 6),
 
-                    title: const Text('Spent'),
-
-                    trailing: Text('KES ${spent.toStringAsFixed(0)}'),
+                  const Text(
+                    "Monthly Budget",
+                    style: TextStyle(color: Colors.grey),
                   ),
 
-                  ListTile(
-                    leading: const Icon(Icons.savings),
+                  const SizedBox(height: 28),
 
-                    title: const Text('Remaining'),
+                  SizedBox(
+                    width: 130,
+                    height: 130,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          value: budget > 0 ? spent / budget : 0,
+                          strokeWidth: 10,
+                          backgroundColor: Colors.grey.shade200,
+                          color: statusColor,
+                        ),
 
-                    trailing: Text('KES ${remaining.toStringAsFixed(0)}'),
+                        Text(
+                          "${percentageUsed.toStringAsFixed(0)}%",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              "KES ${spent.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
+
+                            const SizedBox(height: 4),
+
+                            const Text("Spent"),
+                          ],
+                        ),
+                      ),
+
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              "KES ${remaining.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
+
+                            const SizedBox(height: 4),
+
+                            const Text("Remaining"),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Chip(
+                        avatar: Icon(
+                          Icons.circle,
+                          size: 10,
+                          color: statusColor,
+                        ),
+                        label: Text(statusText),
+                      ),
+
+                      Text(
+                        "$daysRemaining days left",
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
                 ],
               ),
