@@ -218,12 +218,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  Text(
-                    "KES ${budget.toStringAsFixed(0)}",
-                    style: const TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: budget),
+                    duration: const Duration(milliseconds: 1000),
+                    builder: (context, value, child) {
+                      return Text(
+                        "KES ${value.toStringAsFixed(0)}",
+                        style: const TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 6),
@@ -241,19 +247,36 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        CircularProgressIndicator(
-                          value: budget > 0 ? spent / budget : 0,
-                          strokeWidth: 10,
-                          backgroundColor: Colors.grey.shade200,
-                          color: statusColor,
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(
+                            begin: 0,
+                            end: budget > 0 ? spent / budget : 0,
+                          ),
+                          duration: const Duration(milliseconds: 1200),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, child) {
+                            return CircularProgressIndicator(
+                              value: value,
+                              strokeWidth: 10,
+                              backgroundColor: Colors.grey.shade200,
+                              color: statusColor,
+                            );
+                          },
                         ),
 
-                        Text(
-                          "${percentageUsed.toStringAsFixed(0)}%",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                          ),
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: percentageUsed),
+                          duration: const Duration(milliseconds: 1200),
+                          curve: Curves.easeOut,
+                          builder: (context, value, child) {
+                            return Text(
+                              "${value.toStringAsFixed(0)}%",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 24,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -266,12 +289,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            Text(
-                              "KES ${spent.toStringAsFixed(0)}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                              ),
+                            TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0, end: spent),
+                              duration: const Duration(milliseconds: 1000),
+                              builder: (context, value, child) {
+                                return Text(
+                                  "KES ${value.toStringAsFixed(0)}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                  ),
+                                );
+                              },
                             ),
 
                             const SizedBox(height: 4),
@@ -284,12 +313,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            Text(
-                              "KES ${remaining.toStringAsFixed(0)}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                              ),
+                            TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0, end: remaining),
+                              duration: const Duration(milliseconds: 1000),
+                              builder: (context, value, child) {
+                                return Text(
+                                  "KES ${value.toStringAsFixed(0)}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                  ),
+                                );
+                              },
                             ),
 
                             const SizedBox(height: 4),
@@ -307,12 +342,23 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Chip(
+                        backgroundColor: statusColor.withOpacity(.12),
+
+                        side: BorderSide.none,
+
                         avatar: Icon(
                           Icons.circle,
                           size: 10,
                           color: statusColor,
                         ),
-                        label: Text(statusText),
+
+                        label: Text(
+                          statusText,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
 
                       Text(
