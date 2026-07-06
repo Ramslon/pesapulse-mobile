@@ -4,6 +4,7 @@ import '../widgets/budget_stat_card.dart';
 import '../widgets/spending_pie_chart.dart';
 import '../widgets/spending_trend_chart.dart';
 import '../widgets/analytics_card.dart';
+import '../widgets/financial_health_card.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -30,6 +31,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
   double averageDaily = 0;
 
   double estimatedMonthEnd = 0;
+
+  int financialScore = 100;
+
+  String financialLabel = "";
 
   String recommendation = '';
   String categoryAdvice = '';
@@ -132,6 +137,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
         estimatedMonthEnd = (insights['estimated_month_end_spending'] as num)
             .toDouble();
+
+        financialScore = insights['financial_health_score'];
+
+        financialLabel = insights['financial_health_label'];
 
         if (insights['category_breakdown'] != null) {
           for (final item in insights['category_breakdown']) {
@@ -572,6 +581,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
             value: "KES ${estimatedMonthEnd.toStringAsFixed(0)}",
             color: Colors.green,
           ),
+
+          const SizedBox(height: 25),
+
+          FinancialHealthCard(score: financialScore, label: financialLabel),
 
           const SizedBox(height: 24),
 
