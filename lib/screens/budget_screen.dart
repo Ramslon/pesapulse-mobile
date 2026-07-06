@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 import '../widgets/budget_stat_card.dart';
+import '../widgets/spending_pie_chart.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -15,6 +16,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
   double budget = 0;
   double spent = 0;
   double remaining = 0;
+
+  Map<String, double> categoryTotals = {};
 
   String recommendation = '';
   String categoryAdvice = '';
@@ -98,6 +101,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
         recommendation = insights['recommendation'] ?? '';
         categoryAdvice = insights['category_advice'] ?? '';
 
+        categoryTotals.clear();
+
+        if (insights['category_breakdown'] != null) {
+          for (final item in insights['category_breakdown']) {
+            categoryTotals[item['category']] = (item['total'] as num)
+                .toDouble();
+          }
+        }
+
         isLoading = false;
       });
     } catch (e) {
@@ -146,6 +158,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
   }
 
   @override
+  void dispose() {
+    budgetController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -161,9 +179,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Monthly Budget",
-            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+          Text(
+            "Budget Overview",
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 6),
@@ -414,6 +434,66 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
+          const SizedBox(height: 30),
+
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Spending by Category",
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: 250,
+                    child: SpendingPieChart(categoryTotals: categoryTotals),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  ...categoryTotals.entries.map((entry) {
+                    final color =
+                        SpendingPieChart.colors[categoryTotals.keys
+                                .toList()
+                                .indexOf(entry.key) %
+                            SpendingPieChart.colors.length];
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        children: [
+                          CircleAvatar(radius: 6, backgroundColor: color),
+
+                          const SizedBox(width: 12),
+
+                          Expanded(child: Text(entry.key)),
+
+                          Text(
+                            "KES ${entry.value.toStringAsFixed(0)}",
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+
           const SizedBox(height: 24),
 
           Text(
@@ -424,7 +504,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
           const SizedBox(height: 10),
 
           LinearProgressIndicator(
-            value: budget > 0 ? spent / budget : 0,
+            value: budget > 0 ? (spent / budget).clamp(0.0, 1.0) : 0,
 
             color: percentageUsed >= 100
                 ? Colors.red
