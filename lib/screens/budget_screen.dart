@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
+import '../widgets/budget_stat_card.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -172,6 +173,47 @@ class _BudgetScreenState extends State<BudgetScreen> {
             style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
           ),
 
+          const SizedBox(height: 24),
+
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.2,
+
+            children: [
+              BudgetStatCard(
+                icon: Icons.trending_up,
+                title: "Spent",
+                value: "KES ${spent.toStringAsFixed(0)}",
+                color: Colors.red,
+              ),
+
+              BudgetStatCard(
+                icon: Icons.savings,
+                title: "Remaining",
+                value: "KES ${remaining.toStringAsFixed(0)}",
+                color: Colors.green,
+              ),
+
+              BudgetStatCard(
+                icon: Icons.pie_chart,
+                title: "Usage",
+                value: "${percentageUsed.toStringAsFixed(0)}%",
+                color: statusColor,
+              ),
+
+              BudgetStatCard(
+                icon: Icons.calendar_today,
+                title: "Days Left",
+                value: "$daysRemaining",
+                color: Colors.blue,
+              ),
+            ],
+          ),
+
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -189,7 +231,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 24),
 
                   SizedBox(
                     width: double.infinity,
@@ -207,7 +249,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
 
           Card(
             elevation: 2,
@@ -239,7 +281,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     style: TextStyle(color: Colors.grey),
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
                   SizedBox(
                     width: 130,
@@ -282,7 +324,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 24),
 
                   Row(
                     children: [
@@ -372,7 +414,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
 
           Text(
             '${percentageUsed.toStringAsFixed(1)}% Used',
