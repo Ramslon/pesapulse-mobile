@@ -3,6 +3,7 @@ import '../services/api_services.dart';
 import '../widgets/budget_stat_card.dart';
 import '../widgets/spending_pie_chart.dart';
 import '../widgets/spending_trend_chart.dart';
+import '../widgets/analytics_card.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -21,6 +22,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Map<String, double> categoryTotals = {};
 
   Map<String, double> dailySpending = {};
+
+  String highestDay = '';
+
+  double highestDayAmount = 0;
+
+  double averageDaily = 0;
+
+  double estimatedMonthEnd = 0;
 
   String recommendation = '';
   String categoryAdvice = '';
@@ -113,6 +122,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
             dailySpending[day] = (value as num).toDouble();
           });
         }
+
+        highestDay = insights['highest_spending_day']['day'] ?? '';
+
+        highestDayAmount = (insights['highest_spending_day']['amount'] as num)
+            .toDouble();
+
+        averageDaily = (insights['average_daily_spending'] as num).toDouble();
+
+        estimatedMonthEnd = (insights['estimated_month_end_spending'] as num)
+            .toDouble();
 
         if (insights['category_breakdown'] != null) {
           for (final item in insights['category_breakdown']) {
@@ -505,7 +524,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
           Text(
             "Daily Spending Trend",
@@ -525,6 +544,33 @@ class _BudgetScreenState extends State<BudgetScreen> {
               padding: const EdgeInsets.all(20),
               child: SpendingTrendChart(dailySpending: dailySpending),
             ),
+          ),
+
+          const SizedBox(height: 24),
+
+          AnalyticsCard(
+            icon: Icons.calendar_today,
+            title: "Highest Spending Day",
+            value: "$highestDay • KES ${highestDayAmount.toStringAsFixed(0)}",
+            color: Colors.red,
+          ),
+
+          const SizedBox(height: 12),
+
+          AnalyticsCard(
+            icon: Icons.analytics,
+            title: "Average Daily Spending",
+            value: "KES ${averageDaily.toStringAsFixed(0)}/day",
+            color: Colors.blue,
+          ),
+
+          const SizedBox(height: 12),
+
+          AnalyticsCard(
+            icon: Icons.trending_up,
+            title: "Estimated Month-End Spending",
+            value: "KES ${estimatedMonthEnd.toStringAsFixed(0)}",
+            color: Colors.green,
           ),
 
           const SizedBox(height: 24),
