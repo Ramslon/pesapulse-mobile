@@ -92,6 +92,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
     }
   }
 
+  String formatCurrency(double value) {
+    return value
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]},',
+        );
+  }
+
   final TextEditingController budgetController = TextEditingController();
 
   @override
@@ -218,42 +227,48 @@ class _BudgetScreenState extends State<BudgetScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Budget Overview",
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Budget Overview",
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: .3,
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              Text(
+                "Track your spending and stay within budget",
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+              ),
+            ],
           ),
 
-          const SizedBox(height: 6),
-
-          Text(
-            "Manage your monthly spending",
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
-          ),
-
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
 
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.8,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 0.82,
 
             children: [
               BudgetStatCard(
                 icon: Icons.trending_up,
                 title: "Spent",
-                value: "KES ${spent.toStringAsFixed(0)}",
+                value: "KES ${formatCurrency(spent)}",
                 color: Colors.red,
               ),
 
               BudgetStatCard(
                 icon: Icons.savings,
                 title: "Remaining",
-                value: "KES ${remaining.toStringAsFixed(0)}",
+                value: "KES ${formatCurrency(remaining)}",
                 color: Colors.green,
               ),
 
@@ -272,10 +287,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           Card(
+            elevation: 2,
+
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
 
               child: Column(
                 children: [
@@ -290,7 +310,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   SizedBox(
                     width: double.infinity,
@@ -308,12 +328,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
 
           Card(
-            elevation: 2,
+            elevation: 4,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -335,16 +355,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
                   const SizedBox(height: 6),
 
-                  const Text(
-                    "Monthly Budget",
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  sectionTitle("Monthly Budget"),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
                   SizedBox(
-                    width: 130,
-                    height: 130,
+                    width: 110,
+                    height: 110,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
@@ -383,7 +400,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
                   Row(
                     children: [
@@ -437,29 +454,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Chip(
-                        backgroundColor: statusColor.withOpacity(.12),
-
-                        side: BorderSide.none,
-
                         avatar: Icon(
                           Icons.circle,
                           size: 10,
                           color: statusColor,
                         ),
 
-                        label: Text(
-                          statusText,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        backgroundColor: statusColor.withOpacity(.15),
+
+                        label: Text(statusText.toUpperCase()),
                       ),
 
                       Text(
@@ -473,17 +482,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: 32),
 
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Spending by Category",
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ),
+          sectionTitle("Spending by Category"),
 
           const SizedBox(height: 18),
 
@@ -533,14 +534,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
 
-          Text(
-            "Daily Spending Trend",
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
+          sectionTitle("Daily Spending Trend"),
 
           const SizedBox(height: 16),
 
@@ -555,7 +551,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
 
           AnalyticsCard(
             icon: Icons.calendar_today,
@@ -564,7 +560,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             color: Colors.red,
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           AnalyticsCard(
             icon: Icons.analytics,
@@ -573,7 +569,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             color: Colors.blue,
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           AnalyticsCard(
             icon: Icons.trending_up,
@@ -762,6 +758,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
       ),
     );
   }
