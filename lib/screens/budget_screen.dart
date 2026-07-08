@@ -245,19 +245,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
         return const SizedBox.shrink();
     }
 
-    return Card(
-      color: color.withOpacity(0.12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withOpacity(0.15)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              radius: 24,
+              radius: 30,
               backgroundColor: color.withOpacity(0.15),
-              child: Icon(icon, color: color),
+              child: Icon(icon, size: 32, color: color),
             ),
 
             const SizedBox(width: 16),
@@ -271,23 +273,33 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     style: TextStyle(
                       color: color,
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: 22,
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
                   Text(
                     budget > 0
                         ? '${percentageUsed.toStringAsFixed(1)}% of your budget has been used.'
                         : 'No monthly budget has been set.',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
                   Text(
                     recommendation,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Colors.grey.shade800,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),

@@ -38,13 +38,12 @@ class FinancialHealthCard extends StatelessWidget {
             const SizedBox(height: 30),
 
             SizedBox(
-              width: 175,
-              height: 175,
+              width: 180,
+              height: 180,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   CircularProgressIndicator(
-                    value: score / 100,
                     strokeWidth: 16,
                     backgroundColor: Colors.grey.shade300,
                     color: scoreColor,
