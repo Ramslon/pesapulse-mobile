@@ -772,6 +772,29 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
+          const SizedBox(height: 16),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              const Text(
+                "Daily Spending",
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+
           const SizedBox(height: 32),
 
           TweenAnimationBuilder<double>(
