@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/screens/budget_screen.dart';
 import 'package:pesapulse_mobile/screens/expense_screen.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/dashboard_loading_skeleton.dart';
@@ -298,7 +299,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         title: "Budget",
                         color: Colors.blue,
                         onTap: () {
-                          // Navigate later
+                          //
                         },
                       ),
 
@@ -314,7 +315,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             MaterialPageRoute(
                               builder: (_) => const AddGoalScreen(),
                             ),
-                          ); // Navigate later
+                          );
                         },
                       ),
                     ],

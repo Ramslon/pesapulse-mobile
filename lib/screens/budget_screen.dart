@@ -6,6 +6,8 @@ import '../widgets/spending_trend_chart.dart';
 import '../widgets/analytics_card.dart';
 import '../widgets/financial_health_card.dart';
 import '../widgets/status_chip.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/budget_loading_skeleton.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -166,9 +168,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
         isLoading = false;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            "Unable to load your budget. Please check your internet connection and try again.",
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: "Retry",
+            textColor: Colors.white,
+            onPressed: loadBudget,
+          ),
+        ),
+      );
     }
   }
 
@@ -200,9 +215,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
         const SnackBar(content: Text('Budget saved successfully')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Failed to save budget. Please try again."),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -307,9 +326,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const BudgetLoadingSkeleton();
     }
-
+    if (budget <= 0) {
+      return const EmptyState(
+        icon: Icons.account_balance_wallet_outlined,
+        title: "No Budget Yet",
+        message: "Create your monthly budget to start tracking your spending.",
+      );
+    }
     return SingleChildScrollView(
       padding: EdgeInsets.only(
         left: 20,
@@ -641,38 +666,26 @@ class _BudgetScreenState extends State<BudgetScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  SizedBox(
-                    height: 280,
-                    child: SpendingPieChart(categoryTotals: categoryTotals),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Divider(color: Colors.grey.shade300),
-
-                  const SizedBox(height: 18),
-
-                  if (categoryTotals.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 30),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.pie_chart_outline,
-                            size: 60,
-                            color: Colors.grey.shade400,
+                  categoryTotals.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.pie_chart_outline,
+                          title: "No Spending Data",
+                          message:
+                              "Add some expenses to view category analysis.",
+                        )
+                      : SizedBox(
+                          height: 280,
+                          child: SpendingPieChart(
+                            categoryTotals: categoryTotals,
                           ),
+                        ),
+                  if (!categoryTotals.isNotEmpty) ...[
+                    const SizedBox(height: 20),
 
-                          const SizedBox(height: 12),
+                    Divider(color: Colors.grey.shade300),
 
-                          Text(
-                            "No spending data yet",
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
+                    const SizedBox(height: 18),
+
                     ...categoryTotals.entries.map((entry) {
                       final color =
                           SpendingPieChart.colors[categoryTotals.keys
@@ -728,6 +741,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         ),
                       );
                     }),
+                  ],
                 ],
               ),
             ),
@@ -767,7 +781,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: SpendingTrendChart(dailySpending: dailySpending),
+                child: dailySpending.isEmpty
+                    ? const EmptyState(
+                        icon: Icons.show_chart,
+                        title: "No Spending History",
+                        message:
+                            "Your daily spending trend will appear after recording expenses.",
+                      )
+                    : SpendingTrendChart(dailySpending: dailySpending),
               ),
             ),
           ),
