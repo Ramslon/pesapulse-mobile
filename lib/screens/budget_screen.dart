@@ -211,6 +211,93 @@ class _BudgetScreenState extends State<BudgetScreen> {
     super.dispose();
   }
 
+  Widget buildBudgetAlert() {
+    IconData icon;
+    Color color;
+    String title;
+
+    switch (budgetStatus) {
+      case 'healthy':
+        icon = Icons.check_circle;
+        color = Colors.green;
+        title = 'Budget Healthy';
+        break;
+
+      case 'warning':
+        icon = Icons.warning_amber_rounded;
+        color = Colors.orange;
+        title = 'Budget Warning';
+        break;
+
+      case 'overspent':
+        icon = Icons.error_outline;
+        color = Colors.deepOrange;
+        title = 'Budget Exceeded';
+        break;
+
+      case 'critical':
+        icon = Icons.dangerous;
+        color = Colors.red;
+        title = 'Critical Budget Alert';
+        break;
+
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Card(
+      color: color.withOpacity(0.12),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: color.withOpacity(0.15),
+              child: Icon(icon, color: color),
+            ),
+
+            const SizedBox(width: 16),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    budget > 0
+                        ? '${percentageUsed.toStringAsFixed(1)}% of your budget has been used.'
+                        : 'No monthly budget has been set.',
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    recommendation,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -330,11 +417,43 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
           const SizedBox(height: 32),
 
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Monthly Budget",
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
+
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -355,10 +474,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
                   const SizedBox(height: 6),
 
-                  sectionTitle("Monthly Budget"),
-
-                  const SizedBox(height: 32),
-
                   SizedBox(
                     width: 110,
                     height: 110,
@@ -375,7 +490,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           builder: (context, value, child) {
                             return CircularProgressIndicator(
                               value: value,
-                              strokeWidth: 10,
+                              strokeWidth: 14,
+                              strokeCap: StrokeCap.round,
                               backgroundColor: Colors.grey.shade200,
                               color: statusColor,
                             );
@@ -387,12 +503,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           duration: const Duration(milliseconds: 1200),
                           curve: Curves.easeOut,
                           builder: (context, value, child) {
-                            return Text(
-                              "${value.toStringAsFixed(0)}%",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 24,
-                              ),
+                            return Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "${value.toStringAsFixed(0)}%",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 28,
+                                  ),
+                                ),
+
+                                Text(
+                                  "used",
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                ),
+                              ],
                             );
                           },
                         ),
@@ -402,11 +528,24 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
                   const SizedBox(height: 32),
 
+                  Divider(),
+
+                  const SizedBox(height: 20),
+
                   Row(
                     children: [
                       Expanded(
                         child: Column(
                           children: [
+                            CircleAvatar(
+                              backgroundColor: Colors.red.shade200,
+                              child: const Icon(
+                                Icons.arrow_upward,
+                                color: Colors.red,
+                              ),
+                            ),
+
+                            const SizedBox(height: 10),
                             TweenAnimationBuilder<double>(
                               tween: Tween(begin: 0, end: spent),
                               duration: const Duration(milliseconds: 1000),
@@ -431,6 +570,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       Expanded(
                         child: Column(
                           children: [
+                            CircleAvatar(
+                              backgroundColor: Colors.green.shade200,
+                              child: const Icon(
+                                Icons.savings,
+                                color: Colors.green,
+                              ),
+                            ),
+
+                            const SizedBox(height: 10),
                             TweenAnimationBuilder<double>(
                               tween: Tween(begin: 0, end: remaining),
                               duration: const Duration(milliseconds: 1000),
@@ -455,28 +603,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   ),
 
                   const SizedBox(height: 32),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Chip(
-                        avatar: Icon(
-                          Icons.circle,
-                          size: 10,
-                          color: statusColor,
-                        ),
-
-                        backgroundColor: statusColor.withOpacity(.15),
-
-                        label: Text(statusText.toUpperCase()),
-                      ),
-
-                      Text(
-                        "$daysRemaining days left",
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -484,9 +610,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
           const SizedBox(height: 32),
 
-          sectionTitle("Spending by Category"),
+          Text(
+            "Budget Breakdown",
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 6),
+
+          Text(
+            "See where your money goes",
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+
+          const SizedBox(height: 20),
 
           Card(
             elevation: 0,
@@ -498,37 +636,92 @@ class _BudgetScreenState extends State<BudgetScreen> {
               child: Column(
                 children: [
                   SizedBox(
-                    height: 250,
+                    height: 280,
                     child: SpendingPieChart(categoryTotals: categoryTotals),
                   ),
 
                   const SizedBox(height: 20),
 
-                  ...categoryTotals.entries.map((entry) {
-                    final color =
-                        SpendingPieChart.colors[categoryTotals.keys
-                                .toList()
-                                .indexOf(entry.key) %
-                            SpendingPieChart.colors.length];
+                  Divider(color: Colors.grey.shade300),
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(
+                  const SizedBox(height: 18),
+
+                  if (categoryTotals.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 30),
+                      child: Column(
                         children: [
-                          CircleAvatar(radius: 6, backgroundColor: color),
+                          Icon(
+                            Icons.pie_chart_outline,
+                            size: 60,
+                            color: Colors.grey.shade400,
+                          ),
 
-                          const SizedBox(width: 12),
-
-                          Expanded(child: Text(entry.key)),
+                          const SizedBox(height: 12),
 
                           Text(
-                            "KES ${entry.value.toStringAsFixed(0)}",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            "No spending data yet",
+                            style: TextStyle(color: Colors.grey.shade600),
                           ),
                         ],
                       ),
-                    );
-                  }),
+                    )
+                  else
+                    ...categoryTotals.entries.map((entry) {
+                      final color =
+                          SpendingPieChart.colors[categoryTotals.keys
+                                  .toList()
+                                  .indexOf(entry.key) %
+                              SpendingPieChart.colors.length];
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(.08),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(radius: 7, backgroundColor: color),
+
+                              const SizedBox(width: 14),
+
+                              Expanded(
+                                child: Text(
+                                  entry.key,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+
+                              Text(
+                                "${((entry.value / spent) * 100).toStringAsFixed(0)}%",
+                                style: TextStyle(
+                                  color: color,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(width: 14),
+
+                              Text(
+                                "KES ${entry.value.toStringAsFixed(0)}",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),
@@ -536,9 +729,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
           const SizedBox(height: 32),
 
-          sectionTitle("Daily Spending Trend"),
+          Text(
+            "Spending Analytics",
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
+
+          Text(
+            "Insights from your spending habits",
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+
+          const SizedBox(height: 18),
 
           Card(
             elevation: 0,
@@ -553,34 +758,98 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
           const SizedBox(height: 32),
 
-          AnalyticsCard(
-            icon: Icons.calendar_today,
-            title: "Highest Spending Day",
-            value: "$highestDay • KES ${highestDayAmount.toStringAsFixed(0)}",
-            color: Colors.red,
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.95, end: 1),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOut,
+            builder: (context, scale, child) {
+              return Transform.scale(scale: scale, child: child);
+            },
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 170,
+                        child: AnalyticsCard(
+                          icon: Icons.calendar_today_rounded,
+                          title: "Highest Day",
+                          value:
+                              "$highestDay\nKES ${highestDayAmount.toStringAsFixed(0)}",
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: SizedBox(
+                        height: 170,
+                        child: AnalyticsCard(
+                          icon: Icons.analytics_rounded,
+                          title: "Avg Daily Spending",
+                          value: "KES ${averageDaily.toStringAsFixed(0)}",
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 170,
+                  child: AnalyticsCard(
+                    icon: Icons.trending_up_rounded,
+                    title: "Projected Month-End Spending",
+                    value: "KES ${estimatedMonthEnd.toStringAsFixed(0)}",
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 28),
 
-          AnalyticsCard(
-            icon: Icons.analytics,
-            title: "Average Daily Spending",
-            value: "KES ${averageDaily.toStringAsFixed(0)}/day",
-            color: Colors.blue,
+          Text(
+            "Financial Health",
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
 
-          AnalyticsCard(
-            icon: Icons.trending_up,
-            title: "Estimated Month-End Spending",
-            value: "KES ${estimatedMonthEnd.toStringAsFixed(0)}",
-            color: Colors.green,
+          Text(
+            "Your overall money management score",
+            style: TextStyle(color: Colors.grey.shade600),
           ),
 
-          const SizedBox(height: 25),
+          const SizedBox(height: 18),
 
-          FinancialHealthCard(score: financialScore, label: financialLabel),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.9, end: 1),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOutBack,
+            builder: (context, scale, child) {
+              return Transform.scale(scale: scale, child: child);
+            },
+            child: FinancialHealthCard(
+              score: financialScore,
+              label: financialLabel,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Text(
+            "This score is calculated using your budget usage, spending consistency, and savings potential.",
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          ),
 
           const SizedBox(height: 24),
 
@@ -614,133 +883,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-          if (budgetStatus == 'critical')
-            Container(
-              margin: const EdgeInsets.only(top: 20),
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Colors.red.shade700,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.dangerous),
-                      SizedBox(width: 10),
-                      Text(
-                        'Critical Budget Alert',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${percentageUsed.toStringAsFixed(1)}% of your budget has been used.',
-                  ),
-                  const SizedBox(height: 8),
-                  Text(recommendation),
-                ],
-              ),
-            ),
-
-          if (budgetStatus == 'warning')
-            Container(
-              margin: const EdgeInsets.only(top: 20),
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade700,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.warning_amber),
-                      SizedBox(width: 10),
-                      Text(
-                        'Budget Warning',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${percentageUsed.toStringAsFixed(1)}% of your budget has been used.',
-                  ),
-                  const SizedBox(height: 8),
-                  Text(recommendation),
-                ],
-              ),
-            ),
-
-          if (budgetStatus == 'overspent')
-            Container(
-              margin: const EdgeInsets.only(top: 20),
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Colors.deepOrange.shade700,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.error),
-                      SizedBox(width: 10),
-                      Text(
-                        'Budget Exceeded',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'You have spent ${percentageUsed.toStringAsFixed(1)}% of your budget.',
-                  ),
-                  const SizedBox(height: 8),
-                  Text(recommendation),
-                ],
-              ),
-            ),
-
-          if (budgetStatus == 'healthy')
-            Container(
-              margin: const EdgeInsets.only(top: 20),
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Colors.green.shade700,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white),
-                      SizedBox(width: 10),
-                      Text(
-                        'Budget Healthy',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    '${percentageUsed.toStringAsFixed(1)}% of your budget has been used.',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  SizedBox(height: 8),
-                  Text(recommendation, style: TextStyle(color: Colors.white)),
-                ],
-              ),
-            ),
+          buildBudgetAlert(),
 
           if (categoryAdvice.isNotEmpty)
             Card(
