@@ -16,32 +16,43 @@ class BudgetStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: color.withOpacity(.12),
-              child: Icon(icon, color: color),
-            ),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.95, end: 1),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) {
+        return Transform.scale(scale: scale, child: child);
+      },
+      child: Card(
+        elevation: 0,
+        color: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: color.withOpacity(.12),
+                child: Icon(icon, color: color),
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            Text(title, style: TextStyle(color: Colors.grey.shade600)),
+              Text(title, style: TextStyle(color: Colors.grey.shade600)),
 
-            const SizedBox(height: 6),
+              const SizedBox(height: 6),
 
-            Text(
-              value,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-          ],
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import '../widgets/spending_pie_chart.dart';
 import '../widgets/spending_trend_chart.dart';
 import '../widgets/analytics_card.dart';
 import '../widgets/financial_health_card.dart';
+import '../widgets/status_chip.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -268,14 +269,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                    ),
-                  ),
+                  StatusChip(text: title, color: color, icon: icon),
 
                   const SizedBox(height: 12),
 
@@ -756,26 +750,39 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ),
 
           const SizedBox(height: 18),
-
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: SpendingTrendChart(dailySpending: dailySpending),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 30, end: 0),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOut,
+            builder: (context, offset, child) {
+              return Transform.translate(
+                offset: Offset(0, offset),
+                child: child,
+              );
+            },
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: SpendingTrendChart(dailySpending: dailySpending),
+              ),
             ),
           ),
 
           const SizedBox(height: 32),
 
           TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.95, end: 1),
-            duration: const Duration(milliseconds: 600),
+            tween: Tween(begin: 20, end: 0),
+            duration: const Duration(milliseconds: 1100),
             curve: Curves.easeOut,
-            builder: (context, scale, child) {
-              return Transform.scale(scale: scale, child: child);
+            builder: (context, offset, child) {
+              return Transform.translate(
+                offset: Offset(0, offset),
+                child: child,
+              );
             },
             child: Column(
               children: [
@@ -883,19 +890,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
             minHeight: 10,
             borderRadius: BorderRadius.circular(10),
           ),
-
-          if (percentageUsed >= 80)
-            Container(
-              margin: const EdgeInsets.only(top: 20),
-
-              padding: const EdgeInsets.all(15),
-
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          buildBudgetAlert(),
+          const SizedBox(height: 12),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 1200),
+            builder: (context, opacity, child) {
+              return Opacity(opacity: opacity, child: child);
+            },
+            child: buildBudgetAlert(),
+          ),
 
           if (categoryAdvice.isNotEmpty)
             Card(
