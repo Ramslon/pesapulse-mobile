@@ -38,14 +38,14 @@ class FinancialHealthCard extends StatelessWidget {
             const SizedBox(height: 30),
 
             SizedBox(
-              width: 110,
-              height: 110,
+              width: 175,
+              height: 175,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   CircularProgressIndicator(
                     value: score / 100,
-                    strokeWidth: 12,
+                    strokeWidth: 16,
                     backgroundColor: Colors.grey.shade300,
                     color: scoreColor,
                   ),
@@ -56,17 +56,18 @@ class FinancialHealthCard extends StatelessWidget {
                       Text(
                         "$score",
                         style: const TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 48,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
 
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
 
                       Text(
                         label,
                         style: TextStyle(
                           color: scoreColor,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -78,18 +79,32 @@ class FinancialHealthCard extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            LinearProgressIndicator(
-              value: score / 100,
-              color: scoreColor,
-              minHeight: 10,
-              borderRadius: BorderRadius.circular(20),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: LinearProgressIndicator(
+                value: score / 100,
+                minHeight: 14,
+                backgroundColor: Colors.grey.shade300,
+                color: scoreColor,
+              ),
             ),
-
             const SizedBox(height: 12),
 
-            Text(
-              "Financial health score",
-              style: TextStyle(color: Colors.grey.shade600),
+            Column(
+              children: [
+                Text(
+                  "$score / 100",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Financial Health Score",
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+              ],
             ),
           ],
         ),
