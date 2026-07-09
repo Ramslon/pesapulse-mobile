@@ -325,6 +325,17 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    final sectionSpacing = screenHeight * 0.035;
+    final smallSpacing = screenHeight * 0.015;
+    final cardPadding = screenWidth * 0.05;
+    final gaugeSize = screenWidth * 0.34;
+
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
     if (isLoading) {
       return const BudgetLoadingSkeleton();
     }
@@ -350,22 +361,25 @@ class _BudgetScreenState extends State<BudgetScreen> {
             children: [
               Text(
                 "Budget Overview",
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                style: textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   letterSpacing: .3,
                 ),
               ),
 
-              const SizedBox(height: 6),
+              SizedBox(height: smallSpacing),
 
               Text(
                 "Track your spending and stay within budget",
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+                style: TextStyle(
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                  fontSize: 15,
+                ),
               ),
             ],
           ),
 
-          const SizedBox(height: 32),
+          SizedBox(height: sectionSpacing),
 
           GridView.count(
             crossAxisCount: 2,
@@ -373,21 +387,20 @@ class _BudgetScreenState extends State<BudgetScreen> {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 0.82,
+            childAspectRatio: screenWidth < 400 ? 0.78 : 0.88,
 
             children: [
               BudgetStatCard(
                 icon: Icons.trending_up,
                 title: "Spent",
                 value: "KES ${formatCurrency(spent)}",
-                color: Colors.red,
+                color: colorScheme.primary,
               ),
-
               BudgetStatCard(
                 icon: Icons.savings,
                 title: "Remaining",
                 value: "KES ${formatCurrency(remaining)}",
-                color: Colors.green,
+                color: colorScheme.primary,
               ),
 
               BudgetStatCard(
@@ -401,11 +414,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 icon: Icons.calendar_today,
                 title: "Days Left",
                 value: "$daysRemaining",
-                color: Colors.blue,
+                color: colorScheme.primary,
               ),
             ],
           ),
-          const SizedBox(height: 32),
+          SizedBox(height: sectionSpacing),
           Card(
             elevation: 2,
 
@@ -413,7 +426,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(cardPadding),
 
               child: Column(
                 children: [
@@ -428,7 +441,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: sectionSpacing),
 
                   SizedBox(
                     width: double.infinity,
@@ -446,7 +459,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 32),
+          SizedBox(height: sectionSpacing),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -454,7 +467,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               Text(
                 "Monthly Budget",
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -486,7 +499,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
 
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(cardPadding + 4),
               child: Column(
                 children: [
                   TweenAnimationBuilder<double>(
@@ -503,11 +516,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     },
                   ),
 
-                  const SizedBox(height: 6),
+                  SizedBox(height: smallSpacing),
 
                   SizedBox(
-                    width: 110,
-                    height: 110,
+                    width: gaugeSize,
+                    height: gaugeSize,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
@@ -547,7 +560,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
                                 Text(
                                   "used",
-                                  style: TextStyle(color: Colors.grey.shade600),
+                                  style: TextStyle(
+                                    color: theme.textTheme.bodyMedium?.color
+                                        ?.withOpacity(0.7),
+                                  ),
                                 ),
                               ],
                             );
@@ -557,11 +573,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 32),
+                  SizedBox(height: sectionSpacing),
 
                   Divider(),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: sectionSpacing),
 
                   Row(
                     children: [
@@ -591,7 +607,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               },
                             ),
 
-                            const SizedBox(height: 4),
+                            SizedBox(height: smallSpacing),
 
                             const Text("Spent"),
                           ],
@@ -624,7 +640,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               },
                             ),
 
-                            const SizedBox(height: 4),
+                            SizedBox(height: smallSpacing),
 
                             const Text("Remaining"),
                           ],
@@ -632,27 +648,25 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 32),
                 ],
               ),
             ),
           ),
 
-          const SizedBox(height: 32),
+          SizedBox(height: sectionSpacing),
 
           Text(
             "Budget Breakdown",
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
 
-          const SizedBox(height: 6),
+          SizedBox(height: smallSpacing),
 
           Text(
             "See where your money goes",
-            style: TextStyle(color: Colors.grey.shade600),
+            style: TextStyle(
+              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+            ),
           ),
 
           const SizedBox(height: 20),
@@ -663,7 +677,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(cardPadding),
               child: Column(
                 children: [
                   categoryTotals.isEmpty
@@ -723,12 +737,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               Text(
                                 "${((entry.value / spent) * 100).toStringAsFixed(0)}%",
                                 style: TextStyle(
-                                  color: color,
+                                  color: colorScheme.primary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
 
-                              const SizedBox(width: 14),
+                              SizedBox(width: screenWidth),
 
                               Text(
                                 "KES ${entry.value.toStringAsFixed(0)}",
@@ -747,23 +761,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 32),
+          SizedBox(height: sectionSpacing),
 
           Text(
             "Spending Analytics",
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
 
-          const SizedBox(height: 6),
+          SizedBox(height: smallSpacing),
 
           Text(
             "Insights from your spending habits",
-            style: TextStyle(color: Colors.grey.shade600),
+            style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
           ),
 
-          const SizedBox(height: 18),
+          SizedBox(height: sectionSpacing),
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 30, end: 0),
             duration: const Duration(milliseconds: 900),
@@ -780,7 +792,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(cardPadding),
                 child: dailySpending.isEmpty
                     ? const EmptyState(
                         icon: Icons.show_chart,
@@ -793,7 +805,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: sectionSpacing),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -802,12 +814,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 width: 14,
                 height: 14,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
+                  color: colorScheme.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
 
               const Text(
                 "Daily Spending",
@@ -816,7 +828,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ],
           ),
 
-          const SizedBox(height: 32),
+          SizedBox(height: smallSpacing),
 
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 20, end: 0),
@@ -840,59 +852,57 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           title: "Highest Day",
                           value:
                               "$highestDay\nKES ${highestDayAmount.toStringAsFixed(0)}",
-                          color: Colors.red,
+                          color: colorScheme.primary,
                         ),
                       ),
                     ),
 
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
 
                     Expanded(
                       child: SizedBox(
-                        height: 170,
+                        height: screenHeight * 0.20,
                         child: AnalyticsCard(
                           icon: Icons.analytics_rounded,
                           title: "Avg Daily Spending",
                           value: "KES ${averageDaily.toStringAsFixed(0)}",
-                          color: Colors.blue,
+                          color: colorScheme.primary,
                         ),
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: sectionSpacing),
 
                 SizedBox(
-                  height: 170,
+                  height: screenHeight * 0.20,
                   child: AnalyticsCard(
                     icon: Icons.trending_up_rounded,
                     title: "Projected Month-End Spending",
                     value: "KES ${estimatedMonthEnd.toStringAsFixed(0)}",
-                    color: Colors.green,
+                    color: colorScheme.primary,
                   ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 28),
+          SizedBox(height: sectionSpacing),
 
           Text(
             "Financial Health",
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
 
-          const SizedBox(height: 6),
+          SizedBox(height: smallSpacing),
 
           Text(
             "Your overall money management score",
-            style: TextStyle(color: Colors.grey.shade600),
+            style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
           ),
 
-          const SizedBox(height: 18),
+          SizedBox(height: sectionSpacing),
 
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.9, end: 1),
@@ -907,30 +917,33 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
 
-          const SizedBox(height: 12),
+          SizedBox(height: smallSpacing),
 
           Text(
             "This score is calculated using your budget usage, spending consistency, and savings potential.",
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            style: TextStyle(
+              color: colorScheme.onSurface.withOpacity(0.7),
+              fontSize: 13,
+            ),
           ),
 
-          const SizedBox(height: 24),
+          SizedBox(height: sectionSpacing),
 
           Text(
             '${percentageUsed.toStringAsFixed(1)}% Used',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
 
-          const SizedBox(height: 10),
+          SizedBox(height: smallSpacing),
 
           LinearProgressIndicator(
             value: budget > 0 ? (spent / budget).clamp(0.0, 1.0) : 0,
 
             color: percentageUsed >= 100
-                ? Colors.red
+                ? colorScheme.primary
                 : percentageUsed >= 80
-                ? Colors.orange
-                : Colors.green,
+                ? colorScheme.primary
+                : colorScheme.primary,
             minHeight: 10,
             borderRadius: BorderRadius.circular(10),
           ),
