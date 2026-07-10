@@ -9,6 +9,7 @@ import '../widgets/recent_expense_tile.dart';
 import '../services/api_services.dart';
 import '../screens/add_expense_screen.dart';
 import '../screens/add_goals_screen.dart';
+import '../screens/budget_page.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -205,7 +206,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Expanded(
                         child: SizedBox(
-                          height: 185,
+                          height: 190,
                           child: DashboardCard(
                             title: "Expenses",
                             subtitle: "Total Recorded",
@@ -220,7 +221,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       Expanded(
                         child: SizedBox(
-                          height: 185,
+                          height: 190,
                           child: DashboardCard(
                             title: 'Budget',
                             subtitle: "Current Budget",
@@ -239,7 +240,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Expanded(
                         child: SizedBox(
-                          height: 185,
+                          height: 190,
                           child: DashboardCard(
                             title: 'Categories',
                             subtitle: "Expense Types",
@@ -254,7 +255,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       Expanded(
                         child: SizedBox(
-                          height: 185,
+                          height: 190,
                           child: DashboardCard(
                             title: 'Reports',
                             subtitle: "Generated",
@@ -299,7 +300,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         title: "Budget",
                         color: Colors.blue,
                         onTap: () {
-                          //
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const BudgetPage(),
+                            ),
+                          );
                         },
                       ),
 

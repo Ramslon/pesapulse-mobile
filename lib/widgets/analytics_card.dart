@@ -27,6 +27,7 @@ class AnalyticsCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Container(
               width: 42,
@@ -38,43 +39,47 @@ class AnalyticsCard extends StatelessWidget {
               child: Icon(icon, color: color, size: 24),
             ),
 
-            const Spacer(),
-
-            Text(
-              title,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-                letterSpacing: .3,
-              ),
-            ),
-
-            Divider(color: Colors.grey.shade200, thickness: 1),
-
-            const SizedBox(height: 8),
-
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 800),
-              builder: (context, animation, child) {
-                return Opacity(
-                  opacity: animation,
-                  child: Transform.translate(
-                    offset: Offset(0, 10 * (1 - animation)),
-                    child: child,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                    letterSpacing: .3,
                   ),
-                );
-              },
-
-              child: Text(
-                value,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  height: 1.3,
                 ),
-              ),
+
+                Divider(color: Colors.grey.shade200, thickness: 1),
+
+                const SizedBox(height: 6),
+
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 800),
+                  builder: (context, animation, child) {
+                    return Opacity(
+                      opacity: animation,
+                      child: Transform.translate(
+                        offset: Offset(0, 10 * (1 - animation)),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Text(
+                    value,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -20,6 +20,9 @@ class FinancialHealthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+
+    final gaugeSize = (width * .45).clamp(140.0, 190.0);
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -38,8 +41,8 @@ class FinancialHealthCard extends StatelessWidget {
             const SizedBox(height: 30),
 
             SizedBox(
-              width: 180,
-              height: 180,
+              width: gaugeSize,
+              height: gaugeSize,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -54,8 +57,8 @@ class FinancialHealthCard extends StatelessWidget {
                     children: [
                       Text(
                         "$score",
-                        style: const TextStyle(
-                          fontSize: 48,
+                        style: TextStyle(
+                          fontSize: gaugeSize * .27,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -66,7 +69,7 @@ class FinancialHealthCard extends StatelessWidget {
                         label,
                         style: TextStyle(
                           color: scoreColor,
-                          fontSize: 20,
+                          fontSize: gaugeSize * .11,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

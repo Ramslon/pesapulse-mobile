@@ -331,7 +331,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final sectionSpacing = screenHeight * 0.035;
     final smallSpacing = screenHeight * 0.015;
     final cardPadding = screenWidth * 0.05;
-    final gaugeSize = screenWidth * 0.34;
+    final gaugeSize = (screenWidth * .34).clamp(120.0, 170.0);
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -347,11 +347,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
       );
     }
     return SingleChildScrollView(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * .05,
+        vertical: screenHeight * .025,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,7 +359,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             children: [
               Text(
                 "Budget Overview",
-                style: textTheme.headlineMedium?.copyWith(
+                style: textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   letterSpacing: .3,
                 ),
@@ -387,7 +385,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: screenWidth < 400 ? 0.78 : 0.88,
+            childAspectRatio: screenWidth < 360
+                ? 0.72
+                : screenWidth < 430
+                ? 0.82
+                : 0.92,
 
             children: [
               BudgetStatCard(
@@ -461,8 +463,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
           SizedBox(height: sectionSpacing),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            runSpacing: 10,
+            spacing: 12,
             children: [
               Text(
                 "Monthly Budget",
@@ -508,8 +512,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     builder: (context, value, child) {
                       return Text(
                         "KES ${value.toStringAsFixed(0)}",
-                        style: const TextStyle(
-                          fontSize: 34,
+                        style: TextStyle(
+                          fontSize: screenWidth * .09,
                           fontWeight: FontWeight.bold,
                         ),
                       );
@@ -552,9 +556,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               children: [
                                 Text(
                                   "${value.toStringAsFixed(0)}%",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 28,
+                                    fontSize: screenWidth * .09,
                                   ),
                                 ),
 
@@ -693,7 +697,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             categoryTotals: categoryTotals,
                           ),
                         ),
-                  if (!categoryTotals.isNotEmpty) ...[
+                  if (categoryTotals.isNotEmpty) ...[
                     const SizedBox(height: 20),
 
                     Divider(color: Colors.grey.shade300),
@@ -742,7 +746,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 ),
                               ),
 
-                              SizedBox(width: screenWidth),
+                              const SizedBox(width: 12),
 
                               Text(
                                 "KES ${entry.value.toStringAsFixed(0)}",
@@ -807,27 +811,34 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
           SizedBox(height: sectionSpacing),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: colorScheme.primary,
-                  borderRadius: BorderRadius.circular(20),
+          Center(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              runSpacing: 8,
+              spacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
 
-              const Text(
-                "Daily Spending",
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
+                Flexible(
+                  child: Text(
+                    "Daily Spending",
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
           ),
-
           SizedBox(height: smallSpacing),
 
           TweenAnimationBuilder<double>(
@@ -846,7 +857,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 170,
+                        height: screenHeight * .21,
                         child: AnalyticsCard(
                           icon: Icons.calendar_today_rounded,
                           title: "Highest Day",
@@ -861,7 +872,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
                     Expanded(
                       child: SizedBox(
-                        height: screenHeight * 0.20,
+                        height: screenHeight * .21,
                         child: AnalyticsCard(
                           icon: Icons.analytics_rounded,
                           title: "Avg Daily Spending",
@@ -876,7 +887,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 SizedBox(height: sectionSpacing),
 
                 SizedBox(
-                  height: screenHeight * 0.20,
+                  height: screenHeight * .21,
                   child: AnalyticsCard(
                     icon: Icons.trending_up_rounded,
                     title: "Projected Month-End Spending",
@@ -923,15 +934,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
             "This score is calculated using your budget usage, spending consistency, and savings potential.",
             style: TextStyle(
               color: colorScheme.onSurface.withOpacity(0.7),
-              fontSize: 13,
+              fontSize: 14,
             ),
           ),
 
           SizedBox(height: sectionSpacing),
 
           Text(
-            '${percentageUsed.toStringAsFixed(1)}% Used',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            "${percentageUsed.toStringAsFixed(1)}% Used",
+            textAlign: TextAlign.center,
           ),
 
           SizedBox(height: smallSpacing),

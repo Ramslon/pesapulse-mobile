@@ -25,10 +25,16 @@ class StatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: color),
+
           const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(color: color, fontWeight: FontWeight.w700),
+
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: color, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),

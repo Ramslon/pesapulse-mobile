@@ -13,7 +13,6 @@ void main() async {
 
   await NotificationService.init();
 
-  
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
@@ -38,6 +37,19 @@ class MyApp extends StatelessWidget {
 
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
+
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(
+              media.textScaler.scale(1).clamp(0.9, 1.2),
+            ),
+          ),
+          child: child!,
+        );
+      },
 
       home: const SplashScreen(),
     );

@@ -18,11 +18,14 @@ class DashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final sectionSpacing = screenHeight * 0.035;
+    final smallSpacing = screenHeight * 0.015;
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -39,14 +42,14 @@ class DashboardCard extends StatelessWidget {
               style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
 
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
 
             Text(
               title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
 
-            const SizedBox(height: 3),
+            SizedBox(height: 3),
 
             Text(subtitle, style: const TextStyle(color: Colors.grey)),
           ],
