@@ -305,6 +305,19 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<void> deleteBudget() async {
+    final token = await getToken();
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/budget'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete budget');
+    }
+  }
+
   static Future<Map<String, dynamic>> getFinancialInsights() async {
     final token = await getToken();
 
