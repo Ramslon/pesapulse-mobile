@@ -107,53 +107,69 @@ class _HomeScreenState extends State<HomeScreen> {
 
       body: screens[currentIndex],
 
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
 
-        onTap: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        },
+        child: Material(
+          elevation: 12,
+          borderRadius: BorderRadius.circular(24),
 
-        type: BottomNavigationBarType.fixed,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
 
-        selectedItemColor: Colors.green,
+            child: NavigationBar(
+              selectedIndex: currentIndex,
 
-        unselectedItemColor: Colors.grey,
+              onDestinationSelected: (index) {
+                setState(() {
+                  currentIndex = index;
+                });
+              },
 
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
+              height: 72,
 
-            label: 'Dashboard',
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard),
+                  label: "Dashboard",
+                ),
+
+                NavigationDestination(
+                  icon: Icon(Icons.receipt_long_outlined),
+                  selectedIcon: Icon(Icons.receipt_long),
+                  label: "Expenses",
+                ),
+
+                NavigationDestination(
+                  icon: Icon(Icons.account_balance_wallet_outlined),
+                  selectedIcon: Icon(Icons.account_balance_wallet),
+                  label: "Budget",
+                ),
+
+                NavigationDestination(
+                  icon: Icon(Icons.bar_chart_outlined),
+                  selectedIcon: Icon(Icons.bar_chart),
+                  label: "Analytics",
+                ),
+
+                NavigationDestination(
+                  icon: Icon(Icons.flag_outlined),
+                  selectedIcon: Icon(Icons.flag),
+                  label: "Goals",
+                ),
+
+                NavigationDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: "Settings",
+                ),
+              ],
+            ),
           ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long),
-
-            label: 'Expenses',
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet),
-
-            label: 'Budget',
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-
-            label: 'Analytics',
-          ),
-
-          BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Goals'),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+        ),
       ),
     );
   }
