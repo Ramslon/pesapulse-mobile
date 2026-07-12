@@ -18,40 +18,49 @@ class DashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final sectionSpacing = screenHeight * 0.035;
-    final smallSpacing = screenHeight * 0.015;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              radius: 22,
+              radius: 20,
               backgroundColor: iconColor.withOpacity(.12),
-              child: Icon(icon, color: iconColor, size: 22),
+              child: Icon(icon, color: iconColor),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
 
-            Text(
-              value,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
 
-            SizedBox(height: 6),
+            const SizedBox(height: 10),
 
             Text(
               title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
 
-            SizedBox(height: 3),
-
-            Text(subtitle, style: const TextStyle(color: Colors.grey)),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
         ),
       ),

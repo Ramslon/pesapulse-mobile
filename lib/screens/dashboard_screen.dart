@@ -109,6 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cardHeight = MediaQuery.of(context).size.height * 0.22;
     if (isLoading) {
       return const DashboardLoadingSkeleton();
     }
@@ -118,6 +119,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onRefresh: () async {
           await loadDashboardData();
         },
+
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -206,7 +208,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Expanded(
                         child: SizedBox(
-                          height: 190,
+                          height: cardHeight,
                           child: DashboardCard(
                             title: "Expenses",
                             subtitle: "Total Recorded",
@@ -221,7 +223,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       Expanded(
                         child: SizedBox(
-                          height: 190,
+                          height: cardHeight,
                           child: DashboardCard(
                             title: 'Budget',
                             subtitle: "Current Budget",
@@ -240,7 +242,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Expanded(
                         child: SizedBox(
-                          height: 190,
+                          height: cardHeight,
                           child: DashboardCard(
                             title: 'Categories',
                             subtitle: "Expense Types",
@@ -255,7 +257,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       Expanded(
                         child: SizedBox(
-                          height: 190,
+                          height: cardHeight,
                           child: DashboardCard(
                             title: 'Reports',
                             subtitle: "Generated",

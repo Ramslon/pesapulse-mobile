@@ -24,8 +24,9 @@ class BudgetStatCard extends StatelessWidget {
         return Transform.scale(scale: scale, child: child);
       },
       child: Card(
-        elevation: 0,
-        color: Theme.of(context).colorScheme.surface,
+        elevation: 2,
+        shadowColor: color.withOpacity(.12),
+
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(18),
