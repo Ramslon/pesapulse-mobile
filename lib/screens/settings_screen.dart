@@ -335,6 +335,7 @@ https://github.com/ramslon/PesaPulse
     }
 
     return SingleChildScrollView(
+      key: const PageStorageKey("settings"),
       child: Padding(
         padding: const EdgeInsets.all(20),
 

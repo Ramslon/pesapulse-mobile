@@ -18,7 +18,8 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with AutomaticKeepAliveClientMixin {
   bool isLoading = true;
 
   int totalExpenses = 0;
@@ -108,7 +109,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final cardHeight = MediaQuery.of(context).size.height * 0.22;
     if (isLoading) {
       return const DashboardLoadingSkeleton();
@@ -121,6 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
 
         child: SingleChildScrollView(
+          key: const PageStorageKey("dashboard"),
           child: Padding(
             padding: const EdgeInsets.all(20),
 

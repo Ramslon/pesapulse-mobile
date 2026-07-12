@@ -15,7 +15,8 @@ class AnalyticsScreen extends StatefulWidget {
   State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends State<AnalyticsScreen> {
+class _AnalyticsScreenState extends State<AnalyticsScreen>
+    with AutomaticKeepAliveClientMixin {
   List expenses = [];
 
   List<String> insights = [];
@@ -489,10 +490,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     return isLoading
         ? const LoadingWidget()
         : SingleChildScrollView(
+            key: const PageStorageKey("analytics"),
             padding: const EdgeInsets.all(20),
 
             child: Column(

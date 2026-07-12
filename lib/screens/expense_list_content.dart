@@ -14,7 +14,8 @@ class ExpenseListContent extends StatefulWidget {
   State<ExpenseListContent> createState() => _ExpenseListContentState();
 }
 
-class _ExpenseListContentState extends State<ExpenseListContent> {
+class _ExpenseListContentState extends State<ExpenseListContent>
+    with AutomaticKeepAliveClientMixin {
   List expenses = [];
 
   final NumberFormat currencyFormatter = NumberFormat("#,##0");
@@ -350,7 +351,11 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (isLoading) {
       return const ExpenseLoadingSkeleton();
     }
@@ -363,6 +368,7 @@ class _ExpenseListContentState extends State<ExpenseListContent> {
       onRefresh: refreshExpenses,
       color: Theme.of(context).colorScheme.primary,
       child: CustomScrollView(
+        key: const PageStorageKey("expenses"),
         controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,

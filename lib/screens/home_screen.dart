@@ -11,6 +11,7 @@ import 'settings_screen.dart';
 import 'analytics_screen.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +23,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
 
-  final List screens = [
+  final List<Widget> screens = [
     const DashboardScreen(),
 
     const ExpenseListContent(),
@@ -105,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: const [],
       ),
 
-      body: screens[currentIndex],
+      body: IndexedStack(index: currentIndex, children: screens),
 
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -121,6 +122,9 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedIndex: currentIndex,
 
               onDestinationSelected: (index) {
+                if (index == currentIndex) return;
+                HapticFeedback.lightImpact();
+
                 setState(() {
                   currentIndex = index;
                 });

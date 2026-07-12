@@ -16,7 +16,8 @@ class BudgetScreen extends StatefulWidget {
   State<BudgetScreen> createState() => _BudgetScreenState();
 }
 
-class _BudgetScreenState extends State<BudgetScreen> {
+class _BudgetScreenState extends State<BudgetScreen>
+    with AutomaticKeepAliveClientMixin {
   bool isLoading = true;
 
   double budget = 0;
@@ -447,7 +448,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -498,6 +503,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
       body: RefreshIndicator(
         onRefresh: refreshBudgetData,
         child: SingleChildScrollView(
+          key: const PageStorageKey("budget"),
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),

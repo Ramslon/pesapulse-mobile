@@ -13,7 +13,8 @@ class GoalsScreen extends StatefulWidget {
   State<GoalsScreen> createState() => _GoalsScreenState();
 }
 
-class _GoalsScreenState extends State<GoalsScreen> {
+class _GoalsScreenState extends State<GoalsScreen>
+    with AutomaticKeepAliveClientMixin {
   bool isLoading = true;
 
   List goals = [];
@@ -215,7 +216,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -269,6 +274,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ],
               )
             : ListView(
+                key: const PageStorageKey("goals"),
                 padding: const EdgeInsets.all(16),
                 children: [
                   Row(
