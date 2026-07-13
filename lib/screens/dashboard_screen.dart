@@ -43,9 +43,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
+  String budgetStatus = "healthy";
+
   Future<void> loadDashboardData() async {
     try {
-      final data = await ApiService.getDashboard();
+      final results = await Future.wait([
+        ApiService.getDashboard(),
+        ApiService.getFinancialInsights(),
+      ]);
+      final data = results[0] as Map<String, dynamic>;
+      final insights = results[1] as Map<String, dynamic>;
+
       final summary = data['summary'];
 
       setState(() {
@@ -59,6 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         recentExpenses = List<Map<String, dynamic>>.from(
           data['recent_expenses'],
         );
+        budgetStatus = insights['budget_status'] ?? 'healthy';
 
         isLoading = false;
       });

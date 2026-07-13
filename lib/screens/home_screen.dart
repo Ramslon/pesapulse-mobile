@@ -4,6 +4,7 @@ import 'dashboard_screen.dart';
 import 'expense_list_content.dart';
 
 import '../services/settings_service.dart';
+import '../services/api_services.dart';
 import '../providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -60,11 +61,53 @@ class _HomeScreenState extends State<HomeScreen> {
     Icons.settings,
   ];
 
+  String budgetStatus = "healthy";
+
+  Color? getBudgetBadgeColor() {
+    switch (budgetStatus) {
+      case "warning":
+        return Colors.orange;
+
+      case "overspent":
+        return Colors.deepOrange;
+
+      case "critical":
+        return Colors.red;
+
+      default:
+        return Colors.green;
+    }
+  }
+
+  Widget buildNavIcon({required IconData icon, Color? badgeColor}) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon),
+
+        if (badgeColor != null)
+          Positioned(
+            right: -3,
+            top: -3,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: badgeColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   void initState() {
     super.initState();
 
     _syncPreferences();
+    loadBudgetStatus();
   }
 
   Future<void> _syncPreferences() async {
@@ -82,6 +125,16 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       debugPrint("Theme sync failed: $e");
     }
+  }
+
+  Future<void> loadBudgetStatus() async {
+    final insights = await ApiService.getFinancialInsights();
+
+    if (!mounted) return;
+
+    setState(() {
+      budgetStatus = insights['budget_status'] ?? 'healthy';
+    });
   }
 
   @override
@@ -121,9 +174,13 @@ class _HomeScreenState extends State<HomeScreen> {
             child: NavigationBar(
               selectedIndex: currentIndex,
 
-              onDestinationSelected: (index) {
+              onDestinationSelected: (index) async {
                 if (index == currentIndex) return;
                 HapticFeedback.lightImpact();
+
+                if (index == 2 || currentIndex == 2) {
+                  await loadBudgetStatus();
+                }
 
                 setState(() {
                   currentIndex = index;
@@ -134,40 +191,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
 
-              destinations: const [
+              destinations: [
                 NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard),
+                  icon: const Icon(Icons.dashboard_outlined),
+                  selectedIcon: const Icon(Icons.dashboard),
                   label: "Dashboard",
                 ),
 
                 NavigationDestination(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  selectedIcon: Icon(Icons.receipt_long),
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  selectedIcon: const Icon(Icons.receipt_long),
                   label: "Expenses",
                 ),
 
                 NavigationDestination(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  selectedIcon: Icon(Icons.account_balance_wallet),
+                  icon: buildNavIcon(
+                    icon: Icons.account_balance_wallet_outlined,
+                    badgeColor: getBudgetBadgeColor(),
+                  ),
+                  selectedIcon: buildNavIcon(
+                    icon: Icons.account_balance_wallet,
+                    badgeColor: getBudgetBadgeColor(),
+                  ),
                   label: "Budget",
                 ),
 
                 NavigationDestination(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  selectedIcon: Icon(Icons.bar_chart),
+                  icon: const Icon(Icons.bar_chart_outlined),
+                  selectedIcon: const Icon(Icons.bar_chart),
                   label: "Analytics",
                 ),
 
                 NavigationDestination(
-                  icon: Icon(Icons.flag_outlined),
-                  selectedIcon: Icon(Icons.flag),
+                  icon: const Icon(Icons.flag_outlined),
+                  selectedIcon: const Icon(Icons.flag),
                   label: "Goals",
                 ),
 
                 NavigationDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
+                  icon: const Icon(Icons.settings_outlined),
+                  selectedIcon: const Icon(Icons.settings),
                   label: "Settings",
                 ),
               ],

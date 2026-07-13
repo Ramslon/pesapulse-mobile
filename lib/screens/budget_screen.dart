@@ -127,7 +127,8 @@ class _BudgetScreenState extends State<BudgetScreen>
 
         remaining = double.tryParse(data['remaining'].toString()) ?? 0;
 
-        budgetStatus = insights['status'] ?? '';
+        budgetStatus = insights['budget_status'] ?? 'healthy';
+        debugPrint("Dashboard budgetStatus = $budgetStatus");
         recommendation = insights['recommendation'] ?? '';
         categoryAdvice = insights['category_advice'] ?? '';
 
