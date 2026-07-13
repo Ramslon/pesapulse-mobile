@@ -21,18 +21,19 @@ class AppTheme {
 
       indicatorColor: Colors.green.withOpacity(.15),
 
-      labelTextStyle: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) {
-          return const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
-          );
-        }
-
-        return const TextStyle(color: Colors.grey);
+      labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
+        return TextStyle(
+          fontSize: 11,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w600
+              : FontWeight.w500,
+          color: states.contains(WidgetState.selected)
+              ? Colors.green
+              : Colors.grey,
+        );
       }),
 
-      iconTheme: WidgetStateProperty.resolveWith((states) {
+      iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
         if (states.contains(WidgetState.selected)) {
           return const IconThemeData(color: Colors.green, size: 28);
         }
@@ -78,30 +79,32 @@ class AppTheme {
     ),
 
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: Colors.black,
+      height: 72,
 
-      indicatorColor: Colors.green.withOpacity(.25),
+      backgroundColor: const Color(0xFF1E1E1E),
 
-      labelTextStyle: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) {
-          return const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
-          );
-        }
+      indicatorColor: Colors.green.withOpacity(.20),
 
-        return const TextStyle(color: Colors.grey);
+      labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
+        return TextStyle(
+          fontSize: 11,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w600
+              : FontWeight.w500,
+          color: states.contains(WidgetState.selected)
+              ? Colors.green
+              : Colors.grey.shade400,
+        );
       }),
 
-      iconTheme: WidgetStateProperty.resolveWith((states) {
+      iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
         if (states.contains(WidgetState.selected)) {
           return const IconThemeData(color: Colors.green, size: 28);
         }
 
-        return const IconThemeData(color: Colors.grey, size: 24);
+        return IconThemeData(color: Colors.grey.shade400, size: 24);
       }),
     ),
-
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.green,

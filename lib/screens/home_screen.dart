@@ -144,25 +144,37 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         centerTitle: true,
 
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-
-          children: [
-            Icon(icons[currentIndex]),
-
-            const SizedBox(width: 10),
-
-            Text(titles[currentIndex]),
-          ],
+        title: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          child: Row(
+            key: ValueKey(currentIndex),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icons[currentIndex]),
+              const SizedBox(width: 10),
+              Text(titles[currentIndex]),
+            ],
+          ),
         ),
 
         actions: const [],
       ),
 
-      body: IndexedStack(index: currentIndex, children: screens),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        child: KeyedSubtree(
+          key: ValueKey(currentIndex),
+          child: IndexedStack(index: currentIndex, children: screens),
+        ),
+      ),
 
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
 
         child: Material(
           elevation: 12,
@@ -172,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(24),
 
             child: NavigationBar(
+              animationDuration: const Duration(milliseconds: 300),
               selectedIndex: currentIndex,
 
               onDestinationSelected: (index) async {
@@ -189,7 +202,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
               height: 72,
 
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              labelBehavior:
+                  NavigationDestinationLabelBehavior.onlyShowSelected,
 
               destinations: [
                 NavigationDestination(
