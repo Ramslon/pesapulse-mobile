@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/analytics_loading_skeleton.dart';
+import '../widgets/analytics_section_header.dart';
+import '../widgets/empty_state.dart';
 import '../services/api_services.dart';
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
@@ -348,7 +350,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   Widget buildStatCard(String title, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(22),
 
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -498,6 +500,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     if (isLoading) {
       return const AnalyticsLoadingSkeleton();
     }
+
+    const EmptyState(
+      icon: Icons.analytics_outlined,
+      title: "No Analytics Yet",
+      message: "Add some expenses to unlock spending insights.",
+    );
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: fetchAnalytics,
@@ -510,47 +518,57 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
 
             children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Analytics Overview",
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 500),
+                tween: Tween(begin: .95, end: 1),
+
+                builder: (_, value, child) {
+                  return Transform.scale(scale: value, child: child);
+                },
+
+                child: Card(
+                  elevation: 2,
+
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Analytics Overview",
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
 
-                      const SizedBox(height: 6),
+                        const SizedBox(height: 6),
 
-                      Text(
-                        "Track your spending and financial progress",
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-
-                      const SizedBox(height: 22),
-
-                      Text(
-                        "KES ${totalSpending.toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          "Track your spending and financial progress",
+                          style: TextStyle(color: Colors.grey.shade600),
                         ),
-                      ),
 
-                      const SizedBox(height: 6),
+                        const SizedBox(height: 22),
 
-                      Text(
-                        "Total Spending",
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    ],
+                        Text(
+                          "KES ${totalSpending.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        Text(
+                          "Total Spending",
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -607,7 +625,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(22),
 
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
@@ -724,20 +742,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
               SizedBox(height: sectionSpacing),
 
-              Card(
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  child: Text(
-                    "Category Breakdown",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              const AnalyticsSectionHeader(
+                icon: Icons.pie_chart,
+                title: "Category Breakdown",
               ),
 
               const SizedBox(height: 20),
@@ -757,22 +764,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               ),
               SizedBox(height: sectionSpacing * 1.2),
 
-              Card(
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  child: Text(
-                    "Goal Status",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              const AnalyticsSectionHeader(
+                icon: Icons.flag,
+                title: "Goal Status",
               ),
-
               const SizedBox(height: 20),
 
               SizedBox(
@@ -788,20 +783,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
               SizedBox(height: sectionSpacing * 1.2),
 
-              Card(
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  child: Text(
-                    "Monthly Spending Trend",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              const AnalyticsSectionHeader(
+                icon: Icons.show_chart,
+                title: "Monthly Spending Trend",
               ),
 
               const SizedBox(height: 20),
@@ -863,20 +847,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
               SizedBox(height: sectionSpacing * 1.2),
 
-              Card(
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  child: Text(
-                    "Smart Insights",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              const AnalyticsSectionHeader(
+                icon: Icons.lightbulb,
+                title: "Smart Insights",
               ),
 
               const SizedBox(height: 20),
@@ -892,20 +865,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
               SizedBox(height: sectionSpacing * 1.2),
 
-              Card(
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  child: Text(
-                    "Reports Center",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              const AnalyticsSectionHeader(
+                icon: Icons.description,
+                title: "Reports Center",
               ),
 
               const SizedBox(height: 10),
@@ -918,13 +880,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               const SizedBox(height: 15),
 
               reports.isEmpty
-                  ? const Card(
+                  ? Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22),
+                      ),
                       child: Padding(
-                        padding: EdgeInsets.all(20),
+                        padding: EdgeInsets.all(22),
                         child: Center(child: Text('No reports generated yet')),
                       ),
                     )
                   : Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22),
+                      ),
                       child: Column(
                         children: reports.asMap().entries.map((entry) {
                           final index = entry.key;
