@@ -104,17 +104,6 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.cancelAll();
   }
 
-  static Future<void> debugPendingNotifications() async {
-    final pending = await flutterLocalNotificationsPlugin
-        .pendingNotificationRequests();
-
-    print('Pending notifications: ${pending.length}');
-
-    for (final item in pending) {
-      print('${item.id} - ${item.title}');
-    }
-  }
-
   static Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -122,10 +111,6 @@ class NotificationService {
     required DateTime scheduledDate,
   }) async {
     final scheduledTZ = tz.TZDateTime.from(scheduledDate, tz.local);
-
-    print('Now: ${DateTime.now()}');
-    print('Scheduled Local: ${scheduledDate.toLocal()}');
-    print('Scheduled: $scheduledTZ');
 
     await flutterLocalNotificationsPlugin.zonedSchedule(
       id: id,

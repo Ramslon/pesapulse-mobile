@@ -51,8 +51,6 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
-
-        debugPrint("...");
       } else {
         ScaffoldMessenger.of(
           context,

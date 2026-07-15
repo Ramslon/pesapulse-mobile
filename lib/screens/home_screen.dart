@@ -24,21 +24,21 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
 
-  final List<Widget> screens = [
-    const DashboardScreen(),
+  final List<Widget> screens = const [
+    DashboardScreen(),
 
-    const ExpenseListContent(),
+    ExpenseListContent(),
 
-    const BudgetScreen(),
+    BudgetScreen(),
 
-    const AnalyticsScreen(),
+    AnalyticsScreen(),
 
-    const GoalsScreen(),
+    GoalsScreen(),
 
-    const SettingsScreen(),
+    SettingsScreen(),
   ];
 
-  final List<String> titles = [
+  final List<String> titles = const [
     'Dashboard',
     'Expenses',
     'Budget',
@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Settings',
   ];
 
-  final List<IconData> icons = [
+  final List<IconData> icons = const [
     Icons.dashboard,
 
     Icons.receipt_long,
@@ -79,19 +79,37 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget buildNavIcon({required IconData icon, Color? badgeColor}) {
+  Widget buildNavIcon({
+    required IconData icon,
+    Color? badgeColor,
+    bool selected = false,
+  }) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Icon(icon),
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: selected
+                ? Colors.green.withOpacity(.12)
+                : Colors.transparent,
+          ),
+          child: Icon(
+            icon,
+            color: selected ? Colors.green : Colors.grey,
+            size: selected ? 26 : 24,
+          ),
+        ),
 
         if (badgeColor != null)
           Positioned(
-            right: -3,
-            top: -3,
+            right: 2,
+            top: 2,
             child: Container(
-              width: 12,
-              height: 12,
+              width: 9,
+              height: 9,
               decoration: BoxDecoration(
                 color: badgeColor,
                 shape: BoxShape.circle,
@@ -137,8 +155,95 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  List<NavigationDestination> get _navigationDestinations => [
+    // Dashboard
+    NavigationDestination(
+      icon: Tooltip(
+        message: "Dashboard",
+        child: buildNavIcon(icon: Icons.dashboard_outlined),
+      ),
+      selectedIcon: Tooltip(
+        message: "Dashboard",
+        child: buildNavIcon(icon: Icons.dashboard, selected: true),
+      ),
+      label: "Dashboard",
+    ),
+
+    // Expenses
+    NavigationDestination(
+      icon: Tooltip(
+        message: "Expenses",
+        child: buildNavIcon(icon: Icons.receipt_long_outlined),
+      ),
+      selectedIcon: Tooltip(
+        message: "Expenses",
+        child: buildNavIcon(icon: Icons.receipt_long, selected: true),
+      ),
+      label: "Expenses",
+    ),
+
+    // Budget
+    NavigationDestination(
+      icon: Tooltip(
+        message: "Budget",
+        child: buildNavIcon(
+          icon: Icons.account_balance_wallet_outlined,
+          badgeColor: getBudgetBadgeColor(),
+        ),
+      ),
+      selectedIcon: Tooltip(
+        message: "Budget",
+        child: buildNavIcon(
+          icon: Icons.account_balance_wallet,
+          badgeColor: getBudgetBadgeColor(),
+          selected: true,
+        ),
+      ),
+      label: "Budget",
+    ),
+    NavigationDestination(
+      icon: Tooltip(
+        message: "Analytics",
+
+        child: buildNavIcon(icon: Icons.bar_chart_outlined),
+      ),
+
+      selectedIcon: Tooltip(
+        message: "Analytics",
+        child: buildNavIcon(icon: Icons.bar_chart, selected: true),
+      ),
+      label: "Analytics",
+    ),
+
+    NavigationDestination(
+      icon: Tooltip(
+        message: "Goals",
+        child: buildNavIcon(icon: Icons.flag_outlined),
+      ),
+      selectedIcon: Tooltip(
+        message: "Goals",
+        child: buildNavIcon(icon: Icons.flag, selected: true),
+      ),
+      label: "Goals",
+    ),
+
+    NavigationDestination(
+      icon: Tooltip(
+        message: "Settings",
+        child: buildNavIcon(icon: Icons.settings_outlined),
+      ),
+      selectedIcon: Tooltip(
+        message: "Settings",
+        child: buildNavIcon(icon: Icons.settings, selected: true),
+      ),
+      label: "Settings",
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
@@ -146,13 +251,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
         title: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
+          transitionBuilder: (child, animation) {
+            return FadeTransition(opacity: animation, child: child);
+          },
           child: Row(
             key: ValueKey(currentIndex),
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icons[currentIndex]),
               const SizedBox(width: 10),
-              Text(titles[currentIndex]),
+              Text(
+                titles[currentIndex],
+                style: TextStyle(
+                  fontSize: isLandscape ? 18 : 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -160,94 +274,46 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: const [],
       ),
 
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        switchInCurve: Curves.easeOut,
-        switchOutCurve: Curves.easeIn,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        child: KeyedSubtree(
-          key: ValueKey(currentIndex),
-          child: IndexedStack(index: currentIndex, children: screens),
-        ),
-      ),
+      body: IndexedStack(index: currentIndex, children: screens),
 
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            isLandscape ? 6 : 8,
+            0,
+            isLandscape ? 6 : 8,
+            isLandscape ? 6 : 10,
+          ),
+          child: Material(
+            elevation: 6,
+            borderRadius: BorderRadius.circular(28),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: NavigationBar(
+                animationDuration: const Duration(milliseconds: 300),
+                selectedIndex: currentIndex,
 
-        child: Material(
-          elevation: 12,
-          borderRadius: BorderRadius.circular(24),
+                onDestinationSelected: (index) async {
+                  if (index == currentIndex) return;
+                  HapticFeedback.lightImpact();
 
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
+                  if (index == 2 || currentIndex == 2) {
+                    await loadBudgetStatus();
+                  }
 
-            child: NavigationBar(
-              animationDuration: const Duration(milliseconds: 300),
-              selectedIndex: currentIndex,
+                  setState(() {
+                    currentIndex = index;
+                  });
+                },
 
-              onDestinationSelected: (index) async {
-                if (index == currentIndex) return;
-                HapticFeedback.lightImpact();
+                height: isLandscape ? 60 : 72,
 
-                if (index == 2 || currentIndex == 2) {
-                  await loadBudgetStatus();
-                }
-
-                setState(() {
-                  currentIndex = index;
-                });
-              },
-
-              height: 72,
-
-              labelBehavior:
-                  NavigationDestinationLabelBehavior.onlyShowSelected,
-
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.dashboard_outlined),
-                  selectedIcon: const Icon(Icons.dashboard),
-                  label: "Dashboard",
-                ),
-
-                NavigationDestination(
-                  icon: const Icon(Icons.receipt_long_outlined),
-                  selectedIcon: const Icon(Icons.receipt_long),
-                  label: "Expenses",
-                ),
-
-                NavigationDestination(
-                  icon: buildNavIcon(
-                    icon: Icons.account_balance_wallet_outlined,
-                    badgeColor: getBudgetBadgeColor(),
-                  ),
-                  selectedIcon: buildNavIcon(
-                    icon: Icons.account_balance_wallet,
-                    badgeColor: getBudgetBadgeColor(),
-                  ),
-                  label: "Budget",
-                ),
-
-                NavigationDestination(
-                  icon: const Icon(Icons.bar_chart_outlined),
-                  selectedIcon: const Icon(Icons.bar_chart),
-                  label: "Analytics",
-                ),
-
-                NavigationDestination(
-                  icon: const Icon(Icons.flag_outlined),
-                  selectedIcon: const Icon(Icons.flag),
-                  label: "Goals",
-                ),
-
-                NavigationDestination(
-                  icon: const Icon(Icons.settings_outlined),
-                  selectedIcon: const Icon(Icons.settings),
-                  label: "Settings",
-                ),
-              ],
+                labelBehavior: isLandscape
+                    ? NavigationDestinationLabelBehavior.alwaysHide
+                    : NavigationDestinationLabelBehavior.onlyShowSelected,
+                destinations: _navigationDestinations,
+              ),
             ),
           ),
         ),
