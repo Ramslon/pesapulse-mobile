@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:pesapulse_mobile/widgets/loading_widget.dart';
 
+import '../widgets/analytics_loading_skeleton.dart';
 import '../services/api_services.dart';
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
@@ -486,6 +486,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
 
     final colorScheme = theme.colorScheme;
@@ -493,504 +494,492 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     final screenHeight = MediaQuery.of(context).size.height;
 
     final sectionSpacing = screenHeight * .035;
-    super.build(context);
-    return isLoading
-        ? const LoadingWidget()
-        : RefreshIndicator(
-            onRefresh: fetchAnalytics,
-            child: SingleChildScrollView(
-              key: const PageStorageKey("analytics"),
-              padding: const EdgeInsets.all(20),
 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    if (isLoading) {
+      return const AnalyticsLoadingSkeleton();
+    }
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: fetchAnalytics,
+        child: SingleChildScrollView(
+          key: const PageStorageKey("analytics"),
 
+          padding: const EdgeInsets.all(20),
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+
+            children: [
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Analytics Overview",
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      Text(
+                        "Track your spending and financial progress",
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
+
+                      const SizedBox(height: 22),
+
+                      Text(
+                        "KES ${totalSpending.toStringAsFixed(2)}",
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      Text(
+                        "Total Spending",
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              SizedBox(height: sectionSpacing),
+
+              Row(
                 children: [
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(22),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Analytics Overview",
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          const SizedBox(height: 6),
-
-                          Text(
-                            "Track your spending and financial progress",
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-
-                          const SizedBox(height: 22),
-
-                          Text(
-                            "KES ${totalSpending.toStringAsFixed(2)}",
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          const SizedBox(height: 6),
-
-                          Text(
-                            "Total Spending",
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
+                  Expanded(
+                    child: buildStatCard(
+                      'Goals',
+                      totalGoals.toString(),
+                      Icons.flag,
                     ),
                   ),
 
-                  SizedBox(height: sectionSpacing),
+                  const SizedBox(width: 12),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: buildStatCard(
-                          'Goals',
-                          totalGoals.toString(),
-                          Icons.flag,
-                        ),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: buildStatCard(
-                          'Completed',
-                          completedGoals.toString(),
-                          Icons.emoji_events,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: buildStatCard(
-                          'Active',
-                          activeGoals.toString(),
-                          Icons.track_changes,
-                        ),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: buildStatCard(
-                          'Rate',
-                          '${completionRate.toStringAsFixed(0)}%',
-                          Icons.trending_up,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: sectionSpacing),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-
-                      color: healthScore >= 80
-                          ? Colors.green
-                          : healthScore >= 60
-                          ? Colors.orange
-                          : Colors.red,
+                  Expanded(
+                    child: buildStatCard(
+                      'Completed',
+                      completedGoals.toString(),
+                      Icons.emoji_events,
                     ),
-
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Financial Health Score',
-                          style: TextStyle(color: Colors.white, fontSize: 18),
-                        ),
-
-                        const Icon(
-                          Icons.health_and_safety,
-                          color: Colors.white,
-                          size: 40,
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        Text(
-                          '${healthScore.toStringAsFixed(0)}/100',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 5),
-
-                        Text(
-                          healthStatus,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.picture_as_pdf),
-                          label: const Text('Export PDF'),
-
-                          onPressed: () async {
-                            final file = await ExportService.exportExpensesPdf(
-                              expenses,
-                            );
-                            await ReportHistoryService.saveReport(
-                              name: file.path.split('/').last,
-                              path: file.path,
-                            );
-
-                            await loadReports();
-
-                            await ExportService.shareFile(file);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'PDF report exported successfully',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.table_chart),
-                          label: const Text('Export CSV'),
-
-                          onPressed: () async {
-                            final file = await ExportService.exportExpensesCsv(
-                              expenses,
-                            );
-
-                            await ReportHistoryService.saveReport(
-                              name: file.path.split('/').last,
-                              path: file.path,
-                            );
-                            await loadReports();
-
-                            await ExportService.shareFile(file);
-
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'CSV report exported successfully',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  buildRecommendationCard(),
-
-                  SizedBox(height: sectionSpacing),
-
-                  Card(
-                    elevation: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 14,
-                      ),
-                      child: Text(
-                        "Category Breakdown",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  SizedBox(
-                    height: 300,
-
-                    child: PieChart(
-                      PieChartData(
-                        sections: getSections(),
-
-                        centerSpaceRadius: 40,
-
-                        sectionsSpace: 3,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: sectionSpacing * 1.2),
-
-                  Card(
-                    elevation: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 14,
-                      ),
-                      child: Text(
-                        "Goal Status",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  SizedBox(
-                    height: 250,
-                    child: PieChart(
-                      PieChartData(
-                        sections: getGoalSections(),
-                        centerSpaceRadius: 40,
-                        sectionsSpace: 3,
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: sectionSpacing * 1.2),
-
-                  Card(
-                    elevation: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 14,
-                      ),
-                      child: Text(
-                        "Monthly Spending Trend",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  SizedBox(
-                    height: 300,
-
-                    child: BarChart(
-                      BarChartData(
-                        borderData: FlBorderData(show: false),
-
-                        titlesData: FlTitlesData(
-                          leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: true),
-                          ),
-
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-
-                              getTitlesWidget: (value, meta) {
-                                const months = [
-                                  '',
-                                  'Jan',
-                                  'Feb',
-                                  'Mar',
-                                  'Apr',
-                                  'May',
-                                  'Jun',
-                                  'Jul',
-                                  'Aug',
-                                  'Sep',
-                                  'Oct',
-                                  'Nov',
-                                  'Dec',
-                                ];
-
-                                return Text(months[value.toInt()]);
-                              },
-                            ),
-                          ),
-                        ),
-
-                        barGroups: getMonthlyBars(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  Center(
-                    child: Text(
-                      '$completedGoals of $totalGoals goals completed',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: sectionSpacing * 1.2),
-
-                  Card(
-                    elevation: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 14,
-                      ),
-                      child: Text(
-                        "Smart Insights",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  ...insights.map(
-                    (insight) => Card(
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.lightbulb,
-                          color: Colors.amber,
-                        ),
-                        title: Text(insight),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: sectionSpacing * 1.2),
-
-                  Card(
-                    elevation: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 14,
-                      ),
-                      child: Text(
-                        "Reports Center",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Text(
-                    '${reports.length} Reports Generated',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  reports.isEmpty
-                      ? const Card(
-                          child: Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Center(
-                              child: Text('No reports generated yet'),
-                            ),
-                          ),
-                        )
-                      : Card(
-                          child: Column(
-                            children: reports.asMap().entries.map((entry) {
-                              final index = entry.key;
-                              final report = entry.value;
-                              return ListTile(
-                                leading: Icon(
-                                  report['name']
-                                          .toString()
-                                          .toLowerCase()
-                                          .endsWith('.pdf')
-                                      ? Icons.picture_as_pdf
-                                      : Icons.table_chart,
-                                ),
-
-                                title: Text(report['name']),
-
-                                subtitle: Text(
-                                  report['created_at'].toString().substring(
-                                    0,
-                                    10,
-                                  ),
-                                ),
-
-                                onTap: () => previewReport(report),
-
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.share),
-                                      onPressed: () =>
-                                          shareExistingReport(report['path']),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () => deleteReport(index),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      await ReportHistoryService.clearReports();
-
-                      await loadReports();
-                    },
-
-                    icon: const Icon(Icons.delete),
-
-                    label: const Text('Clear Report History'),
                   ),
                 ],
               ),
-            ),
-          );
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: buildStatCard(
+                      'Active',
+                      activeGoals.toString(),
+                      Icons.track_changes,
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: buildStatCard(
+                      'Rate',
+                      '${completionRate.toStringAsFixed(0)}%',
+                      Icons.trending_up,
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: sectionSpacing),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+
+                  color: healthScore >= 80
+                      ? Colors.green
+                      : healthScore >= 60
+                      ? Colors.orange
+                      : Colors.red,
+                ),
+
+                child: Column(
+                  children: [
+                    const Text(
+                      'Financial Health Score',
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+
+                    const Icon(
+                      Icons.health_and_safety,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Text(
+                      '${healthScore.toStringAsFixed(0)}/100',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    Text(
+                      healthStatus,
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.picture_as_pdf),
+                      label: const Text('Export PDF'),
+
+                      onPressed: () async {
+                        final file = await ExportService.exportExpensesPdf(
+                          expenses,
+                        );
+                        await ReportHistoryService.saveReport(
+                          name: file.path.split('/').last,
+                          path: file.path,
+                        );
+
+                        await loadReports();
+
+                        await ExportService.shareFile(file);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('PDF report exported successfully'),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.table_chart),
+                      label: const Text('Export CSV'),
+
+                      onPressed: () async {
+                        final file = await ExportService.exportExpensesCsv(
+                          expenses,
+                        );
+
+                        await ReportHistoryService.saveReport(
+                          name: file.path.split('/').last,
+                          path: file.path,
+                        );
+                        await loadReports();
+
+                        await ExportService.shareFile(file);
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('CSV report exported successfully'),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              buildRecommendationCard(),
+
+              SizedBox(height: sectionSpacing),
+
+              Card(
+                elevation: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  child: Text(
+                    "Category Breakdown",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              SizedBox(
+                height: 300,
+
+                child: PieChart(
+                  PieChartData(
+                    sections: getSections(),
+
+                    centerSpaceRadius: 40,
+
+                    sectionsSpace: 3,
+                  ),
+                ),
+              ),
+              SizedBox(height: sectionSpacing * 1.2),
+
+              Card(
+                elevation: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  child: Text(
+                    "Goal Status",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              SizedBox(
+                height: 250,
+                child: PieChart(
+                  PieChartData(
+                    sections: getGoalSections(),
+                    centerSpaceRadius: 40,
+                    sectionsSpace: 3,
+                  ),
+                ),
+              ),
+
+              SizedBox(height: sectionSpacing * 1.2),
+
+              Card(
+                elevation: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  child: Text(
+                    "Monthly Spending Trend",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              SizedBox(
+                height: 300,
+
+                child: BarChart(
+                  BarChartData(
+                    borderData: FlBorderData(show: false),
+
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: true),
+                      ),
+
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+
+                          getTitlesWidget: (value, meta) {
+                            const months = [
+                              '',
+                              'Jan',
+                              'Feb',
+                              'Mar',
+                              'Apr',
+                              'May',
+                              'Jun',
+                              'Jul',
+                              'Aug',
+                              'Sep',
+                              'Oct',
+                              'Nov',
+                              'Dec',
+                            ];
+
+                            return Text(months[value.toInt()]);
+                          },
+                        ),
+                      ),
+                    ),
+
+                    barGroups: getMonthlyBars(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Center(
+                child: Text(
+                  '$completedGoals of $totalGoals goals completed',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              SizedBox(height: sectionSpacing * 1.2),
+
+              Card(
+                elevation: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  child: Text(
+                    "Smart Insights",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              ...insights.map(
+                (insight) => Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.lightbulb, color: Colors.amber),
+                    title: Text(insight),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: sectionSpacing * 1.2),
+
+              Card(
+                elevation: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  child: Text(
+                    "Reports Center",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Text(
+                '${reports.length} Reports Generated',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 15),
+
+              reports.isEmpty
+                  ? const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(child: Text('No reports generated yet')),
+                      ),
+                    )
+                  : Card(
+                      child: Column(
+                        children: reports.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final report = entry.value;
+                          return ListTile(
+                            leading: Icon(
+                              report['name'].toString().toLowerCase().endsWith(
+                                    '.pdf',
+                                  )
+                                  ? Icons.picture_as_pdf
+                                  : Icons.table_chart,
+                            ),
+
+                            title: Text(report['name']),
+
+                            subtitle: Text(
+                              report['created_at'].toString().substring(0, 10),
+                            ),
+
+                            onTap: () => previewReport(report),
+
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.share),
+                                  onPressed: () =>
+                                      shareExistingReport(report['path']),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () => deleteReport(index),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await ReportHistoryService.clearReports();
+
+                  await loadReports();
+                },
+
+                icon: const Icon(Icons.delete),
+
+                label: const Text('Clear Report History'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
