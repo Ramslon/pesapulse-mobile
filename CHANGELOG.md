@@ -6,6 +6,51 @@ The format is based on **Keep a Changelog** and the project follows **Semantic V
 
 ---
 
+# PesaPulse v2.2.0
+
+Release Date: mid July 2026
+
+## ✨ New Features
+
+• Financial Health Score
+• Smart Budget Insights
+• Category Spending Analysis
+• Daily Spending Analytics
+• Budget Recommendations
+• Budget Floating Action Button
+• Budget Edit/Delete
+• Pull-to-Refresh across major screens
+• Smart Budget Status Indicator
+• Material 3 Navigation
+• Accessibility Improvements
+• Landscape Responsiveness
+
+## 🎨 UI Improvements
+
+• Redesigned Dashboard
+• Improved Analytics Cards
+• Better Empty States
+• Premium Bottom Navigation
+• Responsive Dashboard Cards
+• Improved Navigation Icons
+
+## ⚡ Performance
+
+• Optimized navigation using IndexedStack
+• Reduced unnecessary rebuilds
+• Improved code organization
+• Navigation cleanup
+
+## 🐞 Bug Fixes
+
+• Fixed gigantic text issue
+• Fixed Bottom Overflow errors
+• Fixed Budget screen launched from Dashboard
+• Fixed dashboard budget badge synchronization
+• Fixed multiple responsive layout issues
+
+---
+
 # [2.1.0] - 2026-07-03
 
 ## 🎉 Major Update – Settings & User Experience

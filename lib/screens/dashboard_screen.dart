@@ -51,8 +51,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         ApiService.getDashboard(),
         ApiService.getFinancialInsights(),
       ]);
-      final data = results[0] as Map<String, dynamic>;
-      final insights = results[1] as Map<String, dynamic>;
+      final data = results[0];
+      final insights = results[1];
 
       final summary = data['summary'];
 
@@ -72,8 +72,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         isLoading = false;
       });
     } catch (e) {
-      print(e);
-
       setState(() {
         isLoading = false;
       });

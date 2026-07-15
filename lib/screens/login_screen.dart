@@ -56,13 +56,10 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text(response['message'])));
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       setState(() {
         isLoading = false;
       });
-
-      print("LOGIN ERROR: $e");
-      print(stackTrace);
 
       ScaffoldMessenger.of(
         context,

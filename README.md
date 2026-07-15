@@ -11,6 +11,39 @@
 
 PesaPulse is a modern personal finance application built with **Flutter** and **Laravel** that helps users manage expenses, budgets, savings goals, and financial insights through intelligent analytics and forecasting.
 
+---
+## 🚀 What's New in v2.2.0
+
+• Financial Health Score
+• Smart Budget Insights
+• Category Spending Analysis
+• Daily Spending Analytics
+• Budget Recommendations
+• Budget Floating Action Button
+• Budget Edit/Delete
+• Pull-to-Refresh across major screens
+• Smart Budget Status Indicator
+• Material 3 Navigation
+• Accessibility Improvements
+• Landscape Responsiveness
+
+---
+
+## 🎨 UI Improvements
+
+• Redesigned Dashboard
+• Improved Analytics Cards
+• Better Empty States
+• Premium Bottom Navigation
+• Responsive Dashboard Cards
+• Improved Navigation Icons
+
+## ⚡ Performance
+
+• Optimized navigation using IndexedStack
+• Reduced unnecessary rebuilds
+• Improved code organization
+• Navigation cleanup
 
 ---
 ## 🚀 What's New in v2.1.0

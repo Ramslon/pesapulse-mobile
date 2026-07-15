@@ -489,10 +489,7 @@ class ApiService {
     required String newPassword,
     required String confirmPassword,
   }) async {
-    print("Sending change password request...");
-
     final token = await getToken();
-    print("TOKEN: $token");
 
     final response = await http.put(
       Uri.parse('$baseUrl/change-password'),
@@ -503,9 +500,6 @@ class ApiService {
         'new_password_confirmation': confirmPassword,
       },
     );
-
-    print("Status Code: ${response.statusCode}");
-    print("Body: ${response.body}");
 
     if (response.statusCode == 200) {
       return;
