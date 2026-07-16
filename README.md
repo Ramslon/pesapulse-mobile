@@ -3,7 +3,7 @@
 ![PHP](https://img.shields.io/badge/PHP-8.x-purple?logo=php)
 ![MySQL](https://img.shields.io/badge/MySQL-Database-blue?logo=mysql)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/badge/Version-2.1.0-brightgreen)
+![Version](https://img.shields.io/badge/Version-2.2.1-brightgreen)
 
 # 💰 PesaPulse
 
@@ -12,21 +12,26 @@
 PesaPulse is a modern personal finance application built with **Flutter** and **Laravel** that helps users manage expenses, budgets, savings goals, and financial insights through intelligent analytics and forecasting.
 
 ---
-## 🚀 What's New in v2.2.0
+## 🚀 What's New in v2.2.1
 
-• Financial Health Score
-• Smart Budget Insights
-• Category Spending Analysis
-• Daily Spending Analytics
-• Budget Recommendations
-• Budget Floating Action Button
-• Budget Edit/Delete
-• Pull-to-Refresh across major screens
-• Smart Budget Status Indicator
-• Material 3 Navigation
-• Accessibility Improvements
-• Landscape Responsiveness
+### 📊 Smart Analytics Screen Polish
 
+- Completely redesigned Analytics Overview
+- Financial Health Score improvements
+- Smart Recommendation redesign
+- Budget usage visualization improvements
+- Category spending analysis enhancements
+- Monthly spending trend improvements
+- Goal analytics redesign
+- Reports Center improvements
+- Redesigned statistics cards with themed icons
+- Color-coded financial indicators
+- Improved PDF & CSV export actions
+- Consistent Material 3 styling
+- Responsive portrait & landscape layouts
+- Improved animations throughout Analytics
+- Analytics skeleton loading redesign
+- Performance optimization and UI cleanup
 ---
 
 ## 🎨 UI Improvements
@@ -129,12 +134,17 @@ PesaPulse is a modern personal finance application built with **Flutter** and **
 
 ## 📈 Analytics
 
-* Financial Health Score
-* Spending Trends
-* Category Breakdown
-* Goal Status
-* Smart Insights
-* Export Reports (PDF & CSV)
+- Financial Health Score
+- Smart Recommendations
+- Budget Health Analysis
+- Spending Trends
+- Monthly Spending Reports
+- Category Breakdown
+- Goal Progress Analytics
+- Smart Financial Insights
+- PDF Report Export
+- CSV Report Export
+- Reports Center
 
 ---
 
@@ -178,11 +188,13 @@ PesaPulse is a modern personal finance application built with **Flutter** and **
 
 - Financial Health Analysis
 - Smart Budget Recommendations
+- Budget Health Monitoring
 - Goal Forecasting
 - Goal Completion Prediction
-- Savings Progress Insights
 - Spending Trend Analysis
+- Category Spending Intelligence
 - Intelligent Savings Suggestions
+- Personalized Financial Insights
 
 ---
 
@@ -295,7 +307,7 @@ flutter run
 
 Latest Stable Release
 
-**PesaPulse v2.1.0**
+**PesaPulse v2.2.1**
 
 Download from the GitHub Releases page.
 
@@ -303,9 +315,9 @@ Download from the GitHub Releases page.
 
 # 🎥 Demo
 
-Watch the application demo on YouTube.
+Watch the application demo from a presentation slides.
 
-Coming Soon...
+Demo video coming with the v2.3 release.
 
 ---
 
@@ -345,14 +357,30 @@ Coming Soon...
 
 ---
 
+# 🌟 Highlights
+
+- 📱 Material 3 Design
+- 📊 Smart Financial Analytics
+- 💰 Intelligent Budget Management
+- 🎯 Savings Goal Tracking
+- 📈 Financial Health Score
+- 📄 PDF & CSV Report Export
+- 🌙 Dark Mode Support
+- 🔔 Smart Notifications
+- ⚡ Optimized Performance
+- 📱 Responsive Mobile Experience
+
+---
+
 # 📊 Version History
 
 | Version | Release | Highlights |
 |---------|---------|------------|
-| **v2.1.0** | Latest | Settings redesign, Password Management, Notifications, Branding |
+| **v2.2.1** | Latest | Smart Analytics redesign, Financial Health Score improvements, Reports Center, UI polish |
+| **v2.2.0** | Stable | Budget Intelligence, Material 3 Navigation, Smart Budget Status, Accessibility |
+| **v2.1.0** | Stable | Settings redesign, Password Management, Notifications, Branding |
 | **v2.0.0** | Stable | Smart Goals, Advanced Analytics, Budget Insights |
 | **v1.0.0** | Initial | Expense Tracking, Budgets, Authentication |
-
 ---
 
 # 🗺 Roadmap
@@ -392,15 +420,22 @@ Coming Soon...
 
 ---
 
-## 🚧 Planned (v2.2)
+## 🚧 Planned (v2.3)
 
-- Recurring Transactions
-- Subscription Manager
-- AI Spending Predictions
-- Monthly Financial Reports
-- Financial Calendar
-- Savings Challenges
-- Personalized Financial Tips
+### 🎯 Goals Experience Redesign
+
+- Complete Goals screen UI redesign
+- Modern Material 3 card layout
+- Consistent design matching Dashboard, Budget and Analytics
+- Improved goal overview with progress summaries
+- Redesigned goal cards with better visual hierarchy
+- Enhanced savings progress visualization
+- Improved milestone indicators
+- Responsive portrait and landscape layouts
+- Skeleton loading consistent with other screens
+- Improved animations and transitions
+- Better empty states for goals
+- Performance optimization and code cleanup
 
 ---
 
@@ -409,6 +444,17 @@ Coming Soon...
 Contributions, issues, and feature requests are welcome.
 
 If you'd like to improve PesaPulse, feel free to fork the repository and submit a pull request.
+
+---
+
+## ❤️ Built With
+
+- Flutter
+- Laravel
+- PHP
+- MySQL
+- Material 3
+- Laravel Sanctum
 
 ---
 

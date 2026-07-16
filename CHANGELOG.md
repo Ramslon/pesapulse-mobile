@@ -5,6 +5,57 @@ All notable changes to **PesaPulse** are documented in this file.
 The format is based on **Keep a Changelog** and the project follows **Semantic Versioning (SemVer)**.
 
 ---
+## PesaPulse v2.2.1 - 2026-07-16
+
+### 🎨 Analytics UI & UX Polish
+
+This release focuses on refining the Analytics experience with a cleaner, more professional interface that matches the overall PesaPulse design system.
+
+### ✨ Added
+- Redesigned Analytics Overview card with improved visual hierarchy.
+- New Financial Health Score card with dynamic colors and status indicators.
+- Smart Recommendation card with:
+  - Budget status badge.
+  - Category insights.
+  - Budget usage progress indicator.
+  - Financial recommendations.
+- Animated transitions for analytics sections using fade and slide effects.
+- Redesigned statistic cards with themed circular icons.
+- Color-coded statistic icons for improved readability.
+- Distinct colors for PDF and CSV export actions.
+- Improved section headers for better navigation.
+
+### 🎨 Improved
+- Unified card styling across the Analytics screen.
+- Consistent spacing, padding, and border radius.
+- Improved typography for headings, statistics, and descriptions.
+- Better visual hierarchy throughout the Analytics page.
+- Enhanced chart responsiveness for portrait and landscape modes.
+- Improved Reports Center layout and presentation.
+- Analytics skeleton loading redesigned to match other application screens.
+- Better consistency with Dashboard and Budget screens.
+
+### ⚡ Performance
+- Reduced unnecessary widget rebuilds.
+- Removed unused code and variables.
+- Optimized animation behavior.
+- Improved layout efficiency and responsiveness.
+
+### 🐞 Fixed
+- Fixed budget status color synchronization between Dashboard and Budget screens.
+- Fixed analytics progress indicator animation.
+- Fixed animated budget usage percentage display.
+- Fixed analytics skeleton background inconsistency.
+- Fixed recommendation card status color handling.
+- Improved overall UI consistency across Analytics.
+
+### 📱 Responsive Design
+- Improved support for landscape orientation.
+- Adaptive chart heights based on screen size.
+- Responsive spacing for different device sizes.
+- Better layout behavior on tablets and larger screens.
+
+---
 
 # PesaPulse v2.2.0
 
