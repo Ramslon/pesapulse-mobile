@@ -347,9 +347,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     await loadReports();
   }
 
-  Widget buildStatCard(String title, String value, IconData icon) {
-    final colorScheme = Theme.of(context).colorScheme;
-
+  Widget buildStatCard(String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
@@ -360,8 +358,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: colorScheme.primary.withOpacity(.12),
-              child: Icon(icon, color: colorScheme.primary, size: 26),
+              backgroundColor: color.withOpacity(.12),
+              child: Icon(icon, color: color, size: 26),
             ),
 
             const SizedBox(height: 16),
@@ -753,16 +751,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                       'Goals',
                       totalGoals.toString(),
                       Icons.flag,
+                      Colors.indigo,
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
                   Expanded(
                     child: buildStatCard(
                       'Completed',
                       completedGoals.toString(),
                       Icons.emoji_events,
+                      Colors.green,
                     ),
                   ),
                 ],
@@ -777,16 +775,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                       'Active',
                       activeGoals.toString(),
                       Icons.track_changes,
+                      Colors.orange,
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
                   Expanded(
                     child: buildStatCard(
                       'Rate',
                       '${completionRate.toStringAsFixed(0)}%',
                       Icons.trending_up,
+                      Colors.blue,
                     ),
                   ),
                 ],
@@ -896,6 +894,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.picture_as_pdf),
                         label: const Text('Export PDF'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
 
                         onPressed: () async {
                           final file = await ExportService.exportExpensesPdf(
@@ -928,6 +930,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.table_chart),
                         label: const Text('Export CSV'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                          foregroundColor: Colors.white,
+                        ),
 
                         onPressed: () async {
                           final file = await ExportService.exportExpensesCsv(
