@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/analytics_loading_skeleton.dart';
 import '../widgets/analytics_section_header.dart';
+import '../widgets/fade_slide_animation.dart';
 import '../widgets/empty_state.dart';
 import '../services/api_services.dart';
 import '../services/export_service.dart';
@@ -143,8 +144,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       setState(() {
         isLoading = false;
       });
-
-      debugPrint('Analytics Error: $e');
     }
   }
 
@@ -349,43 +348,82 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   Widget buildStatCard(String title, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(22),
+    final colorScheme = Theme.of(context).colorScheme;
 
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: colorScheme.primary.withOpacity(.12),
+              child: Icon(icon, color: colorScheme.primary, size: 26),
+            ),
 
-      child: Column(
-        children: [
-          Icon(icon, size: 30),
+            const SizedBox(height: 16),
 
-          const SizedBox(height: 10),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
 
-          Text(
-            value,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
+            const SizedBox(height: 6),
 
-          const SizedBox(height: 5),
-
-          Text(title),
-        ],
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget buildRecommendationCard() {
-    Color cardColor;
+  Color getRecommendationColor() {
+    switch (budgetStatus.toLowerCase()) {
+      case "healthy":
+        return Colors.green;
 
-    if (budgetStatus == 'overspent') {
-      cardColor = Colors.red;
-    } else if (budgetStatus == 'warning') {
-      cardColor = Colors.orange;
-    } else {
-      cardColor = Colors.green;
+      case "warning":
+        return Colors.orange;
+
+      case "overspent":
+        return Colors.deepOrange;
+
+      case "critical":
+        return Colors.red;
+
+      default:
+        return Theme.of(context).colorScheme.primary;
     }
+  }
+
+  IconData getRecommendationIcon() {
+    switch (budgetStatus) {
+      case 'critical':
+        return Icons.warning_rounded;
+
+      case 'overspent':
+        return Icons.error_outline;
+
+      case 'warning':
+        return Icons.info_outline;
+
+      default:
+        return Icons.check_circle;
+    }
+  }
+
+  Widget buildRecommendationCard() {
+    final cardColor = getRecommendationColor();
 
     return Container(
       width: double.infinity,
@@ -402,26 +440,43 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         children: [
           Row(
             children: [
-              Icon(
-                budgetStatus == 'overspent'
-                    ? Icons.warning
-                    : budgetStatus == 'warning'
-                    ? Icons.error_outline
-                    : Icons.check_circle,
-                color: Colors.white,
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.white24,
+                child: Icon(getRecommendationIcon(), color: Colors.white),
               ),
 
-              const SizedBox(width: 10),
+              const SizedBox(width: 14),
 
-              const Text(
-                'Smart Recommendation',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              const Expanded(
+                child: Text(
+                  "Smart Recommendation",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 10),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              budgetStatus.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
           ),
 
           const SizedBox(height: 10),
@@ -434,53 +489,165 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           const SizedBox(height: 15),
 
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.white.withOpacity(.15),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.pie_chart, color: Colors.white),
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.white24,
+                  child: const Icon(Icons.pie_chart, color: Colors.white),
+                ),
 
-                const SizedBox(width: 10),
+                const SizedBox(width: 14),
 
                 Expanded(
-                  child: Text(
-                    'Top Spending Category: $topCategory',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Top Spending Category",
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        topCategory,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
 
-          Text(categoryAdvice, style: const TextStyle(color: Colors.white70)),
+          Container(
+            margin: const EdgeInsets.only(top: 14),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.tips_and_updates, color: Colors.white),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: Text(
+                    categoryAdvice,
+                    style: const TextStyle(color: Colors.white, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           const SizedBox(height: 15),
 
-          LinearProgressIndicator(
-            value: (budgetUsage / 100).clamp(0.0, 1.0),
-            minHeight: 10,
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 900),
+            tween: Tween(begin: 0, end: (budgetUsage / 100).clamp(0.0, 1.0)),
+            builder: (context, value, child) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: LinearProgressIndicator(
+                  value: value,
+                  minHeight: 10,
+                  backgroundColor: Colors.white24,
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              );
+            },
           ),
+          const SizedBox(height: 20),
 
-          const SizedBox(height: 10),
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 900),
+            tween: Tween(begin: 0, end: budgetUsage),
+            builder: (context, value, child) {
+              return RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: "${value.toStringAsFixed(1)}%",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
 
-          Text(
-            '${budgetUsage.toStringAsFixed(1)}% of budget used',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+                    const TextSpan(
+                      text: " of budget used",
+                      style: TextStyle(color: Colors.white70, fontSize: 15),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
     );
+  }
+
+  Color getFinancialHealthColor() {
+    switch (healthStatus.toLowerCase()) {
+      case "excellent":
+        return Colors.green;
+
+      case "good":
+        return Colors.lightGreen;
+
+      case "fair":
+        return Colors.orange;
+
+      case "poor":
+        return Colors.deepOrange;
+
+      case "critical":
+        return Colors.red;
+
+      default:
+        return Theme.of(context).colorScheme.primary;
+    }
+  }
+
+  IconData getFinancialHealthIcon() {
+    switch (healthStatus.toLowerCase()) {
+      case "excellent":
+        return Icons.sentiment_very_satisfied;
+
+      case "good":
+        return Icons.sentiment_satisfied;
+
+      case "fair":
+        return Icons.sentiment_neutral;
+
+      case "poor":
+        return Icons.sentiment_dissatisfied;
+
+      case "critical":
+        return Icons.warning_rounded;
+
+      default:
+        return Icons.favorite;
+    }
   }
 
   @override
@@ -491,21 +658,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     super.build(context);
     final theme = Theme.of(context);
 
-    final colorScheme = theme.colorScheme;
-
     final screenHeight = MediaQuery.of(context).size.height;
 
     final sectionSpacing = screenHeight * .035;
+
+    final screenSize = MediaQuery.of(context).size;
+
+    final isLandscape = screenSize.width > screenSize.height;
+
+    final chartHeight = isLandscape
+        ? screenSize.height * .55
+        : screenSize.height * .32;
+
+    const double cardSpacing = 24;
+    const double internalSpacing = 16;
 
     if (isLoading) {
       return const AnalyticsLoadingSkeleton();
     }
 
-    const EmptyState(
-      icon: Icons.analytics_outlined,
-      title: "No Analytics Yet",
-      message: "Add some expenses to unlock spending insights.",
-    );
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: fetchAnalytics,
@@ -623,122 +794,173 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
               SizedBox(height: sectionSpacing),
 
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(22),
+              FadeSlideAnimation(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(22),
 
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
 
-                  color: healthScore >= 80
-                      ? Colors.green
-                      : healthScore >= 60
-                      ? Colors.orange
-                      : Colors.red,
+                    color: getFinancialHealthColor(),
+                  ),
+
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Colors.white.withOpacity(.2),
+                            child: Icon(
+                              getFinancialHealthIcon(),
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          ),
+
+                          const SizedBox(width: 12),
+
+                          const Expanded(
+                            child: Text(
+                              "Financial Health",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 900),
+                        tween: Tween(begin: 0, end: healthScore),
+                        builder: (context, value, child) {
+                          return Text(
+                            '${value.toStringAsFixed(0)}/100',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 42,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(.18),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          healthStatus,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: cardSpacing),
+
+                      Text(
+                        recommendation,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          height: 1.4,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ),
+              const SizedBox(height: cardSpacing),
 
-                child: Column(
+              FadeSlideAnimation(
+                delay: 400,
+                child: Row(
                   children: [
-                    const Text(
-                      'Financial Health Score',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.picture_as_pdf),
+                        label: const Text('Export PDF'),
 
-                    const Icon(
-                      Icons.health_and_safety,
-                      color: Colors.white,
-                      size: 40,
-                    ),
+                        onPressed: () async {
+                          final file = await ExportService.exportExpensesPdf(
+                            expenses,
+                          );
+                          await ReportHistoryService.saveReport(
+                            name: file.path.split('/').last,
+                            path: file.path,
+                          );
 
-                    const SizedBox(height: 10),
+                          await loadReports();
 
-                    Text(
-                      '${healthScore.toStringAsFixed(0)}/100',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
+                          await ExportService.shareFile(file);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'PDF report exported successfully',
+                                ),
+                              ),
+                            );
+                          }
+                        },
                       ),
                     ),
 
-                    const SizedBox(height: 5),
+                    const SizedBox(width: 12),
 
-                    Text(
-                      healthStatus,
-                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.table_chart),
+                        label: const Text('Export CSV'),
+
+                        onPressed: () async {
+                          final file = await ExportService.exportExpensesCsv(
+                            expenses,
+                          );
+
+                          await ReportHistoryService.saveReport(
+                            name: file.path.split('/').last,
+                            path: file.path,
+                          );
+                          await loadReports();
+
+                          await ExportService.shareFile(file);
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'CSV report exported successfully',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.picture_as_pdf),
-                      label: const Text('Export PDF'),
-
-                      onPressed: () async {
-                        final file = await ExportService.exportExpensesPdf(
-                          expenses,
-                        );
-                        await ReportHistoryService.saveReport(
-                          name: file.path.split('/').last,
-                          path: file.path,
-                        );
-
-                        await loadReports();
-
-                        await ExportService.shareFile(file);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('PDF report exported successfully'),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.table_chart),
-                      label: const Text('Export CSV'),
-
-                      onPressed: () async {
-                        final file = await ExportService.exportExpensesCsv(
-                          expenses,
-                        );
-
-                        await ReportHistoryService.saveReport(
-                          name: file.path.split('/').last,
-                          path: file.path,
-                        );
-                        await loadReports();
-
-                        await ExportService.shareFile(file);
-
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('CSV report exported successfully'),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              buildRecommendationCard(),
+              FadeSlideAnimation(delay: 100, child: buildRecommendationCard()),
 
               SizedBox(height: sectionSpacing),
 
@@ -747,18 +969,34 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 title: "Category Breakdown",
               ),
 
-              const SizedBox(height: 20),
+              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
 
-              SizedBox(
-                height: 300,
+              if (categoryTotals.isEmpty)
+                const EmptyState(
+                  icon: Icons.pie_chart_outline,
+                  title: "No Category Data",
+                  message:
+                      "Add some expenses to see how your spending is distributed.",
+                ),
 
-                child: PieChart(
-                  PieChartData(
-                    sections: getSections(),
-
-                    centerSpaceRadius: 40,
-
-                    sectionsSpace: 3,
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(
+                    (screenSize.width * .045).clamp(16.0, 24.0),
+                  ),
+                  child: SizedBox(
+                    height: chartHeight,
+                    child: PieChart(
+                      PieChartData(
+                        sections: getSections(),
+                        centerSpaceRadius: chartHeight * .15,
+                        sectionsSpace: 4,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -768,15 +1006,30 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 icon: Icons.flag,
                 title: "Goal Status",
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
 
-              SizedBox(
-                height: 250,
-                child: PieChart(
-                  PieChartData(
-                    sections: getGoalSections(),
-                    centerSpaceRadius: 40,
-                    sectionsSpace: 3,
+              FadeSlideAnimation(
+                delay: 200,
+
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(
+                      (screenSize.width * .045).clamp(16.0, 24.0),
+                    ),
+                    child: SizedBox(
+                      height: chartHeight,
+                      child: PieChart(
+                        PieChartData(
+                          sections: getGoalSections(),
+                          centerSpaceRadius: chartHeight * .15,
+                          sectionsSpace: 4,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -788,52 +1041,66 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 title: "Monthly Spending Trend",
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: cardSpacing),
 
-              SizedBox(
-                height: 300,
+              FadeSlideAnimation(
+                delay: 300,
 
-                child: BarChart(
-                  BarChartData(
-                    borderData: FlBorderData(show: false),
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(
+                      (screenSize.width * .045).clamp(16.0, 24.0),
+                    ),
+                    child: SizedBox(
+                      height: chartHeight,
+                      child: BarChart(
+                        BarChartData(
+                          borderData: FlBorderData(show: false),
 
-                    titlesData: FlTitlesData(
-                      leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: true),
-                      ),
+                          titlesData: FlTitlesData(
+                            leftTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: true),
+                            ),
 
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
 
-                          getTitlesWidget: (value, meta) {
-                            const months = [
-                              '',
-                              'Jan',
-                              'Feb',
-                              'Mar',
-                              'Apr',
-                              'May',
-                              'Jun',
-                              'Jul',
-                              'Aug',
-                              'Sep',
-                              'Oct',
-                              'Nov',
-                              'Dec',
-                            ];
+                                getTitlesWidget: (value, meta) {
+                                  const months = [
+                                    '',
+                                    'Jan',
+                                    'Feb',
+                                    'Mar',
+                                    'Apr',
+                                    'May',
+                                    'Jun',
+                                    'Jul',
+                                    'Aug',
+                                    'Sep',
+                                    'Oct',
+                                    'Nov',
+                                    'Dec',
+                                  ];
 
-                            return Text(months[value.toInt()]);
-                          },
+                                  return Text(months[value.toInt()]);
+                                },
+                              ),
+                            ),
+                          ),
+
+                          barGroups: getMonthlyBars(),
                         ),
                       ),
                     ),
-
-                    barGroups: getMonthlyBars(),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
 
               Center(
                 child: Text(
@@ -852,14 +1119,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 title: "Smart Insights",
               ),
 
-              const SizedBox(height: 20),
+              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
 
-              ...insights.map(
-                (insight) => Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.lightbulb, color: Colors.amber),
-                    title: Text(insight),
-                  ),
+              FadeSlideAnimation(
+                delay: 350,
+                child: Column(
+                  children: [
+                    ...insights.map(
+                      (insight) => Card(
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.lightbulb,
+                            color: Colors.amber,
+                          ),
+                          title: Text(insight),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -876,8 +1153,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 '${reports.length} Reports Generated',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-
-              const SizedBox(height: 15),
+              const SizedBox(height: internalSpacing),
 
               reports.isEmpty
                   ? Card(
