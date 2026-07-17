@@ -51,6 +51,26 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+
+    titleController.addListener(() {
+      setState(() {});
+    });
+
+    amountController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    amountController.dispose();
+    super.dispose();
+  }
+
   Widget buildInputField({
     required TextEditingController controller,
     required String label,
@@ -81,6 +101,70 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
             color: Theme.of(context).colorScheme.primary,
             width: 2,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildGoalPreview() {
+    final goalTitle = titleController.text.isEmpty
+        ? "Your Goal"
+        : titleController.text;
+
+    final amount = double.tryParse(amountController.text) ?? 0;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Colors.deepPurple.withOpacity(.12),
+                  child: const Icon(
+                    Icons.flag_rounded,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  "Goal Preview",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            Text(
+              goalTitle,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 10),
+
+            Text(
+              "Target: KES ${amount.toStringAsFixed(0)}",
+              style: TextStyle(color: Colors.grey.shade700),
+            ),
+
+            const SizedBox(height: 18),
+
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: const LinearProgressIndicator(value: 0, minHeight: 8),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text("0% Complete", style: TextStyle(color: Colors.grey.shade600)),
+          ],
         ),
       ),
     );
@@ -126,7 +210,12 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
+
+          buildGoalPreview(),
+
+          const SizedBox(height: 28),
+
           buildInputField(
             controller: titleController,
             label: "Goal Title",
