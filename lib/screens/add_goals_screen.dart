@@ -51,6 +51,41 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
     }
   }
 
+  Widget buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    String? prefixText,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixText: prefixText,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: Theme.of(context).cardColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary,
+            width: 2,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,36 +127,45 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
           ),
 
           const SizedBox(height: 32),
-          TextField(
+          buildInputField(
             controller: titleController,
-
-            decoration: const InputDecoration(labelText: 'Goal Title'),
+            label: "Goal Title",
+            icon: Icons.flag_outlined,
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
 
-          TextField(
+          buildInputField(
             controller: amountController,
-
+            label: "Target Amount",
+            icon: Icons.account_balance_wallet_outlined,
             keyboardType: TextInputType.number,
-
-            decoration: const InputDecoration(
-              labelText: 'Target Amount',
-              prefixText: 'KES ',
-            ),
+            prefixText: "KES ",
           ),
-
           const SizedBox(height: 30),
 
           SizedBox(
             width: double.infinity,
-
-            child: ElevatedButton(
+            height: 56,
+            child: ElevatedButton.icon(
               onPressed: isLoading ? null : saveGoal,
-
-              child: isLoading
-                  ? const CircularProgressIndicator()
-                  : const Text('Save Goal'),
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check_circle_outline),
+              label: Text(isLoading ? "Saving..." : "Create Goal"),
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
             ),
           ),
         ],
