@@ -3,6 +3,12 @@ import 'package:intl/intl.dart';
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
 
+import '../widgets/goal_section_header.dart';
+import '../widgets/goal_loading_skeleton.dart';
+import '../widgets/goal_stat_card.dart';
+import '../widgets/goal_empty_state.dart';
+import '../widgets/fade_slide_animation.dart';
+
 import 'add_goals_screen.dart';
 import 'archived_goals_screen.dart';
 
@@ -221,30 +227,23 @@ class _GoalsScreenState extends State<GoalsScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final theme = Theme.of(context);
+
+    final screenSize = MediaQuery.of(context).size;
+
+    final screenHeight = screenSize.height;
+
+    final sectionSpacing = screenHeight * .035;
+
+    const double cardSpacing = 24;
+
+    const double internalSpacing = 16;
+
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const GoalLoadingSkeleton();
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Financial Goals'),
-        centerTitle: true,
-
-        actions: [
-          IconButton(
-            tooltip: 'Archived Goals',
-            icon: const Icon(Icons.archive),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ArchivedGoalsScreen()),
-              ).then((_) {
-                loadGoals();
-              });
-            },
-          ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
@@ -277,126 +276,241 @@ class _GoalsScreenState extends State<GoalsScreen>
                 key: const PageStorageKey("goals"),
                 padding: const EdgeInsets.all(16),
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Goals',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-
-                                Text(
-                                  '${goalAnalytics?['total_goals'] ?? 0}',
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 10),
-
-                      Expanded(
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Completed',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-
-                                Text(
-                                  '${goalAnalytics?['completed_goals'] ?? 0}',
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.trending_up),
-                      title: const Text('Success Rate'),
-                      trailing: Text(
-                        '${goalAnalytics?['completion_rate'] ?? 0}%',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  if (upcomingDeadlines.isNotEmpty)
-                    Card(
-                      color: const Color(0xFFFFF3E0),
-                      elevation: 0,
+                  FadeSlideAnimation(
+                    child: Card(
+                      elevation: 2,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                        side: BorderSide(color: Colors.orange.shade300),
+                        borderRadius: BorderRadius.circular(22),
                       ),
-                      margin: const EdgeInsets.only(bottom: 20),
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(22),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Icon(
-                                  Icons.notifications_active,
-                                  color: Colors.orange.shade700,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Financial Goals",
+                                        style: theme.textTheme.titleLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+
+                                      const SizedBox(height: 6),
+
+                                      Text(
+                                        "Track your savings goals and progress",
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Upcoming Goal Deadlines',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 17,
-                                    color: Colors.orange.shade900,
+
+                                IconButton(
+                                  tooltip: "Archived Goals",
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ArchivedGoalsScreen(),
+                                      ),
+                                    ).then((_) {
+                                      loadGoals();
+                                    });
+                                  },
+                                  icon: const Icon(Icons.archive),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 22),
+
+                            Text(
+                              "${goalAnalytics?['total_goals'] ?? 0}",
+                              style: const TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            const SizedBox(height: 6),
+
+                            Text(
+                              "Total Goals",
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: sectionSpacing),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GoalStatCard(
+                          title: "Goals",
+                          value: "${goalAnalytics?['total_goals'] ?? 0}",
+                          icon: Icons.flag,
+                          color: Colors.blue,
+                        ),
+                      ),
+
+                      const SizedBox(width: 14),
+
+                      Expanded(
+                        child: GoalStatCard(
+                          title: "Completed",
+                          value: "${goalAnalytics?['completed_goals'] ?? 0}",
+                          icon: Icons.emoji_events,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GoalStatCard(
+                          title: "Active",
+                          value: "${goalAnalytics?['active_goals'] ?? 0}",
+                          icon: Icons.track_changes,
+                          color: Colors.orange,
+                        ),
+                      ),
+
+                      const SizedBox(width: 14),
+
+                      Expanded(
+                        child: GoalStatCard(
+                          title: "Success Rate",
+                          value: "${goalAnalytics?['completion_rate'] ?? 0}%",
+                          icon: Icons.trending_up,
+                          color: Colors.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: sectionSpacing),
+                  if (upcomingDeadlines.isNotEmpty)
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(22),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.orange.shade500,
+                              Colors.deepOrange.shade400,
+                            ],
+                          ),
+                        ),
+
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: Colors.white24,
+                                  child: const Icon(
+                                    Icons.notifications_active,
+                                    color: Colors.white,
+                                  ),
+                                ),
+
+                                const SizedBox(width: 14),
+
+                                const Expanded(
+                                  child: Text(
+                                    "Upcoming Deadlines",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
 
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 20),
 
                             ...upcomingDeadlines.map((goal) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(14),
+
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(.15),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+
                                 child: Row(
                                   children: [
-                                    Icon(
-                                      Icons.flag_circle,
-                                      size: 18,
-                                      color: Colors.red.shade400,
+                                    CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: Colors.white24,
+                                      child: const Icon(
+                                        Icons.flag_circle,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
                                     ),
 
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 12),
 
                                     Expanded(
-                                      child: Text(
-                                        '${goal['title']} • ${goal['days_remaining'].ceil()} day(s) left',
-                                        style: const TextStyle(
-                                          color: Colors.black87,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            goal['title'],
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+
+                                          const SizedBox(height: 4),
+
+                                          Text(
+                                            "${goal['days_remaining'].ceil()} day(s) remaining",
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                        ],
                                       ),
+                                    ),
+
+                                    const Icon(
+                                      Icons.chevron_right,
+                                      color: Colors.white,
                                     ),
                                   ],
                                 ),
@@ -467,10 +581,13 @@ class _GoalsScreenState extends State<GoalsScreen>
                     }
 
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 15),
-
+                      elevation: 2,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22),
+                      ),
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(22),
 
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,69 +595,94 @@ class _GoalsScreenState extends State<GoalsScreen>
                           children: [
                             Row(
                               children: [
-                                Icon(
-                                  percentage >= 1.0
-                                      ? Icons.emoji_events
-                                      : Icons.flag,
-                                  color: percentage >= 1.0
-                                      ? Colors.amber
-                                      : Colors.blue,
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: Colors.blue.withOpacity(.12),
+
+                                  child: Icon(
+                                    percentage >= 1
+                                        ? Icons.emoji_events
+                                        : Icons.flag,
+
+                                    color: percentage >= 1
+                                        ? Colors.amber
+                                        : Colors.blue,
+                                  ),
                                 ),
 
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 14),
 
                                 Expanded(
-                                  child: Text(
-                                    goal['title'],
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+
+                                    children: [
+                                      Text(
+                                        goal['title'],
+                                        style: const TextStyle(
+                                          fontSize: 21,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 4),
+
+                                      Text(
+                                        goal['target_date'] != null
+                                            ? DateFormat('dd MMM yyyy').format(
+                                                DateTime.parse(
+                                                  goal['target_date'],
+                                                ),
+                                              )
+                                            : "No deadline",
+
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
 
-                            const SizedBox(height: 6),
-
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  size: 16,
-                                  color: Colors.grey,
-                                ),
-
-                                const SizedBox(width: 6),
-
-                                Text(
-                                  goal['target_date'] != null
-                                      ? DateFormat('dd MMM yyyy').format(
-                                          DateTime.parse(goal['target_date']),
-                                        )
-                                      : 'No deadline',
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 22),
 
                             Text(
-                              '${currency.format(saved)} / ${currency.format(target)}',
+                              currency.format(saved),
+
+                              style: const TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
 
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 6),
 
-                            LinearProgressIndicator(
-                              value: percentage,
-                              minHeight: 10,
-                              borderRadius: BorderRadius.circular(10),
-                              color: percentage >= 1.0
-                                  ? Colors.green
-                                  : percentage >= 0.75
-                                  ? Colors.orange
-                                  : Colors.blue,
+                            Text(
+                              "Saved of ${currency.format(target)} target",
+
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+
+                            const SizedBox(height: 18),
+
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+
+                              child: LinearProgressIndicator(
+                                value: percentage,
+                                minHeight: 12,
+
+                                backgroundColor: Colors.grey.shade300,
+
+                                color: percentage >= 1
+                                    ? Colors.green
+                                    : percentage >= .75
+                                    ? Colors.orange
+                                    : Colors.blue,
+                              ),
                             ),
 
                             if (insight != null)
@@ -790,9 +932,30 @@ class _GoalsScreenState extends State<GoalsScreen>
                                 ),
                               )
                             else
-                              Text(
-                                '${(percentage * 100).toStringAsFixed(0)}% Complete',
+                              const SizedBox(height: 14),
+
+                            Align(
+                              alignment: Alignment.centerRight,
+
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 7,
+                                ),
+
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+
+                                child: Text(
+                                  "${(percentage * 100).toStringAsFixed(0)}%",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
+                            ),
 
                             if (forecast != null)
                               Card(
