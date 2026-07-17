@@ -84,7 +84,6 @@ class _GoalsScreenState extends State<GoalsScreen>
         goalAnalytics = data;
         isLoading = false;
       });
-      await loadGoalsAnalytics();
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -485,7 +484,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                           title: "Completed",
                           value: "${goalAnalytics?['completed_goals'] ?? 0}",
                           icon: Icons.emoji_events,
-                          color: Colors.green,
+                          color: Colors.amber,
                         ),
                       ),
                     ],
@@ -633,7 +632,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                       ),
                     ),
 
-                  ...goals.map((goal) {
+                  ...goals.map<Widget>((goal) {
                     final target =
                         double.tryParse(goal['target_amount'].toString()) ?? 0;
 
@@ -729,84 +728,66 @@ class _GoalsScreenState extends State<GoalsScreen>
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
-
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              goal['title'],
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                      Text(
+                                        goal['title'],
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
                                             ),
-
-                                            const SizedBox(height: 6),
-
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 4,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: percentage >= 1
-                                                    ? Colors.green.withOpacity(
-                                                        .15,
-                                                      )
-                                                    : percentage >= .75
-                                                    ? Colors.orange.withOpacity(
-                                                        .15,
-                                                      )
-                                                    : Colors.blue.withOpacity(
-                                                        .15,
-                                                      ),
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                percentage >= 1
-                                                    ? "Completed"
-                                                    : percentage >= .75
-                                                    ? "Almost There"
-                                                    : "In Progress",
-                                                style: TextStyle(
-                                                  color: percentage >= 1
-                                                      ? Colors.green
-                                                      : percentage >= .75
-                                                      ? Colors.orange
-                                                      : Colors.blue,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
                                       ),
 
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 6),
 
-                                      Text(
-                                        goal['target_date'] != null
-                                            ? DateFormat('dd MMM yyyy').format(
-                                                DateTime.parse(
-                                                  goal['target_date'],
-                                                ),
-                                              )
-                                            : "No deadline",
-
-                                        style: TextStyle(
-                                          color: Colors.grey.shade600,
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: percentage >= 1
+                                              ? Colors.green.withOpacity(.15)
+                                              : percentage >= .75
+                                              ? Colors.orange.withOpacity(.15)
+                                              : Colors.blue.withOpacity(.15),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          percentage >= 1
+                                              ? "Completed"
+                                              : percentage >= .75
+                                              ? "Almost There"
+                                              : "In Progress",
+                                          style: TextStyle(
+                                            color: percentage >= 1
+                                                ? Colors.green
+                                                : percentage >= .75
+                                                ? Colors.orange
+                                                : Colors.blue,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
+                                ),
+
+                                const SizedBox(height: 4),
+
+                                Text(
+                                  goal['target_date'] != null
+                                      ? DateFormat('dd MMM yyyy').format(
+                                          DateTime.parse(goal['target_date']),
+                                        )
+                                      : "No deadline",
+
+                                  style: TextStyle(color: Colors.grey.shade600),
                                 ),
                               ],
                             ),
