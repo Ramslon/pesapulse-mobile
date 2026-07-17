@@ -353,7 +353,14 @@ class _GoalsScreenState extends State<GoalsScreen>
     }
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: "goalFab",
+        elevation: 4,
+        icon: const Icon(Icons.flag_outlined),
+        label: const Text(
+          "New Goal",
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         onPressed: () async {
           final result = await Navigator.push(
             context,
@@ -364,20 +371,21 @@ class _GoalsScreenState extends State<GoalsScreen>
             loadGoals();
           }
         },
-        child: const Icon(Icons.add),
       ),
 
       body: RefreshIndicator(
         onRefresh: loadGoals,
         child: goals.isEmpty
             ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
-                  SizedBox(height: 300),
-                  Center(
-                    child: Text(
-                      'No financial goals yet',
-                      style: TextStyle(fontSize: 18),
-                    ),
+                  SizedBox(height: 120),
+
+                  GoalEmptyState(
+                    icon: Icons.flag_outlined,
+                    title: "No Financial Goals",
+                    message:
+                        "Create savings goals to track your progress and achieve your financial milestones.",
                   ),
                 ],
               )
