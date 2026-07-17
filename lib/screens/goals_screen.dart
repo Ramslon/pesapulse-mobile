@@ -221,6 +221,38 @@ class _GoalsScreenState extends State<GoalsScreen>
     );
   }
 
+  Widget buildMilestoneBadge({
+    required String title,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withOpacity(.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: color.withOpacity(.18),
+            child: Icon(icon, color: color, size: 18),
+          ),
+
+          const SizedBox(width: 10),
+
+          Text(
+            title,
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   bool get wantKeepAlive => true;
 
@@ -618,11 +650,62 @@ class _GoalsScreenState extends State<GoalsScreen>
                                         CrossAxisAlignment.start,
 
                                     children: [
-                                      Text(
-                                        goal['title'],
-                                        style: const TextStyle(
-                                          fontSize: 21,
-                                          fontWeight: FontWeight.bold,
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              goal['title'],
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+
+                                            const SizedBox(height: 6),
+
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: percentage >= 1
+                                                    ? Colors.green.withOpacity(
+                                                        .15,
+                                                      )
+                                                    : percentage >= .75
+                                                    ? Colors.orange.withOpacity(
+                                                        .15,
+                                                      )
+                                                    : Colors.blue.withOpacity(
+                                                        .15,
+                                                      ),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: Text(
+                                                percentage >= 1
+                                                    ? "Completed"
+                                                    : percentage >= .75
+                                                    ? "Almost There"
+                                                    : "In Progress",
+                                                style: TextStyle(
+                                                  color: percentage >= 1
+                                                      ? Colors.green
+                                                      : percentage >= .75
+                                                      ? Colors.orange
+                                                      : Colors.blue,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
 
@@ -668,21 +751,27 @@ class _GoalsScreenState extends State<GoalsScreen>
 
                             const SizedBox(height: 18),
 
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
+                            TweenAnimationBuilder<double>(
+                              duration: const Duration(milliseconds: 900),
+                              tween: Tween(begin: 0, end: percentage),
+                              builder: (_, value, __) {
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
 
-                              child: LinearProgressIndicator(
-                                value: percentage,
-                                minHeight: 12,
+                                  child: LinearProgressIndicator(
+                                    value: value,
+                                    minHeight: 10,
 
-                                backgroundColor: Colors.grey.shade300,
+                                    backgroundColor: Colors.grey.shade300,
 
-                                color: percentage >= 1
-                                    ? Colors.green
-                                    : percentage >= .75
-                                    ? Colors.orange
-                                    : Colors.blue,
-                              ),
+                                    color: percentage >= 1
+                                        ? Colors.green
+                                        : percentage >= .75
+                                        ? Colors.orange
+                                        : Colors.blue,
+                                  ),
+                                );
+                              },
                             ),
 
                             if (insight != null)
@@ -761,41 +850,33 @@ class _GoalsScreenState extends State<GoalsScreen>
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.shade900,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.star, size: 18),
-                                        SizedBox(width: 8),
-                                        Flexible(
-                                          child: Text(
-                                            '🏆 Goal Completed',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                  buildMilestoneBadge(
+                                    title: "Goal Completed",
+                                    icon: Icons.emoji_events,
+                                    color: Colors.amber,
                                   ),
-
                                   const SizedBox(height: 12),
 
                                   SizedBox(
                                     width: double.infinity,
-                                    child: OutlinedButton.icon(
-                                      icon: const Icon(Icons.archive),
-                                      label: const Text('Archive Goal'),
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        backgroundColor: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      icon: const Icon(Icons.archive_outlined),
+                                      label: const Text("Archive Goal"),
                                       onPressed: () async {
                                         final confirm = await showDialog<bool>(
                                           context: context,
@@ -848,88 +929,22 @@ class _GoalsScreenState extends State<GoalsScreen>
                                 ],
                               )
                             else if (percentage >= 0.75)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade400,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.star, size: 18),
-                                    SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        '75% Milestone',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              buildMilestoneBadge(
+                                title: "75% Almost There",
+                                icon: Icons.bolt,
+                                color: Colors.orange,
                               )
                             else if (percentage >= 0.50)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade400,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.star, size: 18),
-                                    SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        '50% Milestone',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              buildMilestoneBadge(
+                                title: "50% Progress",
+                                icon: Icons.trending_up,
+                                color: Colors.indigo,
                               )
                             else if (percentage >= 0.25)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade400,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.star, size: 18),
-                                    SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        '25% Milestone',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              buildMilestoneBadge(
+                                title: "25% Saved",
+                                icon: Icons.savings,
+                                color: Colors.green,
                               )
                             else
                               const SizedBox(height: 14),
