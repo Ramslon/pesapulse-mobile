@@ -15,17 +15,32 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   bool isLoading = false;
 
   Future<void> saveGoal() async {
+    if (titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter a goal title.")),
+      );
+      return;
+    }
+
+    if (amountController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter a target amount.")),
+      );
+      return;
+    }
+
+    final amount = double.tryParse(amountController.text.trim());
+
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Target amount must be greater than zero."),
+        ),
+      );
+      return;
+    }
+
     try {
-      if (titleController.text.trim().isEmpty) {
-        throw Exception('Enter goal title');
-      }
-
-      if (amountController.text.trim().isEmpty) {
-        throw Exception('Enter target amount');
-      }
-
-      final amount = double.parse(amountController.text.trim());
-
       setState(() {
         isLoading = true;
       });
@@ -36,6 +51,10 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
       );
 
       if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Goal created successfully!")),
+      );
 
       Navigator.pop(context, true);
     } catch (e) {
@@ -77,8 +96,17 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     String? prefixText,
+    TextInputAction? textInputAction,
+    VoidCallback? onSubmitted,
   }) {
     return TextField(
+      textInputAction: textInputAction,
+
+      onSubmitted: (_) {
+        if (onSubmitted != null) {
+          onSubmitted();
+        }
+      },
       controller: controller,
       keyboardType: keyboardType,
       decoration: InputDecoration(
@@ -214,12 +242,42 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
           buildGoalPreview(),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
+
+          Card(
+            elevation: 0,
+            color: Colors.blue.withOpacity(.08),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb_outline, color: Colors.blue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Set realistic savings goals and update your progress regularly to stay on track.",
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
 
           buildInputField(
             controller: titleController,
             label: "Goal Title",
             icon: Icons.flag_outlined,
+            textInputAction: TextInputAction.next,
           ),
 
           const SizedBox(height: 22),
@@ -230,6 +288,8 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
             icon: Icons.account_balance_wallet_outlined,
             keyboardType: TextInputType.number,
             prefixText: "KES ",
+            textInputAction: TextInputAction.done,
+            onSubmitted: saveGoal,
           ),
           const SizedBox(height: 30),
 
@@ -237,7 +297,12 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton.icon(
-              onPressed: isLoading ? null : saveGoal,
+              onPressed:
+                  isLoading ||
+                      titleController.text.trim().isEmpty ||
+                      amountController.text.trim().isEmpty
+                  ? null
+                  : saveGoal,
               icon: isLoading
                   ? const SizedBox(
                       width: 22,
