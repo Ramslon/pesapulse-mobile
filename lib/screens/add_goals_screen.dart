@@ -54,47 +54,77 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Goal')),
+      appBar: AppBar(title: const Text(""), elevation: 0),
 
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+        children: [
+          Text(
+            "Add Financial Goal",
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
 
-        child: Column(
-          children: [
-            TextField(
-              controller: titleController,
+          const SizedBox(height: 8),
 
-              decoration: const InputDecoration(labelText: 'Goal Title'),
-            ),
+          Text(
+            "Create a new savings goal and start tracking your progress.",
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+          ),
 
-            const SizedBox(height: 20),
+          const SizedBox(height: 28),
 
-            TextField(
-              controller: amountController,
-
-              keyboardType: TextInputType.number,
-
-              decoration: const InputDecoration(
-                labelText: 'Target Amount',
-                prefixText: 'KES ',
+          Center(
+            child: Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withOpacity(.12),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(
+                Icons.flag_rounded,
+                size: 42,
+                color: Colors.deepPurple,
               ),
             ),
+          ),
 
-            const SizedBox(height: 30),
+          const SizedBox(height: 32),
+          TextField(
+            controller: titleController,
 
-            SizedBox(
-              width: double.infinity,
+            decoration: const InputDecoration(labelText: 'Goal Title'),
+          ),
 
-              child: ElevatedButton(
-                onPressed: isLoading ? null : saveGoal,
+          const SizedBox(height: 20),
 
-                child: isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('Save Goal'),
-              ),
+          TextField(
+            controller: amountController,
+
+            keyboardType: TextInputType.number,
+
+            decoration: const InputDecoration(
+              labelText: 'Target Amount',
+              prefixText: 'KES ',
             ),
-          ],
-        ),
+          ),
+
+          const SizedBox(height: 30),
+
+          SizedBox(
+            width: double.infinity,
+
+            child: ElevatedButton(
+              onPressed: isLoading ? null : saveGoal,
+
+              child: isLoading
+                  ? const CircularProgressIndicator()
+                  : const Text('Save Goal'),
+            ),
+          ),
+        ],
       ),
     );
   }
