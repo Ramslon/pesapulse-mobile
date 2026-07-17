@@ -253,6 +253,84 @@ class _GoalsScreenState extends State<GoalsScreen>
     );
   }
 
+  Widget buildInsightMetric({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: color.withOpacity(.15),
+            child: Icon(icon, color: color, size: 18),
+          ),
+
+          const SizedBox(height: 10),
+
+          Text(
+            value,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            title,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildForecastMetric({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: color.withOpacity(.15),
+            child: Icon(icon, color: color, size: 18),
+          ),
+
+          const SizedBox(height: 10),
+
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            title,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   bool get wantKeepAlive => true;
 
@@ -310,7 +388,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                 children: [
                   FadeSlideAnimation(
                     child: Card(
-                      elevation: 2,
+                      elevation: 4,
+                      shadowColor: Colors.black12,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(22),
                       ),
@@ -441,7 +520,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                   SizedBox(height: sectionSpacing),
                   if (upcomingDeadlines.isNotEmpty)
                     Card(
-                      elevation: 2,
+                      elevation: 4,
+                      shadowColor: Colors.black12,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(22),
                       ),
@@ -613,7 +693,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                     }
 
                     return Card(
-                      elevation: 2,
+                      elevation: 4,
+                      shadowColor: Colors.black12,
                       margin: const EdgeInsets.only(bottom: 24),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(22),
@@ -774,75 +855,154 @@ class _GoalsScreenState extends State<GoalsScreen>
                               },
                             ),
 
+                            const SizedBox(height: 22),
+
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.lightbulb_outline,
+                                  color: Colors.amber,
+                                  size: 20,
+                                ),
+
+                                SizedBox(width: 8),
+
+                                Text(
+                                  "Smart Insight",
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 12),
+
                             if (insight != null)
-                              Container(
-                                margin: const EdgeInsets.only(
-                                  top: 12,
-                                  bottom: 12,
-                                ),
+                              FadeSlideAnimation(
+                                delay: 300,
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 18,
+                                  ),
+                                  padding: const EdgeInsets.all(18),
+                                  decoration: BoxDecoration(
+                                    color: insightColor.withOpacity(.08),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: insightColor.withOpacity(.25),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 20,
+                                            backgroundColor: insightColor
+                                                .withOpacity(.15),
+                                            child: Icon(
+                                              insight['status'] == 'completed'
+                                                  ? Icons.emoji_events
+                                                  : insight['status'] ==
+                                                        'urgent'
+                                                  ? Icons.warning_amber_rounded
+                                                  : Icons.track_changes,
+                                              color: insightColor,
+                                            ),
+                                          ),
 
-                                padding: const EdgeInsets.all(12),
+                                          const SizedBox(width: 12),
 
-                                decoration: BoxDecoration(
-                                  color: insightColor.withOpacity(0.1),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                "Goal Insight",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
 
-                                  borderRadius: BorderRadius.circular(12),
+                                              Text(
+                                                insight['status']
+                                                    .toString()
+                                                    .replaceAll('_', ' ')
+                                                    .toUpperCase(),
+                                                style: TextStyle(
+                                                  color: insightColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
 
-                                  border: Border.all(color: insightColor),
-                                ),
+                                      const SizedBox(height: 18),
 
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: buildInsightMetric(
+                                              title: "Remaining",
+                                              value: currency.format(
+                                                insight['remaining_amount'],
+                                              ),
+                                              icon:
+                                                  Icons.account_balance_wallet,
+                                              color: insightColor,
+                                            ),
+                                          ),
 
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          insight['status'] == 'completed'
-                                              ? Icons.emoji_events
-                                              : insight['status'] == 'urgent'
-                                              ? Icons.warning
-                                              : Icons.track_changes,
-                                          color: insightColor,
+                                          const SizedBox(width: 12),
+
+                                          Expanded(
+                                            child: buildInsightMetric(
+                                              title: "Days Left",
+                                              value:
+                                                  "${insight['days_remaining'].ceil()}",
+                                              icon: Icons.calendar_today,
+                                              color: insightColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 12),
+
+                                      buildInsightMetric(
+                                        title: "Monthly Needed",
+                                        value: currency.format(
+                                          insight['monthly_needed'],
                                         ),
+                                        icon: Icons.savings,
+                                        color: insightColor,
+                                      ),
 
-                                        const SizedBox(width: 8),
+                                      const SizedBox(height: 16),
 
-                                        Text(
-                                          insight['status']
-                                              .toString()
-                                              .toUpperCase(),
-                                          style: TextStyle(
-                                            color: insightColor,
-                                            fontWeight: FontWeight.bold,
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(.05),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
                                           ),
                                         ),
-                                      ],
-                                    ),
-
-                                    const SizedBox(height: 8),
-
-                                    Text(
-                                      'Remaining: ${currency.format(insight['remaining_amount'])}',
-                                    ),
-
-                                    Text(
-                                      'Days Left: ${insight['days_remaining'].ceil()}',
-                                    ),
-
-                                    Text(
-                                      'Monthly Savings Needed: ${currency.format(insight['monthly_needed'])}',
-                                    ),
-
-                                    const SizedBox(height: 6),
-
-                                    Text(
-                                      insight['message'] ?? '',
-                                      style: const TextStyle(
-                                        fontStyle: FontStyle.italic,
+                                        child: Text(
+                                          insight['message'] ?? '',
+                                          style: const TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
 
@@ -963,105 +1123,162 @@ class _GoalsScreenState extends State<GoalsScreen>
                                   borderRadius: BorderRadius.circular(20),
                                 ),
 
-                                child: Text(
-                                  "${(percentage * 100).toStringAsFixed(0)}%",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                child: TweenAnimationBuilder<double>(
+                                  duration: const Duration(milliseconds: 800),
+                                  tween: Tween(begin: 0, end: percentage * 100),
+                                  builder: (_, value, __) {
+                                    return Text(
+                                      "${value.toStringAsFixed(0)}%",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
 
+                            const SizedBox(height: 22),
+
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_graph,
+                                  color: Colors.indigo,
+                                  size: 20,
+                                ),
+
+                                SizedBox(width: 8),
+
+                                Text(
+                                  "Savings Forecast",
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 20),
+
                             if (forecast != null)
-                              Card(
-                                margin: const EdgeInsets.only(top: 12),
-                                color: forecastColor.withOpacity(0.12),
-                                elevation: 0,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
+                              FadeSlideAnimation(
+                                delay: 450,
+                                child: Container(
+                                  margin: const EdgeInsets.only(top: 20),
+                                  padding: const EdgeInsets.all(18),
+                                  decoration: BoxDecoration(
+                                    color: forecastColor.withOpacity(.08),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: forecastColor.withOpacity(.25),
+                                    ),
+                                  ),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
-                                          Icon(
-                                            forecastIcon,
-                                            color: forecastColor,
-                                          ),
-
-                                          const SizedBox(width: 8),
-
-                                          Text(
-                                            forecast['forecast']
-                                                .toString()
-                                                .replaceAll('_', ' ')
-                                                .toUpperCase(),
-                                            style: TextStyle(
+                                          CircleAvatar(
+                                            radius: 20,
+                                            backgroundColor: forecastColor
+                                                .withOpacity(.15),
+                                            child: Icon(
+                                              forecastIcon,
                                               color: forecastColor,
-                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 12),
+
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                "Savings Forecast",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+
+                                              Text(
+                                                forecast['forecast']
+                                                    .toString()
+                                                    .replaceAll('_', ' ')
+                                                    .toUpperCase(),
+                                                style: TextStyle(
+                                                  color: forecastColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 18),
+
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(.05),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          forecast['message'],
+                                          style: const TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 18),
+
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: buildForecastMetric(
+                                              title: "Completion",
+                                              value:
+                                                  forecast['estimated_completion_date'] ??
+                                                  "Unknown",
+                                              icon: Icons.calendar_today,
+                                              color: forecastColor,
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 12),
+
+                                          Expanded(
+                                            child: buildForecastMetric(
+                                              title: "Daily",
+                                              value: currency.format(
+                                                forecast['recommended_daily_saving'],
+                                              ),
+                                              icon: Icons.savings,
+                                              color: forecastColor,
                                             ),
                                           ),
                                         ],
                                       ),
 
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 12),
 
-                                      Text(forecast['message']),
+                                      buildForecastMetric(
+                                        title: "Monthly Saving",
 
-                                      const SizedBox(height: 10),
+                                        value: currency.format(
+                                          forecast['recommended_monthly_saving'],
+                                        ),
 
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.calendar_today,
-                                            size: 16,
-                                          ),
+                                        icon: Icons.account_balance_wallet,
 
-                                          const SizedBox(width: 6),
-
-                                          Expanded(
-                                            child: Text(
-                                              forecast['estimated_completion_date'] ??
-                                                  'Completion date unavailable',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-
-                                      const SizedBox(height: 6),
-
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.savings, size: 16),
-
-                                          const SizedBox(width: 6),
-
-                                          Expanded(
-                                            child: Text(
-                                              '${currency.format(forecast['recommended_daily_saving'])}/day',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-
-                                      const SizedBox(height: 4),
-
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.account_balance_wallet,
-                                            size: 16,
-                                          ),
-
-                                          const SizedBox(width: 6),
-
-                                          Expanded(
-                                            child: Text(
-                                              '${currency.format(forecast['recommended_monthly_saving'])}/month',
-                                            ),
-                                          ),
-                                        ],
+                                        color: forecastColor,
                                       ),
                                     ],
                                   ),
@@ -1078,6 +1295,18 @@ class _GoalsScreenState extends State<GoalsScreen>
                                     : () {
                                         showAddSavingsDialog(goal['id']);
                                       },
+
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(52),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+
+                                  disabledBackgroundColor: Colors.green
+                                      .withOpacity(.15),
+                                  disabledForegroundColor: Colors.green,
+                                ),
 
                                 icon: const Icon(Icons.savings),
 
