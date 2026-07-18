@@ -47,6 +47,18 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     descriptionController = TextEditingController(
       text: widget.expense['description'] ?? '',
     );
+
+    categoryController.addListener(() {
+      setState(() {});
+    });
+
+    dateController.addListener(() {
+      setState(() {});
+    });
+
+    descriptionController.addListener(() {
+      setState(() {});
+    });
   }
 
   void updateExpense() async {
@@ -87,6 +99,79 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
+  }
+
+  Widget buildExpensePreview() {
+    final title = titleController.text.isEmpty
+        ? "Expense Title"
+        : titleController.text;
+
+    final amount = double.tryParse(amountController.text) ?? 0;
+
+    final category = categoryController.text.isEmpty
+        ? "Category"
+        : categoryController.text;
+
+    final date = dateController.text.isEmpty ? "No Date" : dateController.text;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Colors.orange.withOpacity(.12),
+                  child: const Icon(Icons.receipt_long, color: Colors.orange),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  "Expense Preview",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            Text(
+              title,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              "KES ${amount.toStringAsFixed(0)}",
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+
+            const SizedBox(height: 16),
+
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                Chip(
+                  avatar: const Icon(Icons.category, size: 18),
+                  label: Text(category),
+                ),
+                Chip(
+                  avatar: const Icon(Icons.calendar_today, size: 18),
+                  label: Text(date),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -131,6 +216,10 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
           ),
 
           const SizedBox(height: 30),
+
+          buildExpensePreview(),
+
+          const SizedBox(height: 24),
 
           Card(
             elevation: 0,
