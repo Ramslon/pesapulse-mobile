@@ -772,7 +772,7 @@ class _ExpenseListContentState extends State<ExpenseListContent>
         ),
 
         child: Card(
-          elevation: 0,
+          elevation: 2,
 
           color: Theme.of(context).colorScheme.surface,
 

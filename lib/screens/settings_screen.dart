@@ -334,740 +334,754 @@ https://github.com/ramslon/PesaPulse
       );
     }
 
-    return SingleChildScrollView(
-      key: const PageStorageKey("settings"),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
+    return RefreshIndicator(
+      onRefresh: () async {
+        await loadDashboardStats();
+      },
 
-        child: Column(
-          children: [
-            _buildSectionTitle('Account', Icons.person),
+      child: SingleChildScrollView(
+        key: const PageStorageKey("settings"),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
 
-            Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+          child: Column(
+            children: [
+              _buildSectionTitle('Account', Icons.person),
+
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.green.shade100,
+                        child: const Icon(
+                          Icons.account_circle,
+                          size: 60,
+                          color: Colors.green,
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      Text(
+                        "Welcome back!",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+
+                      Text(
+                        userName.isEmpty ? 'User' : userName,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Text(
+                        userEmail,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 15,
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      const Divider(),
+
+                      const SizedBox(height: 18),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.green.shade100,
+                          child: const Icon(Icons.edit, color: Colors.green),
+                        ),
+                        title: const Text("Edit Profile"),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                        onTap: () async {
+                          final updated = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const EditProfileScreen(),
+                            ),
+                          );
+
+                          if (updated == true) {
+                            loadProfile();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
+
+              _buildSectionTitle('Statistics', Icons.bar_chart),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildProfileStat(
+                      '$totalGoals',
+                      'Goals Created',
+                      Icons.flag,
+                      Colors.green,
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: _buildProfileStat(
+                      '$completedGoals',
+                      'Completed Goals',
+                      Icons.emoji_events,
+                      Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildProfileStat(
+                      '$totalBudgets',
+                      'Budgets Created',
+                      Icons.account_balance_wallet,
+                      Colors.blue,
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: _buildProfileStat(
+                      '$totalExpenses',
+                      'Expenses Recorded',
+                      Icons.receipt_long,
+                      Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+
+              _buildSectionTitle('Appearance', Icons.palette),
+              Card(
+                child: Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                    return SwitchListTile(
+                      secondary: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.indigo.shade100,
+                        child: const Icon(
+                          Icons.dark_mode_outlined,
+                          color: Colors.indigo,
+                        ),
+                      ),
+
+                      title: const Text(
+                        "Dark Mode",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+
+                      subtitle: const Text(
+                        "Switch between light and dark appearance.",
+                      ),
+
+                      value: themeProvider.isDarkMode,
+
+                      activeColor: Colors.green,
+
+                      onChanged: (value) {
+                        themeProvider.toggleTheme(value);
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 30),
+              _buildSectionTitle('Security', Icons.lock),
+
+              Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.orange.shade100,
+                    child: const Icon(Icons.lock_outline, color: Colors.orange),
+                  ),
+
+                  title: const Text(
+                    "Change Password",
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+
+                  subtitle: const Text(
+                    "Update your account password securely.",
+                  ),
+
+                  trailing: const Icon(Icons.chevron_right),
+
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChangePasswordScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.green.shade100,
+                  child: const Icon(Icons.verified_user, color: Colors.green),
+                ),
+
+                title: const Text(
+                  "Security Status",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+
+                subtitle: Text("Your account is protected."),
+              ),
+              const SizedBox(height: 20),
+
+              Align(
+                alignment: Alignment.centerLeft,
+
+                child: _buildSectionTitle('Notifications', Icons.notifications),
+              ),
+
+              const SizedBox(height: 10),
+
+              Card(
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.green.shade100,
-                      child: const Icon(
-                        Icons.account_circle,
-                        size: 60,
-                        color: Colors.green,
-                      ),
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    Text(
-                      "Welcome back!",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-
-                    Text(
-                      userName.isEmpty ? 'User' : userName,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-
-                    const SizedBox(height: 5),
-
-                    Text(
-                      userEmail,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 15,
-                      ),
-                    ),
-
-                    const SizedBox(height: 18),
-
-                    const Divider(),
-
-                    const SizedBox(height: 18),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
+                    SwitchListTile(
+                      secondary: CircleAvatar(
                         radius: 20,
                         backgroundColor: Colors.green.shade100,
-                        child: const Icon(Icons.edit, color: Colors.green),
+                        child: const Icon(Icons.alarm, color: Colors.green),
                       ),
-                      title: const Text("Edit Profile"),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-                      onTap: () async {
-                        final updated = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const EditProfileScreen(),
-                          ),
-                        );
 
-                        if (updated == true) {
-                          loadProfile();
-                        }
+                      title: const Text(
+                        "Daily Reminder",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+
+                      subtitle: const Text("Receive a reminder every day."),
+
+                      value: dailyReminder,
+
+                      activeColor: Colors.green,
+
+                      onChanged: (value) async {
+                        setState(() {
+                          dailyReminder = value;
+                        });
+
+                        await SettingsService.setDailyReminder(value);
+
+                        await ApiService.updatePreferences({
+                          'daily_reminder': value,
+                          'expense_alerts': expenseAlerts,
+                          'weekly_summary': weeklySummary,
+                        });
+
+                        NotificationService.showNotification(
+                          title: 'Daily Reminder',
+
+                          body: value
+                              ? 'Daily reminders enabled'
+                              : 'Daily reminders disabled',
+                        );
+                      },
+                    ),
+
+                    const Divider(height: 1),
+
+                    SwitchListTile(
+                      secondary: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.orange.shade100,
+                        child: const Icon(
+                          Icons.notifications_active_outlined,
+                          color: Colors.orange,
+                        ),
+                      ),
+
+                      title: const Text(
+                        "Expense Alerts",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+
+                      subtitle: const Text(
+                        "Notify me when spending exceeds my budget.",
+                      ),
+
+                      value: expenseAlerts,
+
+                      activeColor: Colors.green,
+
+                      onChanged: (value) async {
+                        setState(() {
+                          expenseAlerts = value;
+                        });
+                        await SettingsService.setExpenseAlerts(value);
+
+                        await ApiService.updatePreferences({
+                          'daily_reminder': dailyReminder,
+                          'expense_alerts': value,
+                          'weekly_summary': weeklySummary,
+                        });
+
+                        NotificationService.showNotification(
+                          title: 'Expense Alerts',
+
+                          body: value
+                              ? 'Expense alerts enabled'
+                              : 'Expense alerts disabled',
+                        );
+                      },
+                    ),
+
+                    const Divider(height: 1),
+
+                    SwitchListTile(
+                      secondary: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.blue.shade100,
+                        child: const Icon(
+                          Icons.summarize_outlined,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      title: const Text(
+                        "Weekly Summary",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+
+                      subtitle: const Text("Receive weekly financial reports."),
+
+                      value: weeklySummary,
+
+                      activeColor: Colors.green,
+
+                      onChanged: (value) async {
+                        setState(() {
+                          weeklySummary = value;
+                        });
+                        await SettingsService.setWeeklySummary(value);
+
+                        await ApiService.updatePreferences({
+                          'daily_reminder': dailyReminder,
+                          'expense_alerts': expenseAlerts,
+                          'weekly_summary': value,
+                        });
+
+                        NotificationService.showNotification(
+                          title: 'Weekly Summary',
+
+                          body: value
+                              ? 'Weekly summaries enabled'
+                              : 'Weekly summaries disabled',
+                        );
                       },
                     ),
                   ],
                 ),
               ),
-            ),
 
-            _buildSectionTitle('Statistics', Icons.bar_chart),
+              const SizedBox(height: 30),
 
-            Row(
-              children: [
-                Expanded(
-                  child: _buildProfileStat(
-                    '$totalGoals',
-                    'Goals Created',
-                    Icons.flag,
-                    Colors.green,
-                  ),
-                ),
+              _buildSectionTitle("About", Icons.info),
 
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: _buildProfileStat(
-                    '$completedGoals',
-                    'Completed Goals',
-                    Icons.emoji_events,
-                    Colors.orange,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildProfileStat(
-                    '$totalBudgets',
-                    'Budgets Created',
-                    Icons.account_balance_wallet,
-                    Colors.blue,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: _buildProfileStat(
-                    '$totalExpenses',
-                    'Expenses Recorded',
-                    Icons.receipt_long,
-                    Colors.red,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            _buildSectionTitle('Appearance', Icons.palette),
-            Card(
-              child: Consumer<ThemeProvider>(
-                builder: (context, themeProvider, child) {
-                  return SwitchListTile(
-                    secondary: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.indigo.shade100,
-                      child: const Icon(
-                        Icons.dark_mode_outlined,
-                        color: Colors.indigo,
-                      ),
-                    ),
-
-                    title: const Text(
-                      "Dark Mode",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text(
-                      "Switch between light and dark appearance.",
-                    ),
-
-                    value: themeProvider.isDarkMode,
-
-                    activeColor: Colors.green,
-
-                    onChanged: (value) {
-                      themeProvider.toggleTheme(value);
-                    },
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 30),
-            _buildSectionTitle('Security', Icons.lock),
-
-            Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.orange.shade100,
-                  child: const Icon(Icons.lock_outline, color: Colors.orange),
-                ),
-
-                title: const Text(
-                  "Change Password",
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-
-                subtitle: const Text("Update your account password securely."),
-
-                trailing: const Icon(Icons.chevron_right),
-
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ChangePasswordScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            const Divider(height: 1),
-
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.green.shade100,
-                child: const Icon(Icons.verified_user, color: Colors.green),
-              ),
-
-              title: const Text(
-                "Security Status",
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-
-              subtitle: Text("Your account is protected."),
-            ),
-            const SizedBox(height: 20),
-
-            Align(
-              alignment: Alignment.centerLeft,
-
-              child: _buildSectionTitle('Notifications', Icons.notifications),
-            ),
-
-            const SizedBox(height: 10),
-
-            Card(
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    secondary: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.green.shade100,
-                      child: const Icon(Icons.alarm, color: Colors.green),
-                    ),
-
-                    title: const Text(
-                      "Daily Reminder",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text("Receive a reminder every day."),
-
-                    value: dailyReminder,
-
-                    activeColor: Colors.green,
-
-                    onChanged: (value) async {
-                      setState(() {
-                        dailyReminder = value;
-                      });
-
-                      await SettingsService.setDailyReminder(value);
-
-                      await ApiService.updatePreferences({
-                        'daily_reminder': value,
-                        'expense_alerts': expenseAlerts,
-                        'weekly_summary': weeklySummary,
-                      });
-
-                      NotificationService.showNotification(
-                        title: 'Daily Reminder',
-
-                        body: value
-                            ? 'Daily reminders enabled'
-                            : 'Daily reminders disabled',
-                      );
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  SwitchListTile(
-                    secondary: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.orange.shade100,
-                      child: const Icon(
-                        Icons.notifications_active_outlined,
-                        color: Colors.orange,
-                      ),
-                    ),
-
-                    title: const Text(
-                      "Expense Alerts",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text(
-                      "Notify me when spending exceeds my budget.",
-                    ),
-
-                    value: expenseAlerts,
-
-                    activeColor: Colors.green,
-
-                    onChanged: (value) async {
-                      setState(() {
-                        expenseAlerts = value;
-                      });
-                      await SettingsService.setExpenseAlerts(value);
-
-                      await ApiService.updatePreferences({
-                        'daily_reminder': dailyReminder,
-                        'expense_alerts': value,
-                        'weekly_summary': weeklySummary,
-                      });
-
-                      NotificationService.showNotification(
-                        title: 'Expense Alerts',
-
-                        body: value
-                            ? 'Expense alerts enabled'
-                            : 'Expense alerts disabled',
-                      );
-                    },
-                  ),
-
-                  const Divider(height: 1),
-
-                  SwitchListTile(
-                    secondary: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.blue.shade100,
-                      child: const Icon(
-                        Icons.summarize_outlined,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    title: const Text(
-                      "Weekly Summary",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text("Receive weekly financial reports."),
-
-                    value: weeklySummary,
-
-                    activeColor: Colors.green,
-
-                    onChanged: (value) async {
-                      setState(() {
-                        weeklySummary = value;
-                      });
-                      await SettingsService.setWeeklySummary(value);
-
-                      await ApiService.updatePreferences({
-                        'daily_reminder': dailyReminder,
-                        'expense_alerts': expenseAlerts,
-                        'weekly_summary': value,
-                      });
-
-                      NotificationService.showNotification(
-                        title: 'Weekly Summary',
-
-                        body: value
-                            ? 'Weekly summaries enabled'
-                            : 'Weekly summaries disabled',
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            _buildSectionTitle("About", Icons.info),
-
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.blue.shade100,
-                      child: const Icon(Icons.info_outline, color: Colors.blue),
-                    ),
-
-                    title: const Text(
-                      "About PesaPulse",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text(
-                      "Version, credits and application information.",
-                    ),
-
-                    trailing: const Icon(Icons.chevron_right),
-
-                    onTap: showAboutPesaPulse,
-                  ),
-
-                  const Divider(height: 1),
-
-                  ListTile(
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.purple.shade100,
-                      child: const Icon(
-                        Icons.privacy_tip_outlined,
-                        color: Colors.purple,
-                      ),
-                    ),
-
-                    title: const Text(
-                      "Privacy Policy",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text("Learn how your data is protected."),
-
-                    trailing: const Icon(Icons.chevron_right),
-
-                    onTap: showPrivacyPolicy,
-                  ),
-
-                  const Divider(height: 1),
-
-                  ListTile(
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.teal.shade100,
-                      child: const Icon(
-                        Icons.description_outlined,
-                        color: Colors.teal,
-                      ),
-                    ),
-
-                    title: const Text(
-                      "Terms of Service",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text(
-                      "Review the terms of using PesaPulse.",
-                    ),
-
-                    trailing: const Icon(Icons.chevron_right),
-
-                    onTap: showTermsOfService,
-                  ),
-
-                  const Divider(height: 1),
-
-                  const ListTile(
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Color(0xFFE8F5E9),
-                      child: Icon(Icons.verified_outlined, color: Colors.green),
-                    ),
-
-                    title: Text(
-                      "Application Version",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: Text("Current installed version"),
-
-                    trailing: Text(
-                      "v2.1.0",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            _buildSectionTitle('Support', Icons.support_agent),
-
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.blue.shade100,
-                      child: const Icon(
-                        Icons.support_agent,
-                        color: Colors.blue,
-                      ),
-                    ),
-
-                    title: const Text(
-                      "Contact Support",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text(
-                      "Need help? Reach out to our support team.",
-                    ),
-
-                    trailing: const Icon(Icons.chevron_right),
-
-                    onTap: contactSupport,
-                  ),
-
-                  const Divider(height: 1),
-
-                  ListTile(
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.amber.shade100,
-                      child: const Icon(
-                        Icons.star_rate_rounded,
-                        color: Colors.amber,
-                      ),
-                    ),
-
-                    title: const Text(
-                      "Rate PesaPulse",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text("Share your experience with us."),
-
-                    trailing: const Icon(Icons.chevron_right),
-
-                    onTap: rateApp,
-                  ),
-
-                  const Divider(height: 1),
-
-                  ListTile(
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.green.shade100,
-                      child: const Icon(
-                        Icons.share_rounded,
-                        color: Colors.green,
-                      ),
-                    ),
-
-                    title: const Text(
-                      "Share App",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-
-                    subtitle: const Text(
-                      "Invite your friends to use PesaPulse.",
-                    ),
-
-                    trailing: const Icon(Icons.chevron_right),
-
-                    onTap: shareApp,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            _buildSectionTitle('Session', Icons.logout),
-
-            Card(
-              elevation: 2,
-              shadowColor: Colors.black12,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
+              Card(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.red.shade100,
-                          child: const Icon(
-                            Icons.logout_rounded,
-                            color: Colors.red,
-                          ),
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.blue.shade100,
+                        child: const Icon(
+                          Icons.info_outline,
+                          color: Colors.blue,
                         ),
+                      ),
 
-                        const SizedBox(width: 14),
+                      title: const Text(
+                        "About PesaPulse",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
 
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Sign Out",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                      subtitle: const Text(
+                        "Version, credits and application information.",
+                      ),
 
-                              SizedBox(height: 4),
+                      trailing: const Icon(Icons.chevron_right),
 
-                              Text(
-                                "Securely sign out from your account.",
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      onTap: showAboutPesaPulse,
                     ),
 
-                    const SizedBox(height: 20),
+                    const Divider(height: 1),
 
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade600,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.purple.shade100,
+                        child: const Icon(
+                          Icons.privacy_tip_outlined,
+                          color: Colors.purple,
                         ),
+                      ),
 
-                        icon: const Icon(Icons.logout_rounded),
+                      title: const Text(
+                        "Privacy Policy",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
 
-                        label: const Text(
-                          "Sign Out",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      subtitle: const Text("Learn how your data is protected."),
+
+                      trailing: const Icon(Icons.chevron_right),
+
+                      onTap: showPrivacyPolicy,
+                    ),
+
+                    const Divider(height: 1),
+
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.teal.shade100,
+                        child: const Icon(
+                          Icons.description_outlined,
+                          color: Colors.teal,
                         ),
+                      ),
 
-                        onPressed: () async {
-                          final confirm = await showLogoutDialog();
+                      title: const Text(
+                        "Terms of Service",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
 
-                          if (confirm != true) return;
+                      subtitle: const Text(
+                        "Review the terms of using PesaPulse.",
+                      ),
 
-                          await ApiService.logoutUser();
+                      trailing: const Icon(Icons.chevron_right),
 
-                          if (!mounted) return;
+                      onTap: showTermsOfService,
+                    ),
 
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                          );
-                        },
+                    const Divider(height: 1),
+
+                    const ListTile(
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Color(0xFFE8F5E9),
+                        child: Icon(
+                          Icons.verified_outlined,
+                          color: Colors.green,
+                        ),
+                      ),
+
+                      title: Text(
+                        "Application Version",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+
+                      subtitle: Text("Current installed version"),
+
+                      trailing: Text(
+                        "v2.1.0",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
 
-            const SizedBox(height: 25),
-            Column(
-              children: [
-                const SizedBox(height: 30),
+              _buildSectionTitle('Support', Icons.support_agent),
 
-                Divider(color: Colors.grey.shade300),
+              Card(
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.blue.shade100,
+                        child: const Icon(
+                          Icons.support_agent,
+                          color: Colors.blue,
+                        ),
+                      ),
 
-                const SizedBox(height: 25),
+                      title: const Text(
+                        "Contact Support",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
 
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Colors.green.shade100,
-                  child: const Icon(
-                    Icons.account_balance_wallet,
-                    color: Colors.green,
-                    size: 30,
+                      subtitle: const Text(
+                        "Need help? Reach out to our support team.",
+                      ),
+
+                      trailing: const Icon(Icons.chevron_right),
+
+                      onTap: contactSupport,
+                    ),
+
+                    const Divider(height: 1),
+
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.amber.shade100,
+                        child: const Icon(
+                          Icons.star_rate_rounded,
+                          color: Colors.amber,
+                        ),
+                      ),
+
+                      title: const Text(
+                        "Rate PesaPulse",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+
+                      subtitle: const Text("Share your experience with us."),
+
+                      trailing: const Icon(Icons.chevron_right),
+
+                      onTap: rateApp,
+                    ),
+
+                    const Divider(height: 1),
+
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.green.shade100,
+                        child: const Icon(
+                          Icons.share_rounded,
+                          color: Colors.green,
+                        ),
+                      ),
+
+                      title: const Text(
+                        "Share App",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+
+                      subtitle: const Text(
+                        "Invite your friends to use PesaPulse.",
+                      ),
+
+                      trailing: const Icon(Icons.chevron_right),
+
+                      onTap: shareApp,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 25),
+
+              _buildSectionTitle('Session', Icons.logout),
+
+              Card(
+                elevation: 2,
+                shadowColor: Colors.black12,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.red.shade100,
+                            child: const Icon(
+                              Icons.logout_rounded,
+                              color: Colors.red,
+                            ),
+                          ),
+
+                          const SizedBox(width: 14),
+
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Sign Out",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+
+                                SizedBox(height: 4),
+
+                                Text(
+                                  "Securely sign out from your account.",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade600,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+
+                          icon: const Icon(Icons.logout_rounded),
+
+                          label: const Text(
+                            "Sign Out",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          onPressed: () async {
+                            final confirm = await showLogoutDialog();
+
+                            if (confirm != true) return;
+
+                            await ApiService.logoutUser();
+
+                            if (!mounted) return;
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 15),
+              const SizedBox(height: 25),
+              Column(
+                children: [
+                  const SizedBox(height: 30),
 
-                Text(
-                  "PesaPulse",
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
+                  Divider(color: Colors.grey.shade300),
 
-                const SizedBox(height: 6),
+                  const SizedBox(height: 25),
 
-                Text(
-                  "Personal Finance Manager",
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-
-                const SizedBox(height: 12),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    "Version 2.1.0",
-                    style: TextStyle(
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Colors.green.shade100,
+                    child: const Icon(
+                      Icons.account_balance_wallet,
                       color: Colors.green,
+                      size: 30,
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  Text(
+                    "PesaPulse",
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 20),
+                  const SizedBox(height: 6),
 
-                Text(
-                  "Designed & Developed\nwith ❤️ in Kenya",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade600, height: 1.5),
-                ),
+                  Text(
+                    "Personal Finance Manager",
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
-                Text(
-                  "© 2026 PesaPulse\nAll rights reserved.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      "Version 2.1.0",
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
 
-                const SizedBox(height: 30),
-              ],
-            ),
-          ],
+                  const SizedBox(height: 20),
+
+                  Text(
+                    "Designed & Developed\nwith ❤️ in Kenya",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade600, height: 1.5),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(
+                    "© 2026 PesaPulse\nAll rights reserved.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

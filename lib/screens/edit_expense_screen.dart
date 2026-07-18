@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../services/api_services.dart';
+import 'package:intl/intl.dart';
+import '../widgets/input_icon_badge.dart';
 
 class EditExpenseScreen extends StatefulWidget {
   final Map expense;
@@ -16,26 +18,59 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
   late TextEditingController amountController;
 
-  late TextEditingController categoryController;
-
   late TextEditingController dateController;
 
   late TextEditingController descriptionController;
 
   bool isLoading = false;
 
+  final DateFormat dateFormatter = DateFormat("dd MMM yyyy");
+
+  List<String> categories = [
+    'Food',
+    'Transport',
+    'Shopping',
+    'Bills',
+    'Entertainment',
+    'Health',
+    'Education',
+    'Other',
+  ];
+
+  final Map<String, IconData> categoryIcons = {
+    'Food': Icons.restaurant,
+    'Transport': Icons.directions_car,
+    'Shopping': Icons.shopping_bag,
+    'Bills': Icons.receipt_long,
+    'Entertainment': Icons.movie,
+    'Health': Icons.favorite,
+    'Education': Icons.school,
+    'Other': Icons.category,
+  };
+
+  final Map<String, Color> categoryColors = {
+    'Food': Colors.orange,
+    'Transport': Colors.blue,
+    'Shopping': Colors.purple,
+    'Bills': Colors.red,
+    'Entertainment': Colors.pink,
+    'Health': Colors.green,
+    'Education': Colors.indigo,
+    'Other': Colors.grey,
+  };
+
+  late String selectedCategory;
+
   @override
   void initState() {
     super.initState();
+
+    selectedCategory = widget.expense['category'];
 
     titleController = TextEditingController(text: widget.expense['title']);
 
     amountController = TextEditingController(
       text: widget.expense['amount'].toString(),
-    );
-
-    categoryController = TextEditingController(
-      text: widget.expense['category'],
     );
 
     dateController = TextEditingController(
@@ -50,10 +85,6 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
     amountController.addListener(() => setState(() {}));
 
-    categoryController.addListener(() {
-      setState(() {});
-    });
-
     dateController.addListener(() {
       setState(() {});
     });
@@ -64,13 +95,13 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   }
 
   bool get isFormValid {
-    final amount = double.tryParse(amountController.text.trim());
+    final amount = double.tryParse(amountController.text);
 
-    return titleController.text.trim().isNotEmpty &&
-        categoryController.text.trim().isNotEmpty &&
-        dateController.text.trim().isNotEmpty &&
+    return titleController.text.trim().length >= 3 &&
         amount != null &&
-        amount > 0;
+        amount > 0 &&
+        selectedCategory.isNotEmpty &&
+        dateController.text.isNotEmpty;
   }
 
   void updateExpense() async {
@@ -95,7 +126,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
         amountController.text.trim(),
 
-        categoryController.text.trim(),
+        selectedCategory,
 
         dateController.text.trim(),
 
@@ -107,9 +138,28 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text("Expense updated successfully 🎉"),
+          margin: const EdgeInsets.all(20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: Colors.green.shade600,
+          content: Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Expense updated successfully!",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
 
@@ -125,21 +175,42 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     }
   }
 
+  Future<void> pickExpenseDate() async {
+    final now = DateTime.now();
+
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.tryParse(dateController.text) ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(now.year + 5),
+      helpText: "Select Expense Date",
+      cancelText: "Cancel",
+      confirmText: "Select",
+    );
+
+    if (pickedDate != null) {
+      dateController.text =
+          "${pickedDate.year}-"
+          "${pickedDate.month.toString().padLeft(2, '0')}-"
+          "${pickedDate.day.toString().padLeft(2, '0')}";
+    }
+  }
+
   Widget buildExpensePreview() {
-    final title = titleController.text.isEmpty
+    final title = titleController.text.trim().isEmpty
         ? "Expense Title"
-        : titleController.text;
+        : titleController.text.trim();
 
     final amount = double.tryParse(amountController.text) ?? 0;
 
-    final category = categoryController.text.isEmpty
-        ? "Category"
-        : categoryController.text;
+    final parsedDate = DateTime.tryParse(dateController.text);
 
-    final date = dateController.text.isEmpty ? "No Date" : dateController.text;
+    final date = parsedDate == null
+        ? "No Date"
+        : dateFormatter.format(parsedDate);
 
     return Card(
-      elevation: 2,
+      elevation: 1.5,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -148,21 +219,39 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: Colors.orange.withOpacity(.12),
-                  child: const Icon(Icons.receipt_long, color: Colors.orange),
+                InputIconBadge(
+                  icon: categoryIcons[selectedCategory]!,
+                  color: categoryColors[selectedCategory]!,
                 ),
+
                 const SizedBox(width: 12),
-                Text(
-                  "Expense Preview",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Expense Preview",
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      Text(
+                        "Live preview of your expense",
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
 
             Text(
               title,
@@ -173,25 +262,98 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
             Text(
               "KES ${amount.toStringAsFixed(0)}",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
+            Row(
               children: [
-                Chip(
-                  avatar: const Icon(Icons.category, size: 18),
-                  label: Text(category),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: categoryColors[selectedCategory]!.withOpacity(.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          categoryIcons[selectedCategory],
+                          color: categoryColors[selectedCategory],
+                          size: 20,
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: Text(
+                            selectedCategory,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                Chip(
-                  avatar: const Icon(Icons.calendar_today, size: 18),
-                  label: Text(date),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_today_rounded,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: Text(
+                            date,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
+
+            if (descriptionController.text.trim().isNotEmpty) ...[
+              const SizedBox(height: 18),
+
+              Divider(color: Colors.grey.shade300),
+
+              const SizedBox(height: 12),
+
+              Text(
+                "Notes",
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 6),
+
+              Text(
+                descriptionController.text.trim(),
+                style: TextStyle(color: Colors.grey.shade700, height: 1.4),
+              ),
+            ],
           ],
         ),
       ),
@@ -204,33 +366,65 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     String? prefixText,
+    String? hintText,
+    int maxLines = 1,
+    TextInputAction textInputAction = TextInputAction.next,
+    bool readOnly = false,
+    VoidCallback? onTap,
   }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixText: prefixText,
-        prefixIcon: Icon(icon),
-        filled: true,
-        fillColor: Theme.of(context).cardColor,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        textInputAction: textInputAction,
+        maxLines: maxLines,
+        readOnly: readOnly,
+        onTap: onTap,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hintText,
+          prefixText: prefixText,
+
+          prefixIcon: InputIconBadge(
+            icon: icon,
             color: Theme.of(context).colorScheme.primary,
-            width: 2,
+          ),
+
+          filled: true,
+          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.primary,
+              width: 1.5,
+            ),
           ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    amountController.dispose();
+
+    descriptionController.dispose();
+    dateController.dispose();
+
+    super.dispose();
   }
 
   @override
@@ -330,44 +524,125 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                   buildInputField(
                     controller: titleController,
                     label: "Expense Title",
-                    icon: Icons.receipt_long_outlined,
+                    hintText: "e.g. Grocery Shopping",
+                    icon: Icons.edit_note_rounded,
                   ),
-
-                  const SizedBox(height: 22),
 
                   buildInputField(
                     controller: amountController,
                     label: "Amount",
-                    icon: Icons.account_balance_wallet_outlined,
-                    keyboardType: TextInputType.number,
+                    hintText: "Enter amount",
                     prefixText: "KES ",
+                    icon: Icons.payments_rounded,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
 
-                  const SizedBox(height: 22),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
 
-                  buildInputField(
-                    controller: categoryController,
-                    label: "Category",
-                    icon: Icons.category_outlined,
+                    decoration: InputDecoration(
+                      labelText: "Category",
+
+                      prefixIcon: InputIconBadge(
+                        icon: categoryIcons[selectedCategory]!,
+                        color: categoryColors[selectedCategory]!,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+
+                    items: categories.map((category) {
+                      return DropdownMenuItem(
+                        value: category,
+                        child: Row(
+                          children: [
+                            InputIconBadge(
+                              icon: categoryIcons[category]!,
+                              color: categoryColors[category]!,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(category),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+
+                    onChanged: (value) {
+                      setState(() {
+                        selectedCategory = value!;
+                      });
+                    },
                   ),
-
-                  const SizedBox(height: 22),
-
-                  buildInputField(
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    textInputAction: TextInputAction.next,
                     controller: dateController,
-                    label: "Expense Date",
-                    icon: Icons.calendar_today_outlined,
+                    readOnly: true,
+                    onTap: pickExpenseDate,
+                    decoration: InputDecoration(
+                      labelText: "Expense Date",
+                      hintText: "Select date",
+                      prefixIcon: const InputIconBadge(
+                        icon: Icons.calendar_month_rounded,
+                        color: Colors.orange,
+                      ),
+                      suffixIcon: const Icon(Icons.keyboard_arrow_down_rounded),
+                      filled: true,
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return "Select an expense date";
+                      }
+
+                      return null;
+                    },
                   ),
-
-                  const SizedBox(height: 22),
-
+                  const SizedBox(height: 24),
                   buildInputField(
                     controller: descriptionController,
                     label: "Description",
-                    icon: Icons.notes_outlined,
+                    hintText: "Optional notes...",
+                    icon: Icons.notes_rounded,
+                    maxLines: 5,
+                    textInputAction: TextInputAction.done,
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
                   SizedBox(
                     width: double.infinity,
