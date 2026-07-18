@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
 
-import '../widgets/goal_section_header.dart';
 import '../widgets/goal_loading_skeleton.dart';
 import '../widgets/goal_stat_card.dart';
 import '../widgets/goal_empty_state.dart';
@@ -343,10 +342,6 @@ class _GoalsScreenState extends State<GoalsScreen>
     final screenHeight = screenSize.height;
 
     final sectionSpacing = screenHeight * .035;
-
-    const double cardSpacing = 24;
-
-    const double internalSpacing = 16;
 
     if (isLoading) {
       return const GoalLoadingSkeleton();

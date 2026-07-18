@@ -92,65 +92,112 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            const Icon(Icons.edit),
+      appBar: AppBar(title: const Text(""), elevation: 0),
 
-            const SizedBox(width: 10),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
 
-            const Text('Edit Expenses'),
-          ],
-        ),
-      ),
-
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-
-          child: Column(
-            children: [
-              CustomTextField(controller: titleController, label: 'Title'),
-
-              const SizedBox(height: 20),
-
-              CustomTextField(controller: amountController, label: 'Amount'),
-
-              const SizedBox(height: 20),
-
-              CustomTextField(
-                controller: categoryController,
-
-                label: 'Category',
-              ),
-
-              const SizedBox(height: 20),
-
-              CustomTextField(controller: dateController, label: 'Date'),
-
-              const SizedBox(height: 20),
-
-              CustomTextField(
-                controller: descriptionController,
-
-                label: 'Description',
-              ),
-
-              const SizedBox(height: 30),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-
-                child: CustomButton(
-                  text: 'Update Expense',
-                  isLoading: isLoading,
-                  onPressed: updateExpense,
-                ),
-              ),
-            ],
+        children: [
+          Text(
+            "Edit Expense",
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
-        ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            "Update your expense details and keep your spending records accurate.",
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+          ),
+
+          const SizedBox(height: 28),
+
+          Center(
+            child: Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(.12),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(
+                Icons.edit_note_rounded,
+                size: 42,
+                color: Colors.orange,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          Card(
+            elevation: 0,
+            color: Colors.orange.withOpacity(.08),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.tips_and_updates_outlined,
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Keep your expense information accurate for better spending insights and reports.",
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+          CustomTextField(controller: titleController, label: 'Title'),
+
+          const SizedBox(height: 20),
+
+          CustomTextField(controller: amountController, label: 'Amount'),
+
+          const SizedBox(height: 20),
+
+          CustomTextField(controller: categoryController, label: 'Category'),
+
+          const SizedBox(height: 20),
+
+          CustomTextField(controller: dateController, label: 'Date'),
+
+          const SizedBox(height: 20),
+
+          CustomTextField(
+            controller: descriptionController,
+
+            label: 'Description',
+          ),
+
+          const SizedBox(height: 30),
+
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+
+            child: CustomButton(
+              text: 'Update Expense',
+              isLoading: isLoading,
+              onPressed: updateExpense,
+            ),
+          ),
+        ],
       ),
     );
   }
