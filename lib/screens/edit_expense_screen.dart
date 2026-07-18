@@ -236,7 +236,15 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(""), elevation: 0),
+      appBar: AppBar(
+        title: Row(
+          children: const [
+            Icon(Icons.receipt_long),
+            SizedBox(width: 10),
+            Text("Edit Expense"),
+          ],
+        ),
+      ),
 
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
@@ -255,30 +263,11 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
             "Update your expense details and keep your spending records accurate.",
             style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
           ),
-
           const SizedBox(height: 28),
-
-          Center(
-            child: Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(.12),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(
-                Icons.edit_note_rounded,
-                size: 42,
-                color: Colors.orange,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 30),
 
           Card(
             elevation: 0,
-            color: Colors.orange.withOpacity(.08),
+            color: Colors.blue.withOpacity(.08),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
@@ -287,14 +276,11 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.tips_and_updates_outlined,
-                    color: Colors.orange,
-                  ),
+                  const Icon(Icons.lightbulb_outline, color: Colors.blue),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      "Keep your expense information accurate for better spending insights and reports.",
+                      "Update your expense information to keep your spending history accurate.",
                       style: TextStyle(
                         color: Colors.grey.shade700,
                         height: 1.4,
@@ -305,77 +291,111 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 24),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: Colors.deepPurple.withOpacity(.15),
+                child: const Icon(
+                  Icons.receipt_long_outlined,
+                  color: Colors.deepPurple,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                "Expense Details",
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
 
           buildExpensePreview(),
 
           const SizedBox(height: 24),
-          buildInputField(
-            controller: titleController,
-            label: "Expense Title",
-            icon: Icons.receipt_long_outlined,
-          ),
 
-          const SizedBox(height: 20),
+          Card(
+            elevation: 1.5,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  buildInputField(
+                    controller: titleController,
+                    label: "Expense Title",
+                    icon: Icons.receipt_long_outlined,
+                  ),
 
-          buildInputField(
-            controller: amountController,
-            label: "Amount",
-            icon: Icons.account_balance_wallet_outlined,
-            keyboardType: TextInputType.number,
-            prefixText: "KES ",
-          ),
+                  const SizedBox(height: 22),
 
-          const SizedBox(height: 20),
+                  buildInputField(
+                    controller: amountController,
+                    label: "Amount",
+                    icon: Icons.account_balance_wallet_outlined,
+                    keyboardType: TextInputType.number,
+                    prefixText: "KES ",
+                  ),
 
-          buildInputField(
-            controller: categoryController,
-            label: "Category",
-            icon: Icons.category_outlined,
-          ),
+                  const SizedBox(height: 22),
 
-          const SizedBox(height: 20),
+                  buildInputField(
+                    controller: categoryController,
+                    label: "Category",
+                    icon: Icons.category_outlined,
+                  ),
 
-          buildInputField(
-            controller: dateController,
-            label: "Date",
-            icon: Icons.calendar_today_outlined,
-          ),
+                  const SizedBox(height: 22),
 
-          const SizedBox(height: 20),
+                  buildInputField(
+                    controller: dateController,
+                    label: "Expense Date",
+                    icon: Icons.calendar_today_outlined,
+                  ),
 
-          buildInputField(
-            controller: descriptionController,
-            label: "Description",
-            icon: Icons.notes_outlined,
-          ),
-          const SizedBox(height: 30),
+                  const SizedBox(height: 22),
 
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton.icon(
-              onPressed: isFormValid && !isLoading ? updateExpense : null,
+                  buildInputField(
+                    controller: descriptionController,
+                    label: "Description",
+                    icon: Icons.notes_outlined,
+                  ),
 
-              icon: isLoading
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
+                  const SizedBox(height: 32),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: isFormValid && !isLoading
+                          ? updateExpense
+                          : null,
+                      icon: isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check_circle_outline),
+                      label: Text(isLoading ? "Updating..." : "Update Expense"),
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
                       ),
-                    )
-                  : const Icon(Icons.check_circle_outline),
-
-              label: Text(isLoading ? "Updating..." : "Update Expense"),
-
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
