@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../services/api_services.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/custom_textfield.dart';
 
 class EditExpenseScreen extends StatefulWidget {
   final Map expense;
@@ -47,6 +45,10 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     descriptionController = TextEditingController(
       text: widget.expense['description'] ?? '',
     );
+
+    titleController.addListener(() => setState(() {}));
+
+    amountController.addListener(() => setState(() {}));
 
     categoryController.addListener(() {
       setState(() {});
@@ -174,6 +176,41 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     );
   }
 
+  Widget buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    String? prefixText,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixText: prefixText,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: Theme.of(context).cardColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary,
+            width: 2,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -217,10 +254,6 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
           const SizedBox(height: 30),
 
-          buildExpensePreview(),
-
-          const SizedBox(height: 24),
-
           Card(
             elevation: 0,
             color: Colors.orange.withOpacity(.08),
@@ -252,38 +285,76 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
           ),
 
           const SizedBox(height: 24),
-          CustomTextField(controller: titleController, label: 'Title'),
 
-          const SizedBox(height: 20),
+          buildExpensePreview(),
 
-          CustomTextField(controller: amountController, label: 'Amount'),
-
-          const SizedBox(height: 20),
-
-          CustomTextField(controller: categoryController, label: 'Category'),
-
-          const SizedBox(height: 20),
-
-          CustomTextField(controller: dateController, label: 'Date'),
-
-          const SizedBox(height: 20),
-
-          CustomTextField(
-            controller: descriptionController,
-
-            label: 'Description',
+          const SizedBox(height: 24),
+          buildInputField(
+            controller: titleController,
+            label: "Expense Title",
+            icon: Icons.receipt_long_outlined,
           ),
 
+          const SizedBox(height: 20),
+
+          buildInputField(
+            controller: amountController,
+            label: "Amount",
+            icon: Icons.account_balance_wallet_outlined,
+            keyboardType: TextInputType.number,
+            prefixText: "KES ",
+          ),
+
+          const SizedBox(height: 20),
+
+          buildInputField(
+            controller: categoryController,
+            label: "Category",
+            icon: Icons.category_outlined,
+          ),
+
+          const SizedBox(height: 20),
+
+          buildInputField(
+            controller: dateController,
+            label: "Date",
+            icon: Icons.calendar_today_outlined,
+          ),
+
+          const SizedBox(height: 20),
+
+          buildInputField(
+            controller: descriptionController,
+            label: "Description",
+            icon: Icons.notes_outlined,
+          ),
           const SizedBox(height: 30),
 
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: isLoading ? null : updateExpense,
 
-            child: CustomButton(
-              text: 'Update Expense',
-              isLoading: isLoading,
-              onPressed: updateExpense,
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check_circle_outline),
+
+              label: Text(isLoading ? "Updating..." : "Update Expense"),
+
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
             ),
           ),
         ],
