@@ -63,7 +63,26 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     });
   }
 
+  bool get isFormValid {
+    final amount = double.tryParse(amountController.text.trim());
+
+    return titleController.text.trim().isNotEmpty &&
+        categoryController.text.trim().isNotEmpty &&
+        dateController.text.trim().isNotEmpty &&
+        amount != null &&
+        amount > 0;
+  }
+
   void updateExpense() async {
+    if (!isFormValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please complete all required fields correctly."),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       isLoading = true;
     });
@@ -88,7 +107,10 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Expense updated successfully')),
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text("Expense updated successfully 🎉"),
+        ),
       );
 
       Navigator.pop(context, true);
@@ -334,7 +356,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton.icon(
-              onPressed: isLoading ? null : updateExpense,
+              onPressed: isFormValid && !isLoading ? updateExpense : null,
 
               icon: isLoading
                   ? const SizedBox(
