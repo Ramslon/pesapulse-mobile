@@ -7,9 +7,16 @@ import '../database/database_helper.dart';
 import 'api_services.dart';
 import 'sync_status.dart';
 import '../services/settings_service.dart';
+import '../repositories/dashboard_repository.dart';
+import '../repositories/financial_insights_repository.dart';
 
 class SyncService {
   SyncService._();
+
+  final DashboardRepository dashboardRepository = DashboardRepository();
+
+  final FinancialInsightsRepository insightsRepository =
+      FinancialInsightsRepository();
 
   static final SyncService instance = SyncService._();
 
@@ -57,6 +64,8 @@ class SyncService {
       }
     }
     await _refreshPendingCounter();
+
+    await refreshOfflineCaches();
 
     await SettingsService.saveLastSync(DateTime.now());
   }
@@ -121,5 +130,13 @@ class SyncService {
 
   Future<void> _refreshPendingCounter() async {
     await getPendingChanges();
+  }
+
+  Future<void> refreshOfflineCaches() async {
+    try {
+      await dashboardRepository.getDashboard();
+
+      await insightsRepository.getInsights();
+    } catch (_) {}
   }
 }

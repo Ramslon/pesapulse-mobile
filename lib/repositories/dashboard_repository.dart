@@ -7,10 +7,7 @@ import 'dart:convert';
 class DashboardRepository {
   final DatabaseHelper db = DatabaseHelper.instance;
 
-  Map<String, dynamic> _dashboardToLocal(
-    Map<String, dynamic> dashboard,
-    Map<String, dynamic> insights,
-  ) {
+  Map<String, dynamic> _dashboardToLocal(Map<String, dynamic> dashboard) {
     final summary = dashboard["summary"];
 
     return {
@@ -23,8 +20,6 @@ class DashboardRepository {
       "total_categories": summary["categories"],
 
       "recent_expenses": jsonEncode(dashboard["recent_expenses"]),
-
-      "budget_status": insights["budget_status"],
 
       "updated_at": DateTime.now().toIso8601String(),
     };
@@ -41,8 +36,6 @@ class DashboardRepository {
       },
 
       "recent_expenses": jsonDecode(row["recent_expenses"]),
-
-      "budget_status": row["budget_status"],
     };
   }
 
@@ -52,9 +45,7 @@ class DashboardRepository {
     try {
       final dashboard = await ApiService.getDashboard();
 
-      final insights = await ApiService.getFinancialInsights();
-
-      final local = _dashboardToLocal(dashboard, insights);
+      final local = _dashboardToLocal(dashboard);
 
       await database.insert(
         "dashboard_cache",
@@ -62,7 +53,7 @@ class DashboardRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      return {"dashboard": dashboard, "insights": insights};
+      return dashboard;
     } catch (_) {
       final cached = await database.query("dashboard_cache", where: "id=1");
 
@@ -70,11 +61,7 @@ class DashboardRepository {
         throw Exception("No cached dashboard");
       }
 
-      return {
-        "dashboard": _localToDashboard(cached.first),
-
-        "insights": {"budget_status": cached.first["budget_status"]},
-      };
+      return _localToDashboard(cached.first);
     }
   }
 }

@@ -12,6 +12,7 @@ import '../screens/add_goals_screen.dart';
 import '../screens/budget_page.dart';
 import '../widgets/offline_banner.dart';
 import '../repositories/dashboard_repository.dart';
+import '../repositories/financial_insights_repository.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -32,6 +33,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   double opacity = 0;
 
   final DashboardRepository repository = DashboardRepository();
+  final FinancialInsightsRepository insightsRepository =
+      FinancialInsightsRepository();
 
   @override
   void initState() {
@@ -51,11 +54,14 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> loadDashboardData() async {
     try {
-      final results = await repository.getDashboard();
+      final results = await Future.wait([
+        repository.getDashboard(),
+        insightsRepository.getInsights(),
+      ]);
 
-      final data = results["dashboard"];
-      final insights = results["insights"];
+      final data = results[0];
 
+      final insights = results[1];
       final summary = data['summary'];
 
       setState(() {
