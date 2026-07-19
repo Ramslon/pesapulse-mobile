@@ -8,6 +8,29 @@ import '../services/sync_service.dart';
 class ExpenseRepository {
   final DatabaseHelper db = DatabaseHelper.instance;
 
+  Map<String, dynamic> _expenseToLocal(Map<String, dynamic> expense) {
+    return {
+      "id": expense["id"],
+      "server_id": expense["id"],
+
+      "title": expense["title"],
+
+      "amount": double.tryParse(expense["amount"].toString()) ?? 0,
+
+      "category": expense["category"],
+
+      "expense_date": expense["expense_date"],
+
+      "description": expense["description"] ?? "",
+
+      "updated_at": expense["updated_at"],
+
+      "is_synced": 1,
+
+      "is_deleted": 0,
+    };
+  }
+
   /// Get expenses
   Future<Map<String, dynamic>> getExpenses({int page = 1}) async {
     try {
@@ -22,7 +45,7 @@ class ExpenseRepository {
       for (final expense in response["data"]) {
         await database.insert(
           "expenses",
-          expense,
+          _expenseToLocal(expense),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
@@ -79,7 +102,7 @@ class ExpenseRepository {
       await database.insert("sync_queue", {
         "table_name": "expenses",
         "record_id": id,
-        "action": "create",
+        "operation": "create",
         "payload": jsonEncode(expense),
       });
 
@@ -132,7 +155,7 @@ class ExpenseRepository {
       await database.insert("sync_queue", {
         "table_name": "expenses",
         "record_id": id,
-        "action": "update",
+        "operation": "update",
         "payload": jsonEncode(expense),
       });
 
@@ -153,7 +176,7 @@ class ExpenseRepository {
       await database.insert("sync_queue", {
         "table_name": "expenses",
         "record_id": id,
-        "action": "delete",
+        "operation": "delete",
         "payload": "{}",
       });
       await SyncService.instance.getPendingChanges();

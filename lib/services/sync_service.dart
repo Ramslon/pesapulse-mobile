@@ -64,7 +64,7 @@ class SyncService {
   Future<void> _processItem(Map<String, dynamic> item) async {
     final payload = jsonDecode(item["payload"]);
 
-    switch (item["action"]) {
+    switch (item["operation"]) {
       case "create":
         await ApiService.addExpense(
           payload["title"],
