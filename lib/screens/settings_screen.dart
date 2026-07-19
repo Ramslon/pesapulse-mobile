@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
 
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
@@ -10,6 +11,8 @@ import '../providers/theme_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/edit_profile_screen.dart';
 import '../screens/change_password_screen.dart';
+import '../providers/connectivity_provider.dart';
+import '../services/sync_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -35,6 +38,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int totalExpenses = 0;
   int totalBudgets = 0;
 
+  DateTime? lastSyncTime;
+  final DateFormat dateFormatter = DateFormat("dd MMM • hh:mm a");
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     loadSettings();
     loadProfile();
     loadDashboardStats();
+    loadLastSyncTime();
   }
 
   Future<void> loadProfile() async {
@@ -107,6 +114,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       debugPrint('Stats Error: $e');
     }
+  }
+
+  Future<void> loadLastSyncTime() async {
+    lastSyncTime = await SettingsService.getLastSync();
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  String formatLastSync(DateTime? date) {
+    if (date == null) return "Never";
+
+    final now = DateTime.now();
+
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    final syncDay = DateTime(date.year, date.month, date.day);
+
+    if (syncDay == today) {
+      return "Today • ${DateFormat("hh:mm a").format(date)}";
+    }
+
+    if (syncDay == yesterday) {
+      return "Yesterday • ${DateFormat("hh:mm a").format(date)}";
+    }
+
+    return DateFormat("dd MMM • hh:mm a").format(date);
   }
 
   void showAboutPesaPulse() {
@@ -710,6 +746,138 @@ https://github.com/ramslon/PesaPulse
                     ),
                   ],
                 ),
+              ),
+
+              const SizedBox(height: 30),
+
+              _buildSectionTitle("Sync & Offline", Icons.sync),
+
+              Consumer<ConnectivityProvider>(
+                builder: (context, network, child) {
+                  return Card(
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: network.isOnline
+                                ? Colors.green.shade100
+                                : Colors.orange.shade100,
+                            child: Icon(
+                              network.isOnline
+                                  ? Icons.cloud_done
+                                  : Icons.cloud_off,
+                              color: network.isOnline
+                                  ? Colors.green
+                                  : Colors.orange,
+                            ),
+                          ),
+
+                          title: Text(
+                            network.isOnline ? "Online" : "Offline",
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+
+                          subtitle: Text(
+                            network.isOnline
+                                ? "Your data is syncing normally."
+                                : "Changes will sync automatically when you're online.",
+                          ),
+                        ),
+
+                        const Divider(height: 1),
+
+                        ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.blue.shade100,
+                            child: const Icon(Icons.sync, color: Colors.blue),
+                          ),
+
+                          title: const Text(
+                            "Pending Changes",
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+
+                          subtitle: Text(
+                            "${network.pendingChanges} item(s) waiting to sync",
+                          ),
+                        ),
+
+                        const Divider(height: 1),
+
+                        ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.purple.shade100,
+                            child: const Icon(
+                              Icons.schedule,
+                              color: Colors.purple,
+                            ),
+                          ),
+
+                          title: const Text(
+                            "Last Sync",
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+
+                          subtitle: Text(formatLastSync(lastSyncTime)),
+                        ),
+
+                        const Divider(height: 1),
+
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              icon: network.isSyncing
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.sync),
+                              label: Text(
+                                network.isSyncing ? "Syncing..." : "Sync Now",
+                              ),
+                              onPressed: network.isOnline
+                                  ? () async {
+                                      network.setSyncing(true);
+
+                                      try {
+                                        await SyncService.instance
+                                            .syncPendingOperations();
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              "Sync completed successfully",
+                                            ),
+                                          ),
+                                        );
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text("Sync failed: $e"),
+                                          ),
+                                        );
+                                      } finally {
+                                        network.setSyncing(false);
+                                      }
+                                    }
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(height: 30),

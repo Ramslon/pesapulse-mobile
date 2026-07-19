@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:pesapulse_mobile/screens/expense_screen.dart';
+
 import '../widgets/dashboard_card.dart';
 import '../widgets/dashboard_loading_skeleton.dart';
 import '../widgets/quick_action_card.dart';
@@ -10,6 +11,7 @@ import '../services/api_services.dart';
 import '../screens/add_expense_screen.dart';
 import '../screens/add_goals_screen.dart';
 import '../screens/budget_page.dart';
+import '../widgets/offline_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -145,6 +147,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
+                  const SizedBox(height: 10),
+                  const OfflineBanner(),
+                  const SizedBox(height: 10),
+
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

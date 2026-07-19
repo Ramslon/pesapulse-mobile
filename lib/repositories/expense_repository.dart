@@ -3,6 +3,8 @@ import '../services/api_services.dart';
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
+import '../services/sync_service.dart';
+
 class ExpenseRepository {
   final DatabaseHelper db = DatabaseHelper.instance;
 
@@ -24,6 +26,8 @@ class ExpenseRepository {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
+
+      await SyncService.instance.getPendingChanges();
 
       return response;
     } catch (_) {
@@ -78,6 +82,8 @@ class ExpenseRepository {
         "action": "create",
         "payload": jsonEncode(expense),
       });
+
+      await SyncService.instance.getPendingChanges();
     }
   }
 
@@ -129,6 +135,8 @@ class ExpenseRepository {
         "action": "update",
         "payload": jsonEncode(expense),
       });
+
+      await SyncService.instance.getPendingChanges();
     }
   }
 
@@ -148,6 +156,7 @@ class ExpenseRepository {
         "action": "delete",
         "payload": "{}",
       });
+      await SyncService.instance.getPendingChanges();
     }
   }
 }

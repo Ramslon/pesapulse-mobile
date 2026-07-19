@@ -3,6 +3,7 @@ import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
+import '../providers/connectivity_provider.dart';
 import 'theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'services/sync_service.dart';
@@ -17,8 +18,12 @@ void main() async {
   SyncService.instance.startListening();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+      ],
       child: const MyApp(),
     ),
   );

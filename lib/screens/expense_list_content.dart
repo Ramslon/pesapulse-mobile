@@ -6,6 +6,7 @@ import '../widgets/empty_expense_state.dart';
 import '../widgets/no_filter_results_widget.dart';
 import '../widgets/expense_loading_skeleton.dart';
 import '../repositories/expense_repository.dart';
+import '../services/sync_service.dart';
 
 class ExpenseListContent extends StatefulWidget {
   const ExpenseListContent({super.key});
@@ -716,6 +717,7 @@ class _ExpenseListContentState extends State<ExpenseListContent>
 
         onDismissed: (_) async {
           await repository.deleteExpense(expense['id']);
+          await SyncService.instance.getPendingChanges();
 
           expenses.removeWhere((e) => e['id'] == expense['id']);
 

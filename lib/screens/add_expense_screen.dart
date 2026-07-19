@@ -4,6 +4,7 @@ import '../widgets/custom_button.dart';
 import '../widgets/input_icon_badge.dart';
 import '../services/notification_service.dart';
 import '../repositories/expense_repository.dart';
+import '../services/sync_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -91,6 +92,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       expenseDate: expenseDate,
       description: description,
     );
+
+    await SyncService.instance.getPendingChanges();
 
     setState(() {
       isLoading = false;

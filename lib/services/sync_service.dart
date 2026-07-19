@@ -1,9 +1,12 @@
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../database/database_helper.dart';
 import 'api_services.dart';
+import 'sync_status.dart';
+import '../services/settings_service.dart';
 
 class SyncService {
   SyncService._();
@@ -47,10 +50,15 @@ class SyncService {
           where: "id=?",
           whereArgs: [item["id"]],
         );
+
+        await _refreshPendingCounter();
       } catch (_) {
         break;
       }
     }
+    await _refreshPendingCounter();
+
+    await SettingsService.saveLastSync(DateTime.now());
   }
 
   Future<void> _processItem(Map<String, dynamic> item) async {
@@ -95,5 +103,23 @@ class SyncService {
     );
 
     return result.first["total"] as int;
+  }
+
+  Future<int> getPendingChanges() async {
+    final database = await db.database;
+
+    final count =
+        Sqflite.firstIntValue(
+          await database.rawQuery("SELECT COUNT(*) FROM sync_queue"),
+        ) ??
+        0;
+
+    SyncStatus.instance.updatePending(count);
+
+    return count;
+  }
+
+  Future<void> _refreshPendingCounter() async {
+    await getPendingChanges();
   }
 }

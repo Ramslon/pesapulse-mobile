@@ -50,4 +50,22 @@ class SettingsService {
 
     await setWeeklySummary(prefs['weekly_summary'] ?? false);
   }
+
+  static const String lastSyncKey = "last_sync";
+
+  static Future<void> saveLastSync(DateTime time) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(lastSyncKey, time.toIso8601String());
+  }
+
+  static Future<DateTime?> getLastSync() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final value = prefs.getString(lastSyncKey);
+
+    if (value == null) return null;
+
+    return DateTime.tryParse(value);
+  }
 }

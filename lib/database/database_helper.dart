@@ -97,6 +97,13 @@ payload TEXT,
 created_at TEXT
 )
 ''');
+
+    await db.execute('''
+CREATE TABLE settings(
+  key TEXT PRIMARY KEY,
+  value TEXT
+)
+''');
   }
 
   Future<void> _upgradeDatabase(

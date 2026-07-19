@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../widgets/input_icon_badge.dart';
 import '../repositories/expense_repository.dart';
+import '../services/sync_service.dart';
 
 class EditExpenseScreen extends StatefulWidget {
   final Map expense;
@@ -129,6 +130,8 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         expenseDate: dateController.text.trim(),
         description: descriptionController.text.trim(),
       );
+
+      await SyncService.instance.getPendingChanges();
 
       setState(() {
         isLoading = false;
