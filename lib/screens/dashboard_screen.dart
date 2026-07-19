@@ -7,11 +7,11 @@ import '../widgets/dashboard_loading_skeleton.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/recent_expense_tile.dart';
 
-import '../services/api_services.dart';
 import '../screens/add_expense_screen.dart';
 import '../screens/add_goals_screen.dart';
 import '../screens/budget_page.dart';
 import '../widgets/offline_banner.dart';
+import '../repositories/dashboard_repository.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -31,6 +31,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   List recentExpenses = [];
   double opacity = 0;
 
+  final DashboardRepository repository = DashboardRepository();
+
   @override
   void initState() {
     super.initState();
@@ -49,12 +51,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> loadDashboardData() async {
     try {
-      final results = await Future.wait([
-        ApiService.getDashboard(),
-        ApiService.getFinancialInsights(),
-      ]);
-      final data = results[0];
-      final insights = results[1];
+      final results = await repository.getDashboard();
+
+      final data = results["dashboard"];
+      final insights = results["insights"];
 
       final summary = data['summary'];
 
@@ -78,9 +78,14 @@ class _DashboardScreenState extends State<DashboardScreen>
         isLoading = false;
       });
 
+      if (e.toString().contains("No cached dashboard")) {
+        // First launch with no internet and no cache.
+        return;
+      }
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 

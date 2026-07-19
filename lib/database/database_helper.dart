@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -42,6 +42,22 @@ description TEXT,
 updated_at TEXT,
 is_synced INTEGER DEFAULT 1,
 is_deleted INTEGER DEFAULT 0
+)
+''');
+
+    await db.execute('''
+CREATE TABLE dashboard_cache(
+id INTEGER PRIMARY KEY,
+
+total_expenses INTEGER,
+total_count INTEGER,
+total_categories INTEGER,
+
+recent_expenses TEXT,
+
+budget_status TEXT,
+
+updated_at TEXT
 )
 ''');
 
@@ -110,5 +126,27 @@ CREATE TABLE settings(
     Database db,
     int oldVersion,
     int newVersion,
-  ) async {}
+  ) async {
+    if (oldVersion < 3) {
+      await db.execute('''
+CREATE TABLE dashboard_cache(
+id INTEGER PRIMARY KEY,
+total_expenses INTEGER,
+total_count INTEGER,
+total_categories INTEGER,
+recent_expenses TEXT,
+budget_status TEXT,
+updated_at TEXT
+)
+''');
+    }
+
+    if (oldVersion < 4) {
+      // future migrations
+    }
+
+    if (oldVersion < 5) {
+      // future migrations
+    }
+  }
 }
