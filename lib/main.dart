@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
 import 'theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +13,8 @@ void main() async {
   await Permission.notification.request();
 
   await NotificationService.init();
+
+  SyncService.instance.startListening();
 
   runApp(
     ChangeNotifierProvider(
