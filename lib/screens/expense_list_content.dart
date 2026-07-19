@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../services/api_services.dart';
 import 'edit_expense_screen.dart';
 import '../widgets/empty_expense_state.dart';
 import '../widgets/no_filter_results_widget.dart';
 import '../widgets/expense_loading_skeleton.dart';
+import '../repositories/expense_repository.dart';
 
 class ExpenseListContent extends StatefulWidget {
   const ExpenseListContent({super.key});
@@ -17,6 +17,8 @@ class ExpenseListContent extends StatefulWidget {
 class _ExpenseListContentState extends State<ExpenseListContent>
     with AutomaticKeepAliveClientMixin {
   List expenses = [];
+
+  final ExpenseRepository repository = ExpenseRepository();
 
   final NumberFormat currencyFormatter = NumberFormat("#,##0");
 
@@ -104,7 +106,7 @@ class _ExpenseListContentState extends State<ExpenseListContent>
     });
 
     try {
-      final response = await ApiService.getExpenses(page: currentPage);
+      final response = await repository.getExpenses(page: currentPage);
 
       final List newExpenses = response['data'] ?? [];
 
@@ -713,7 +715,7 @@ class _ExpenseListContentState extends State<ExpenseListContent>
         },
 
         onDismissed: (_) async {
-          await ApiService.deleteExpense(expense['id']);
+          await repository.deleteExpense(expense['id']);
 
           expenses.removeWhere((e) => e['id'] == expense['id']);
 

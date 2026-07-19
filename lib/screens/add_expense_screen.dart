@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../services/api_services.dart';
+
 import '../widgets/custom_button.dart';
 import '../widgets/input_icon_badge.dart';
 import '../services/notification_service.dart';
+import '../repositories/expense_repository.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -81,68 +82,54 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       isLoading = true;
     });
 
-    try {
-      final response = await ApiService.addExpense(
-        title,
-        amount,
-        category,
-        expenseDate,
-        description,
-      );
+    final repository = ExpenseRepository();
 
-      setState(() {
-        isLoading = false;
-      });
+    await repository.addExpense(
+      title: title,
+      amount: amount,
+      category: category,
+      expenseDate: expenseDate,
+      description: description,
+    );
 
-      if (response.containsKey('id')) {
-        await NotificationService.checkBudgetAlerts();
+    setState(() {
+      isLoading = false;
+    });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(20),
-            duration: const Duration(seconds: 2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            backgroundColor: Colors.green.shade600,
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    "Expense saved successfully!",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+    await NotificationService.checkBudgetAlerts();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(20),
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.green.shade600,
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Expense saved successfully!",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
+              ),
             ),
-          ),
-        );
+          ],
+        ),
+      ),
+    );
 
-        await Future.delayed(const Duration(milliseconds: 600));
-        if (!mounted) return;
-        Navigator.pop(context, response);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response['message'] ?? 'Failed to add expense'),
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+    await Future.delayed(const Duration(milliseconds: 600));
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
+    if (!mounted) return;
+
+    Navigator.pop(context, true);
   }
 
   Future<void> pickExpenseDate() async {

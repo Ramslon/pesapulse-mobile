@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../services/api_services.dart';
 import 'package:intl/intl.dart';
 import '../widgets/input_icon_badge.dart';
+import '../repositories/expense_repository.dart';
 
 class EditExpenseScreen extends StatefulWidget {
   final Map expense;
@@ -14,6 +14,8 @@ class EditExpenseScreen extends StatefulWidget {
 }
 
 class _EditExpenseScreenState extends State<EditExpenseScreen> {
+  final ExpenseRepository repository = ExpenseRepository();
+
   late TextEditingController titleController;
 
   late TextEditingController amountController;
@@ -119,18 +121,13 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     });
 
     try {
-      await ApiService.updateExpense(
-        widget.expense['id'],
-
-        titleController.text.trim(),
-
-        amountController.text.trim(),
-
-        selectedCategory,
-
-        dateController.text.trim(),
-
-        descriptionController.text.trim(),
+      await repository.updateExpense(
+        id: widget.expense["id"],
+        title: titleController.text.trim(),
+        amount: amountController.text.trim(),
+        category: selectedCategory,
+        expenseDate: dateController.text.trim(),
+        description: descriptionController.text.trim(),
       );
 
       setState(() {
