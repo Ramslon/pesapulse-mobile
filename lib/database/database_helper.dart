@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -83,6 +83,20 @@ payload TEXT,
 
 updated_at TEXT
 );
+''');
+
+    await db.execute('''
+CREATE TABLE analytics_cache(
+id INTEGER PRIMARY KEY,
+
+expenses TEXT,
+
+goal_analytics TEXT,
+
+financial_insights TEXT,
+
+updated_at TEXT
+)
 ''');
 
     await db.execute('''
@@ -192,6 +206,22 @@ updated_at TEXT
     ''');
     }
 
-    if (oldVersion < 6) {}
+    if (oldVersion < 6) {
+      await db.execute('''
+CREATE TABLE analytics_cache(
+id INTEGER PRIMARY KEY,
+
+expenses TEXT,
+
+goal_analytics TEXT,
+
+financial_insights TEXT,
+
+updated_at TEXT
+)
+''');
+    }
+
+    if (oldVersion < 7) {}
   }
 }

@@ -1,14 +1,16 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
-
+import 'package:provider/provider.dart';
+import '../providers/connectivity_provider.dart';
 import '../widgets/analytics_loading_skeleton.dart';
 import '../widgets/analytics_section_header.dart';
 import '../widgets/fade_slide_animation.dart';
 import '../widgets/empty_state.dart';
-import '../services/api_services.dart';
+
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
+import '../repositories/analytics_repository.dart';
 
 import 'dart:io';
 
@@ -53,99 +55,164 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   String categoryAdvice = '';
   String topCategory = '';
 
+  final AnalyticsRepository analyticsRepository = AnalyticsRepository();
+  late ConnectivityProvider _network;
+
   @override
   void initState() {
     super.initState();
 
-    fetchAnalytics();
+    _network = context.read<ConnectivityProvider>();
+
+    _network.addListener(_onConnectivityChanged);
+
+    _fetchCachedAnalytics();
+
     loadReports();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshAnalytics();
+    });
   }
 
-  Future<void> fetchAnalytics() async {
+  void _onConnectivityChanged() {
+    if (_network.isOnline) {
+      _refreshAnalytics();
+    }
+  }
+
+  @override
+  void dispose() {
+    _network.removeListener(_onConnectivityChanged);
+
+    super.dispose();
+  }
+
+  Future<void> _fetchCachedAnalytics() async {
     try {
-      final response = await ApiService.getExpenses();
+      final analytics = await analyticsRepository.getAnalytics();
 
-      final goalAnalytics = await ApiService.getGoalAnalytics();
+      final response = analytics["expenses"];
+      final goalAnalytics = analytics["goalAnalytics"];
+      final financialInsights = analytics["financialInsights"];
 
-      final financialInsights = await ApiService.getFinancialInsights();
-
-      final List data = response['data'] ?? [];
-
-      double total = 0;
-
-      Map<String, double> categories = {};
-
-      Map<int, double> monthlyData = {};
-
-      for (var expense in data) {
-        double amount = double.parse(expense['amount'].toString());
-
-        String category = expense['category'];
-
-        total += amount;
-
-        DateTime date = DateTime.parse(expense['created_at']);
-
-        int month = date.month;
-
-        monthlyData[month] = (monthlyData[month] ?? 0) + amount;
-
-        if (categories.containsKey(category)) {
-          categories[category] = categories[category]! + amount;
-        } else {
-          categories[category] = amount;
-        }
-      }
-
-      setState(() {
-        expenses = data;
-
-        totalSpending = total;
-
-        categoryTotals = categories;
-
-        monthlyTotals = monthlyData;
-
-        totalGoals = int.tryParse(goalAnalytics['total_goals'].toString()) ?? 0;
-
-        completedGoals =
-            int.tryParse(goalAnalytics['completed_goals'].toString()) ?? 0;
-
-        activeGoals =
-            int.tryParse(goalAnalytics['active_goals'].toString()) ?? 0;
-
-        completionRate =
-            double.tryParse(goalAnalytics['completion_rate'].toString()) ?? 0;
-
-        budgetAmount =
-            double.tryParse(financialInsights['budget'].toString()) ?? 0;
-
-        budgetSpent =
-            double.tryParse(financialInsights['spent'].toString()) ?? 0;
-
-        budgetRemaining =
-            double.tryParse(financialInsights['remaining'].toString()) ?? 0;
-
-        budgetUsage =
-            double.tryParse(financialInsights['usage_percentage'].toString()) ??
-            0;
-
-        budgetStatus = financialInsights['status'] ?? '';
-        recommendation = financialInsights['recommendation'] ?? '';
-        categoryAdvice = financialInsights['category_advice'] ?? '';
-        topCategory = financialInsights['top_category'] ?? '';
-
-        calculateHealthScore();
-
-        generateInsights();
-
-        isLoading = false;
-      });
-    } catch (e) {
+      _applyAnalytics(response["data"] ?? [], goalAnalytics, financialInsights);
+    } catch (_) {
       setState(() {
         isLoading = false;
       });
     }
+  }
+
+  Future<void> _refreshAnalytics() async {
+    try {
+      final analytics = await analyticsRepository.getAnalytics();
+
+      _applyAnalytics(
+        analytics["expenses"]["data"] ?? [],
+        analytics["goalAnalytics"],
+        analytics["financialInsights"],
+      );
+    } catch (_) {}
+  }
+
+  Future<void> refreshAnalytics() async {
+    if (!mounted) return;
+
+    final network = context.read<ConnectivityProvider>();
+
+    if (!network.isOnline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("You're offline. Showing cached analytics."),
+        ),
+      );
+
+      await _fetchCachedAnalytics();
+      return;
+    }
+
+    await _refreshAnalytics();
+  }
+
+  void _applyAnalytics(
+    List data,
+    Map<String, dynamic> goalAnalytics,
+    Map<String, dynamic> financialInsights,
+  ) {
+    double total = 0;
+
+    final Map<String, double> categories = {};
+
+    final Map<int, double> monthlyData = {};
+
+    for (final expense in data) {
+      final amount = double.tryParse(expense["amount"].toString()) ?? 0;
+
+      final category = expense["category"] ?? "Other";
+
+      total += amount;
+
+      final date = DateTime.parse(expense["created_at"]);
+
+      monthlyData[date.month] = (monthlyData[date.month] ?? 0) + amount;
+
+      categories[category] = (categories[category] ?? 0) + amount;
+    }
+
+    setState(() {
+      expenses = data;
+
+      totalSpending = total;
+
+      categoryTotals = categories;
+
+      monthlyTotals = monthlyData;
+
+      totalGoals = int.tryParse(goalAnalytics["total_goals"].toString()) ?? 0;
+
+      completedGoals =
+          int.tryParse(goalAnalytics["completed_goals"].toString()) ?? 0;
+
+      activeGoals = int.tryParse(goalAnalytics["active_goals"].toString()) ?? 0;
+
+      completionRate =
+          double.tryParse(goalAnalytics["completion_rate"].toString()) ?? 0;
+
+      budgetAmount =
+          double.tryParse(financialInsights["budget"].toString()) ?? 0;
+
+      budgetSpent = double.tryParse(financialInsights["spent"].toString()) ?? 0;
+
+      budgetRemaining =
+          double.tryParse(financialInsights["remaining"].toString()) ?? 0;
+
+      budgetUsage =
+          double.tryParse(financialInsights["usage_percentage"].toString()) ??
+          0;
+
+      budgetStatus = financialInsights["status"] ?? "";
+
+      recommendation = financialInsights["recommendation"] ?? "";
+
+      categoryAdvice = financialInsights["category_advice"] ?? "";
+
+      topCategory = financialInsights["top_category"] ?? "";
+
+      categoryTotals.clear();
+
+      if (financialInsights["category_breakdown"] != null) {
+        for (final item in financialInsights["category_breakdown"]) {
+          categoryTotals[item["category"]] = (item["total"] as num).toDouble();
+        }
+      }
+
+      calculateHealthScore();
+
+      generateInsights();
+
+      isLoading = false;
+    });
   }
 
   List<PieChartSectionData> getSections() {
@@ -678,7 +745,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: fetchAnalytics,
+        onRefresh: refreshAnalytics,
         child: SingleChildScrollView(
           key: const PageStorageKey("analytics"),
 
