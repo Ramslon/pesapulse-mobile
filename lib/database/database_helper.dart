@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -69,6 +69,20 @@ payload TEXT,
 
 updated_at TEXT
 )
+''');
+
+    await db.execute('''
+CREATE TABLE budget_summary_cache(
+id INTEGER PRIMARY KEY,
+
+budget REAL,
+spent REAL,
+remaining REAL,
+
+payload TEXT,
+
+updated_at TEXT
+);
 ''');
 
     await db.execute('''
@@ -166,7 +180,18 @@ updated_at TEXT
     }
 
     if (oldVersion < 5) {
-      // future migrations
+      await db.execute('''
+    CREATE TABLE IF NOT EXISTS budget_summary_cache(
+      id INTEGER PRIMARY KEY,
+      budget REAL,
+      spent REAL,
+      remaining REAL,
+      payload TEXT,
+      updated_at TEXT
+    )
+    ''');
     }
+
+    if (oldVersion < 6) {}
   }
 }

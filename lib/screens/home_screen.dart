@@ -299,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   HapticFeedback.lightImpact();
 
                   if (index == 2 || currentIndex == 2) {
-                    await loadBudgetStatus();
+                    loadBudgetStatus();
                   }
 
                   setState(() {

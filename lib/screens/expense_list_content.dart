@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 
 import 'edit_expense_screen.dart';
 import '../widgets/empty_expense_state.dart';
@@ -414,6 +415,8 @@ class _ExpenseListContentState extends State<ExpenseListContent>
             "Expenses",
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
+
+          SyncStatusIcon(),
 
           SizedBox(height: 6),
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
 
@@ -414,6 +415,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                                               fontWeight: FontWeight.bold,
                                             ),
                                       ),
+
+                                      const SyncStatusIcon(),
 
                                       const SizedBox(height: 6),
 

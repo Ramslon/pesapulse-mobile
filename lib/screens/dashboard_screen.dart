@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:pesapulse_mobile/screens/expense_screen.dart';
+import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 
 import '../widgets/dashboard_card.dart';
 import '../widgets/dashboard_loading_skeleton.dart';
@@ -220,6 +221,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ],
                             ),
                           ),
+                          const SyncStatusIcon(),
 
                           const Spacer(),
 

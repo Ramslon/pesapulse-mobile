@@ -97,9 +97,22 @@ class SyncService {
 
         break;
 
-      case "delete":
-        await ApiService.deleteExpense(item["record_id"]);
+      case "upsert":
+        if (item["table_name"] == "budget") {
+          final payload = jsonDecode(item["payload"]);
 
+          await ApiService.setBudget(
+            double.parse(payload["amount"].toString()),
+          );
+        }
+        break;
+
+      case "delete":
+        if (item["table_name"] == "budget") {
+          await ApiService.deleteBudget();
+        } else {
+          await ApiService.deleteExpense(item["record_id"]);
+        }
         break;
     }
   }

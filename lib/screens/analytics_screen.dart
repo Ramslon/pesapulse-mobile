@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 
 import '../widgets/analytics_loading_skeleton.dart';
 import '../widgets/analytics_section_header.dart';
@@ -712,6 +713,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+
+                        const SyncStatusIcon(),
 
                         const SizedBox(height: 6),
 

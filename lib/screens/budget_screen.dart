@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_services.dart';
+
 import '../widgets/budget_stat_card.dart';
 import '../widgets/spending_pie_chart.dart';
 import '../widgets/spending_trend_chart.dart';
@@ -8,6 +8,11 @@ import '../widgets/financial_health_card.dart';
 import '../widgets/status_chip.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/budget_loading_skeleton.dart';
+import '../widgets/sync_status_icon.dart';
+import '../repositories/budget_repository.dart';
+import '../repositories/financial_insights_repository.dart';
+import '../providers/connectivity_provider.dart';
+import 'package:provider/provider.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -43,6 +48,12 @@ class _BudgetScreenState extends State<BudgetScreen>
   String recommendation = '';
   String categoryAdvice = '';
   String budgetStatus = '';
+
+  final BudgetRepository budgetRepository = BudgetRepository();
+  final FinancialInsightsRepository insightsRepository =
+      FinancialInsightsRepository();
+
+  bool hasCachedBudget = true;
 
   double get percentageUsed {
     if (budget <= 0) return 0;
@@ -115,25 +126,47 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   Future<void> loadBudget() async {
     try {
-      final data = await ApiService.getBudgetSummary();
-      final insights = await ApiService.getFinancialInsights();
+      final data = await budgetRepository.getBudgetSummary();
+
+      if (!mounted) return;
 
       setState(() {
-        budget = double.tryParse(data['budget'].toString()) ?? 0;
+        hasCachedBudget = true;
 
+        budget = double.tryParse(data['budget'].toString()) ?? 0;
         budgetController.text = budget.toStringAsFixed(0);
 
         spent = double.tryParse(data['spent'].toString()) ?? 0;
-
         remaining = double.tryParse(data['remaining'].toString()) ?? 0;
 
+        isLoading = false;
+      });
+
+      // Load the expensive data AFTER the screen is visible
+      _loadInsights();
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+        hasCachedBudget = false;
+      });
+    }
+  }
+
+  Future<void> _loadInsights() async {
+    try {
+      final insights = await insightsRepository.getInsights();
+
+      if (!mounted) return;
+
+      setState(() {
         budgetStatus = insights['budget_status'] ?? 'healthy';
 
         recommendation = insights['recommendation'] ?? '';
         categoryAdvice = insights['category_advice'] ?? '';
 
         categoryTotals.clear();
-
         dailySpending.clear();
 
         if (insights['daily_spending'] != null) {
@@ -153,7 +186,6 @@ class _BudgetScreenState extends State<BudgetScreen>
             .toDouble();
 
         financialScore = insights['financial_health_score'];
-
         financialLabel = insights['financial_health_label'];
 
         if (insights['category_breakdown'] != null) {
@@ -162,34 +194,17 @@ class _BudgetScreenState extends State<BudgetScreen>
                 .toDouble();
           }
         }
-
-        isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            "Unable to load your budget. Please check your internet connection and try again.",
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: "Retry",
-            textColor: Colors.white,
-            onPressed: loadBudget,
-          ),
-        ),
-      );
+    } catch (_) {
+      // Keep budget visible even if insights fail
     }
   }
 
   Future<void> saveBudget() async {
+    final network = context.read<ConnectivityProvider>();
+
+    network.setSyncing(true);
+
     try {
       if (budgetController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -209,7 +224,16 @@ class _BudgetScreenState extends State<BudgetScreen>
 
       final bool isUpdate = budget > 0;
 
-      await ApiService.setBudget(amount);
+      await budgetRepository.saveBudget(amount);
+
+      // Immediately update the UI
+      setState(() {
+        budget = amount;
+
+        budgetController.text = amount.toStringAsFixed(0);
+
+        remaining = amount - spent;
+      });
 
       if (!mounted) return;
 
@@ -222,6 +246,8 @@ class _BudgetScreenState extends State<BudgetScreen>
           ),
         ),
       );
+
+      // Refresh in the background to ensure everything stays consistent
       await loadBudget();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -231,19 +257,64 @@ class _BudgetScreenState extends State<BudgetScreen>
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } finally {
+      network.setSyncing(false);
     }
   }
 
   Future<void> refreshBudgetData() async {
-    await loadBudget();
+    final network = context.read<ConnectivityProvider>();
+
+    if (!network.isOnline) {
+      await loadBudget();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Offline mode • Showing cached budget data."),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      return;
+    }
   }
 
   Future<void> deleteBudget() async {
     try {
-      await ApiService.deleteBudget();
+      await budgetRepository.deleteBudget();
 
       setState(() {
+        budget = 0;
+
+        spent = 0;
+
+        remaining = 0;
+
         budgetController.clear();
+
+        budgetStatus = "healthy";
+
+        recommendation = "";
+
+        categoryAdvice = "";
+
+        categoryTotals.clear();
+
+        dailySpending.clear();
+
+        highestDay = "";
+
+        highestDayAmount = 0;
+
+        averageDaily = 0;
+
+        estimatedMonthEnd = 0;
+
+        financialScore = 0;
+
+        financialLabel = "";
       });
 
       await loadBudget();
@@ -322,9 +393,10 @@ class _BudgetScreenState extends State<BudgetScreen>
             if (budget > 0)
               TextButton.icon(
                 onPressed: () async {
-                  Navigator.pop(context);
-
                   await confirmDeleteBudget();
+                  if (mounted) {
+                    Navigator.pop(context);
+                  }
                 },
                 icon: const Icon(Icons.delete_outline),
                 label: const Text("Delete"),
@@ -336,13 +408,37 @@ class _BudgetScreenState extends State<BudgetScreen>
               child: const Text("Cancel"),
             ),
 
-            ElevatedButton.icon(
-              onPressed: () async {
-                Navigator.pop(context);
-                await saveBudget();
+            Consumer<ConnectivityProvider>(
+              builder: (context, network, child) {
+                return ElevatedButton.icon(
+                  onPressed: network.isSyncing
+                      ? null
+                      : () async {
+                          await saveBudget();
+
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
+
+                  icon: network.isSyncing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(budget > 0 ? Icons.edit : Icons.save),
+
+                  label: Text(
+                    network.isSyncing
+                        ? "Saving..."
+                        : (budget > 0 ? "Update" : "Save"),
+                  ),
+                );
               },
-              icon: Icon(budget > 0 ? Icons.edit : Icons.save),
-              label: Text(budget > 0 ? "Update" : "Save"),
             ),
           ],
         );
@@ -465,6 +561,8 @@ class _BudgetScreenState extends State<BudgetScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+
+    final network = context.watch<ConnectivityProvider>();
     if (isLoading) {
       return const BudgetLoadingSkeleton();
     }
@@ -472,23 +570,33 @@ class _BudgetScreenState extends State<BudgetScreen>
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const EmptyState(
+          EmptyState(
             icon: Icons.account_balance_wallet_outlined,
-            title: "No Budget Yet",
-            message:
-                "Create your monthly budget to start tracking your spending.",
+
+            title: network.isOnline ? "No Budget Yet" : "No Cached Budget",
+
+            message: network.isOnline
+                ? "Create your monthly budget to start tracking your spending."
+                : "You're offline and no budget has been cached yet.\nConnect to the internet once to download or create your budget.",
           ),
 
           const SizedBox(height: 30),
 
-          FloatingActionButton.extended(
-            heroTag: "create_budget",
-            onPressed: () {
-              showCreateBudgetDialog();
-            },
-            icon: const Icon(Icons.add),
-            label: const Text("Create Budget"),
-          ),
+          if (network.isOnline)
+            FloatingActionButton.extended(
+              heroTag: "create_budget",
+              onPressed: () {
+                showCreateBudgetDialog();
+              },
+              icon: const Icon(Icons.add),
+              label: const Text("Create Budget"),
+            )
+          else
+            ElevatedButton.icon(
+              onPressed: refreshBudgetData,
+              icon: const Icon(Icons.refresh),
+              label: const Text("Retry"),
+            ),
         ],
       );
     }
@@ -503,6 +611,7 @@ class _BudgetScreenState extends State<BudgetScreen>
 
       body: RefreshIndicator(
         onRefresh: refreshBudgetData,
+
         child: SingleChildScrollView(
           key: const PageStorageKey("budget"),
           physics: const AlwaysScrollableScrollPhysics(
@@ -515,15 +624,66 @@ class _BudgetScreenState extends State<BudgetScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Consumer<ConnectivityProvider>(
+                builder: (context, network, child) {
+                  if (network.isOnline) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade500,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.orange.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            network.pendingChanges > 0
+                                ? Icons.sync_problem
+                                : Icons.cloud_off,
+                            color: Colors.blue.shade100,
+                          ),
+
+                          SizedBox(width: 12),
+
+                          Expanded(
+                            child: Text(
+                              network.pendingChanges > 0
+                                  ? "${network.pendingChanges} change(s) are waiting to sync."
+                                  : "You're offline. Budget changes will be saved locally.",
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              SizedBox(height: sectionSpacing),
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Budget Overview",
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: .3,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Budget Overview",
+                          style: textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: .3,
+                          ),
+                        ),
+                      ),
+
+                      const SyncStatusIcon(),
+                    ],
                   ),
 
                   SizedBox(height: smallSpacing),
@@ -538,6 +698,43 @@ class _BudgetScreenState extends State<BudgetScreen>
                     ),
                   ),
                 ],
+              ),
+              SizedBox(height: sectionSpacing),
+              Consumer<ConnectivityProvider>(
+                builder: (context, network, child) {
+                  if (network.pendingChanges == 0) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Card(
+                      color: Colors.orange.shade50,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.orange.shade200),
+                      ),
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.sync_problem,
+                          color: Colors.orange,
+                        ),
+
+                        title: Text(
+                          network.pendingChanges == 1
+                              ? "1 pending change"
+                              : "${network.pendingChanges} pending changes",
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+
+                        subtitle: const Text(
+                          "Your budget changes will sync automatically when you're online.",
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
 
               SizedBox(height: sectionSpacing),
