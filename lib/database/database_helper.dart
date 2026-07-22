@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 12,
+      version: 13,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -155,8 +155,8 @@ updated_at TEXT
 
     await db.execute('''
     CREATE TABLE goals(
-id INTEGER PRIMARY KEY,
-server_id INTEGER,
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+server_id INTEGER UNIQUE,
 title TEXT,
 target_amount REAL,
 saved_amount REAL,
@@ -348,6 +348,23 @@ updated_at TEXT
     ''');
     }
 
-    if (oldVersion < 13) {}
+    if (oldVersion < 13) {
+      // Remove duplicate goals that share the same server_id
+      await db.execute("""
+    DELETE FROM goals
+    WHERE rowid NOT IN (
+      SELECT MIN(rowid)
+      FROM goals
+      GROUP BY server_id
+    )
+    AND server_id IS NOT NULL;
+  """);
+
+      // Prevent future duplicates
+      await db.execute("""
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_goals_server_id
+    ON goals(server_id);
+  """);
+    }
   }
 }

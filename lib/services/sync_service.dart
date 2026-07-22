@@ -15,6 +15,7 @@ import '../repositories/goal_analytics_repository.dart';
 import '../repositories/goal_deadline_repository.dart';
 import '../repositories/goals_forecast_repository.dart';
 import '../repositories/goal_insights_repository.dart';
+import 'package:flutter/foundation.dart';
 
 class SyncService {
   SyncService._();
@@ -64,6 +65,7 @@ class SyncService {
   }
 
   Future<void> syncPendingOperations() async {
+    debugPrint("====== SYNC START ======");
     final database = await db.database;
 
     final queue = await database.query("sync_queue", orderBy: "id ASC");
@@ -88,25 +90,40 @@ class SyncService {
     await refreshOfflineCaches();
 
     await SettingsService.saveLastSync(DateTime.now());
+    debugPrint("====== SYNC END ======");
   }
 
   Future<void> _processItem(Map<String, dynamic> item) async {
+    debugPrint("=================================");
+    debugPrint("PROCESSING QUEUE ITEM");
+    debugPrint(item.toString());
+    debugPrint("=================================");
     final payload = jsonDecode(item["payload"]);
 
     switch (item["operation"]) {
       case "create":
         if (item["table_name"] == "goals") {
+          debugPrint("Calling ApiService.createGoal()");
+
           final createdGoal = await ApiService.createGoal(
             title: payload["title"],
             targetAmount: double.parse(payload["target_amount"].toString()),
             targetDate: payload["target_date"],
           );
-
+          debugPrint("Goal created on server:");
+          debugPrint(createdGoal.toString());
           final database = await db.database;
 
           await database.update(
             "goals",
-            {"server_id": createdGoal["id"], "is_synced": 1},
+            {
+              "server_id": createdGoal["id"],
+              "title": createdGoal["title"],
+              "target_amount": createdGoal["target_amount"],
+              "saved_amount": createdGoal["saved_amount"],
+              "updated_at": createdGoal["updated_at"],
+              "is_synced": 1,
+            },
             where: "id=?",
             whereArgs: [item["record_id"]],
           );

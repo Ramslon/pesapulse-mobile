@@ -19,8 +19,14 @@ class GoalsRepository {
       final goals = [...activeGoals, ...archivedGoals];
 
       for (final goal in goals) {
-        await database.insert("goals", {
-          "id": goal["id"],
+        final existing = await database.query(
+          "goals",
+          where: "server_id=?",
+          whereArgs: [goal["id"]],
+          limit: 1,
+        );
+
+        final values = {
           "server_id": goal["id"],
           "title": goal["title"],
           "target_amount": goal["target_amount"],
@@ -32,9 +38,19 @@ class GoalsRepository {
           "is_archived": goal["is_archived"] == true ? 1 : 0,
           "is_synced": 1,
           "is_deleted": 0,
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
-      }
+        };
 
+        if (existing.isNotEmpty) {
+          await database.update(
+            "goals",
+            values,
+            where: "server_id=?",
+            whereArgs: [goal["id"]],
+          );
+        } else {
+          await database.insert("goals", values);
+        }
+      }
       return await database.query(
         "goals",
         where: "is_archived = ? AND is_deleted = ?",
@@ -58,9 +74,39 @@ class GoalsRepository {
   }) async {
     final database = await db.database;
 
+    final now = DateTime.now().toIso8601String();
     final localId = -DateTime.now().millisecondsSinceEpoch;
 
-    final now = DateTime.now().toIso8601String();
+    // Check existing active goals
+    final existing = await database.query(
+      "goals",
+      where:
+          "LOWER(title)=LOWER(?) AND target_amount=? AND is_deleted=0 AND is_archived=0",
+      whereArgs: [title.trim()],
+      limit: 1,
+    );
+
+    if (existing.isNotEmpty) {
+      throw Exception("A goal with this title already exists.");
+    }
+
+    // Check queued creations
+    final queued = await database.query(
+      "sync_queue",
+      where: "table_name=? AND operation=?",
+      whereArgs: ["goals", "create"],
+    );
+
+    final duplicateQueued = queued.any((row) {
+      final payload = jsonDecode(row["payload"] as String);
+
+      return payload["title"].toString().trim().toLowerCase() ==
+          title.trim().toLowerCase();
+    });
+
+    if (duplicateQueued) {
+      throw Exception("This goal is already waiting to be synced.");
+    }
 
     final payload = {
       "title": title,
@@ -68,6 +114,7 @@ class GoalsRepository {
       "target_date": targetDate,
     };
 
+    // Only insert after all validation passes
     await database.insert("goals", {
       "id": localId,
       "server_id": null,
@@ -80,6 +127,7 @@ class GoalsRepository {
       "updated_at": now,
       "is_synced": 0,
       "is_deleted": 0,
+      "is_archived": 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
 
     await database.insert("sync_queue", {
