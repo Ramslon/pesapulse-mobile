@@ -22,17 +22,40 @@ class GoalAnalyticsRepository {
 
       return analytics;
     } catch (_) {
-      final cached = await database.query(
-        "goal_analytics_cache",
-        where: "id=1",
-      );
-
-      if (cached.isEmpty) {
-        throw Exception("No cached goal analytics");
-      }
-
-      return _fromLocal(cached.first);
+      return await _calculateLocalAnalytics(database);
     }
+  }
+
+  Future<Map<String, dynamic>> _calculateLocalAnalytics(
+    Database database,
+  ) async {
+    final goals = await database.query(
+      "goals",
+      where: "is_deleted = ?",
+      whereArgs: [0],
+    );
+
+    final totalGoals = goals.length;
+
+    final completedGoals = goals.where((g) {
+      final saved = (g["saved_amount"] as num?)?.toDouble() ?? 0;
+      final target = (g["target_amount"] as num?)?.toDouble() ?? 0;
+
+      return target > 0 && saved >= target;
+    }).length;
+
+    final activeGoals = totalGoals - completedGoals;
+
+    final completionRate = totalGoals == 0
+        ? 0
+        : ((completedGoals / totalGoals) * 100).round();
+
+    return {
+      "total_goals": totalGoals,
+      "completed_goals": completedGoals,
+      "active_goals": activeGoals,
+      "completion_rate": completionRate,
+    };
   }
 
   Map<String, dynamic> _toLocal(Map<String, dynamic> analytics) {
@@ -41,9 +64,5 @@ class GoalAnalyticsRepository {
       "data": jsonEncode(analytics),
       "updated_at": DateTime.now().toIso8601String(),
     };
-  }
-
-  Map<String, dynamic> _fromLocal(Map<String, dynamic> cache) {
-    return jsonDecode(cache["data"] as String);
   }
 }
