@@ -9,6 +9,11 @@ import 'sync_status.dart';
 import '../services/settings_service.dart';
 import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
+import '../repositories/goals_repository.dart';
+import '../repositories/goal_analytics_repository.dart';
+import '../repositories/goal_deadline_repository.dart';
+import '../repositories/goals_forecast_repository.dart';
+import '../repositories/goal_insights_repository.dart';
 
 class SyncService {
   SyncService._();
@@ -17,6 +22,20 @@ class SyncService {
 
   final FinancialInsightsRepository insightsRepository =
       FinancialInsightsRepository();
+
+  final GoalsRepository goalsRepository = GoalsRepository();
+
+  final GoalAnalyticsRepository goalAnalyticsRepository =
+      GoalAnalyticsRepository();
+
+  final GoalDeadlineRepository goalDeadlineRepository =
+      GoalDeadlineRepository();
+
+  final GoalForecastRepository goalForecastRepository =
+      GoalForecastRepository();
+
+  final GoalInsightsRepository goalInsightsRepository =
+      GoalInsightsRepository();
 
   static final SyncService instance = SyncService._();
 
@@ -75,6 +94,24 @@ class SyncService {
 
     switch (item["operation"]) {
       case "create":
+        if (item["table_name"] == "goals") {
+          final createdGoal = await ApiService.createGoal(
+            title: payload["title"],
+            targetAmount: double.parse(payload["target_amount"].toString()),
+            targetDate: payload["target_date"],
+          );
+
+          final database = await db.database;
+
+          await database.update(
+            "goals",
+            {"server_id": createdGoal["id"], "is_synced": 1},
+            where: "id=?",
+            whereArgs: [item["record_id"]],
+          );
+
+          return;
+        }
         await ApiService.addExpense(
           payload["title"],
           payload["amount"].toString(),
@@ -83,6 +120,64 @@ class SyncService {
           payload["description"] ?? "",
         );
 
+        break;
+
+      case "update_progress":
+        final serverId = await _getServerGoalId(item["record_id"] as int);
+
+        if (serverId == null) {
+          throw Exception("Goal has no server id.");
+        }
+
+        await ApiService.updateGoalProgress(
+          serverId,
+          double.parse(payload["amount"].toString()),
+        );
+
+        final database = await db.database;
+
+        await database.update(
+          "goals",
+          {"is_synced": 1},
+          where: "id=?",
+          whereArgs: [item["record_id"]],
+        );
+        break;
+
+      case "archive":
+        final serverId = await _getServerGoalId(item["record_id"] as int);
+
+        if (serverId == null) {
+          throw Exception("Goal has no server id.");
+        }
+
+        await ApiService.archiveGoal(serverId);
+        final database = await db.database;
+
+        await database.update(
+          "goals",
+          {"is_synced": 1},
+          where: "id=?",
+          whereArgs: [item["record_id"]],
+        );
+        break;
+
+      case "restore":
+        final serverId = await _getServerGoalId(item["record_id"] as int);
+
+        if (serverId == null) {
+          throw Exception("Goal has no server id.");
+        }
+
+        await ApiService.restoreGoal(serverId);
+        final database = await db.database;
+
+        await database.update(
+          "goals",
+          {"is_synced": 1},
+          where: "id=?",
+          whereArgs: [item["record_id"]],
+        );
         break;
 
       case "update":
@@ -117,6 +212,22 @@ class SyncService {
     }
   }
 
+  Future<int?> _getServerGoalId(int localId) async {
+    final database = await db.database;
+
+    final rows = await database.query(
+      "goals",
+      columns: ["server_id"],
+      where: "id=?",
+      whereArgs: [localId],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) return null;
+
+    return rows.first["server_id"] as int?;
+  }
+
   Future<int> pendingOperationsCount() async {
     final database = await db.database;
 
@@ -147,9 +258,30 @@ class SyncService {
 
   Future<void> refreshOfflineCaches() async {
     try {
+      // Dashboard
       await dashboardRepository.getDashboard();
-
       await insightsRepository.getInsights();
+
+      // Goals
+      final goals = await goalsRepository.getGoals();
+
+      await goalAnalyticsRepository.getGoalAnalytics();
+      await goalDeadlineRepository.getUpcomingDeadlines();
+
+      // Refresh forecast and insights cache for every synced goal
+      for (final goal in goals) {
+        final serverId = goal["server_id"];
+
+        if (goal["is_synced"] == 1 && serverId != null) {
+          try {
+            await goalForecastRepository.getForecast(serverId);
+          } catch (_) {}
+
+          try {
+            await goalInsightsRepository.getInsights(serverId);
+          } catch (_) {}
+        }
+      }
     } catch (_) {}
   }
 }
