@@ -163,21 +163,27 @@ class _GoalsScreenState extends State<GoalsScreen>
       final data = await goalDeadlineRepository.getUpcomingDeadlines();
 
       for (final goal in data) {
-        final days = int.tryParse(goal['days_remaining'].toString()) ?? 0;
+        final days =
+            (goal["days_remaining"] as num?)?.toInt() ??
+            int.tryParse(goal["days_remaining"].toString()) ??
+            0;
 
-        if (days <= 3) {
+        // Notify only for goals due today or within the next 3 days
+        if (days >= 0 && days <= 3) {
           await NotificationService.showNotification(
-            title: '🎯 Goal Deadline Approaching',
-            body: '${goal['title']} is due in $days day(s)',
+            title: "🎯 Goal Deadline Approaching",
+            body: "${goal['title']} is due in $days day(s)",
           );
         }
       }
+
+      if (!mounted) return;
 
       setState(() {
         upcomingDeadlines = data;
       });
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint("Upcoming deadlines error: $e");
     }
   }
 

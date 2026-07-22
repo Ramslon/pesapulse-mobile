@@ -22,17 +22,45 @@ class GoalDeadlineRepository {
 
       return deadlines;
     } catch (_) {
-      final cached = await database.query(
-        "goal_deadlines_cache",
-        where: "id=1",
-      );
-
-      if (cached.isEmpty) {
-        return [];
-      }
-
-      return _fromLocal(cached.first);
+      return await _calculateUpcomingDeadlines(database);
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _calculateUpcomingDeadlines(
+    Database database,
+  ) async {
+    final rows = await database.query(
+      "goals",
+      where: """
+      is_deleted = 0
+      AND is_archived = 0
+      AND target_date IS NOT NULL
+    """,
+    );
+
+    final now = DateTime.now();
+
+    final List<Map<String, dynamic>> deadlines = [];
+
+    for (final goal in rows) {
+      final targetDate = DateTime.parse(goal["target_date"] as String);
+
+      final daysRemaining = targetDate.difference(now).inDays;
+
+      deadlines.add({
+        "id": goal["id"],
+        "title": goal["title"],
+        "target_date": goal["target_date"],
+        "days_remaining": daysRemaining,
+      });
+    }
+
+    deadlines.sort(
+      (a, b) =>
+          (a["days_remaining"] as int).compareTo(b["days_remaining"] as int),
+    );
+
+    return deadlines;
   }
 
   Map<String, dynamic> _toLocal(List<dynamic> deadlines) {
