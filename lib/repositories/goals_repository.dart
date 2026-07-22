@@ -1,0 +1,236 @@
+import 'dart:convert';
+
+import 'package:sqflite/sqflite.dart';
+
+import '../database/database_helper.dart';
+import '../services/api_services.dart';
+import 'package:flutter/foundation.dart';
+
+class GoalsRepository {
+  final DatabaseHelper db = DatabaseHelper.instance;
+
+  Future<List<dynamic>> getGoals() async {
+    final database = await db.database;
+
+    try {
+      final activeGoals = await ApiService.getGoals();
+      final archivedGoals = await ApiService.getArchivedGoals();
+
+      final goals = [...activeGoals, ...archivedGoals];
+
+      for (final goal in goals) {
+        await database.insert("goals", {
+          "id": goal["id"],
+          "server_id": goal["id"],
+          "title": goal["title"],
+          "target_amount": goal["target_amount"],
+          "saved_amount": goal["saved_amount"],
+          "achievement": goal["achievement"] ?? "",
+          "completed_percentage": goal["completed_percentage"] ?? 0,
+          "completed_at": goal["completed_at"],
+          "updated_at": goal["updated_at"] ?? DateTime.now().toIso8601String(),
+          "is_archived": goal["is_archived"] == true ? 1 : 0,
+          "is_synced": 1,
+          "is_deleted": 0,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+
+      return await database.query(
+        "goals",
+        where: "is_archived = ? AND is_deleted = ?",
+        whereArgs: [0, 0],
+        orderBy: "updated_at DESC",
+      );
+    } catch (_) {
+      return await database.query(
+        "goals",
+        where: "is_archived=? AND is_deleted=?",
+        whereArgs: [0, 0],
+        orderBy: "updated_at DESC",
+      );
+    }
+  }
+
+  Future<void> createGoalOffline({
+    required String title,
+    required double targetAmount,
+    String? targetDate,
+  }) async {
+    final database = await db.database;
+
+    final localId = -DateTime.now().millisecondsSinceEpoch;
+
+    final now = DateTime.now().toIso8601String();
+
+    final payload = {
+      "title": title,
+      "target_amount": targetAmount,
+      "target_date": targetDate,
+    };
+
+    await database.insert("goals", {
+      "id": localId,
+      "server_id": null,
+      "title": title,
+      "target_amount": targetAmount,
+      "saved_amount": 0,
+      "achievement": "",
+      "completed_percentage": 0,
+      "completed_at": null,
+      "updated_at": now,
+      "is_synced": 0,
+      "is_deleted": 0,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    await database.insert("sync_queue", {
+      "table_name": "goals",
+      "operation": "create",
+      "record_id": localId,
+      "payload": jsonEncode(payload),
+      "created_at": now,
+    });
+  }
+
+  Future<void> updateGoalProgressOffline(int goalId, double amount) async {
+    final database = await db.database;
+
+    final now = DateTime.now().toIso8601String();
+
+    final goal = await database.query(
+      "goals",
+      where: "id=?",
+      whereArgs: [goalId],
+      limit: 1,
+    );
+
+    if (goal.isEmpty) {
+      throw Exception("Goal not found");
+    }
+
+    final currentSaved = (goal.first["saved_amount"] as num?)?.toDouble() ?? 0;
+
+    final targetAmount = (goal.first["target_amount"] as num?)?.toDouble() ?? 0;
+
+    final newSaved = currentSaved + amount;
+
+    final percentage = targetAmount == 0
+        ? 0
+        : ((newSaved / targetAmount) * 100).clamp(0, 100);
+
+    await database.update(
+      "goals",
+      {
+        "saved_amount": newSaved,
+        "completed_percentage": percentage,
+        "updated_at": now,
+        "is_synced": 0,
+      },
+      where: "id=?",
+      whereArgs: [goalId],
+    );
+
+    await database.insert("sync_queue", {
+      "table_name": "goals",
+      "operation": "update_progress",
+      "record_id": goalId,
+      "payload": jsonEncode({"amount": amount}),
+      "created_at": now,
+    });
+  }
+
+  Future<void> archiveGoalOffline(int goalId) async {
+    final database = await db.database;
+
+    final now = DateTime.now().toIso8601String();
+
+    // Mark the goal as archived locally
+    await database.update(
+      "goals",
+      {
+        "is_archived": 1,
+        "completed_at": now,
+        "updated_at": now,
+        "is_synced": 0,
+      },
+      where: "id=?",
+      whereArgs: [goalId],
+    );
+
+    // Queue the archive operation
+    await database.insert("sync_queue", {
+      "table_name": "goals",
+      "operation": "archive",
+      "record_id": goalId,
+      "payload": "{}",
+      "created_at": now,
+    });
+  }
+
+  Future<void> archiveGoalOnline(int goalId) async {
+    final database = await db.database;
+
+    await database.update(
+      "goals",
+      {
+        "is_archived": 1,
+        "completed_at": DateTime.now().toIso8601String(),
+        "is_synced": 1,
+        "updated_at": DateTime.now().toIso8601String(),
+      },
+      where: "id=?",
+      whereArgs: [goalId],
+    );
+  }
+
+  Future<void> restoreGoalOffline(int goalId) async {
+    final database = await db.database;
+
+    final now = DateTime.now().toIso8601String();
+
+    // Restore locally
+    await database.update(
+      "goals",
+      {"is_archived": 0, "updated_at": now, "is_synced": 0},
+      where: "id=?",
+      whereArgs: [goalId],
+    );
+
+    // Queue restore operation
+    await database.insert("sync_queue", {
+      "table_name": "goals",
+      "operation": "restore",
+      "record_id": goalId,
+      "payload": "{}",
+      "created_at": now,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getArchivedGoals() async {
+    final database = await db.database;
+
+    final rows = await database.query(
+      "goals",
+      where: "is_archived=?",
+      whereArgs: [1],
+      orderBy: "updated_at DESC",
+    );
+
+    debugPrint("Archived rows:");
+    for (final row in rows) {
+      debugPrint(row.toString());
+    }
+
+    return rows;
+  }
+
+  Future<List<Map<String, dynamic>>> getActiveGoals() async {
+    final database = await db.database;
+
+    return await database.query(
+      "goals",
+      where: "is_archived = ? AND is_deleted = ?",
+      whereArgs: [0, 0],
+      orderBy: "updated_at DESC",
+    );
+  }
+}

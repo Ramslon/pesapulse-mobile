@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 6,
+      version: 12,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -100,7 +100,61 @@ updated_at TEXT
 ''');
 
     await db.execute('''
-CREATE TABLE goals(
+CREATE TABLE goals_cache(
+id INTEGER PRIMARY KEY,
+
+goals TEXT,
+
+updated_at TEXT
+)
+''');
+
+    await db.execute('''
+CREATE TABLE goal_forecasts_cache(
+id INTEGER PRIMARY KEY,
+
+goal_id INTEGER UNIQUE,
+
+data TEXT,
+
+updated_at TEXT
+)
+''');
+
+    await db.execute('''
+CREATE TABLE goal_insights_cache(
+id INTEGER PRIMARY KEY,
+
+goal_id INTEGER UNIQUE,
+
+data TEXT,
+
+updated_at TEXT
+)
+''');
+
+    await db.execute('''
+CREATE TABLE goal_analytics_cache(
+id INTEGER PRIMARY KEY,
+
+data TEXT,
+
+updated_at TEXT
+)
+''');
+
+    await db.execute('''
+CREATE TABLE goal_deadlines_cache(
+id INTEGER PRIMARY KEY,
+
+data TEXT,
+
+updated_at TEXT
+)
+''');
+
+    await db.execute('''
+    CREATE TABLE goals(
 id INTEGER PRIMARY KEY,
 server_id INTEGER,
 title TEXT,
@@ -111,7 +165,8 @@ completed_percentage REAL,
 completed_at TEXT,
 updated_at TEXT,
 is_synced INTEGER DEFAULT 1,
-is_deleted INTEGER DEFAULT 0
+is_deleted INTEGER DEFAULT 0,
+is_archived INTEGER DEFAULT 0
 )
 ''');
 
@@ -222,6 +277,77 @@ updated_at TEXT
 ''');
     }
 
-    if (oldVersion < 7) {}
+    if (oldVersion < 7) {
+      await db.execute('''
+CREATE TABLE goals_cache(
+id INTEGER PRIMARY KEY,
+
+goals TEXT,
+
+updated_at TEXT
+)
+''');
+    }
+
+    if (oldVersion < 8) {
+      await db.execute('''
+CREATE TABLE goal_forecasts_cache(
+id INTEGER PRIMARY KEY,
+
+goal_id INTEGER UNIQUE,
+
+data TEXT,
+
+updated_at TEXT
+)
+''');
+
+      await db.execute('''
+CREATE TABLE goal_insights_cache(
+id INTEGER PRIMARY KEY,
+
+goal_id INTEGER UNIQUE,
+
+data TEXT,
+
+updated_at TEXT
+)
+''');
+    }
+
+    if (oldVersion < 9) {
+      await db.execute('''
+CREATE TABLE goal_analytics_cache(
+id INTEGER PRIMARY KEY,
+
+data TEXT,
+
+updated_at TEXT
+)
+''');
+    }
+
+    if (oldVersion < 10) {
+      await db.execute('''
+CREATE TABLE goal_deadlines_cache(
+id INTEGER PRIMARY KEY,
+
+data TEXT,
+
+updated_at TEXT
+)
+''');
+    }
+
+    if (oldVersion < 11) {}
+
+    if (oldVersion < 12) {
+      await db.execute('''
+    ALTER TABLE goals
+    ADD COLUMN is_archived INTEGER DEFAULT 0
+    ''');
+    }
+
+    if (oldVersion < 13) {}
   }
 }

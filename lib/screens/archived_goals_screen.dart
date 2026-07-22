@@ -4,6 +4,10 @@ import 'package:intl/intl.dart';
 import '../services/api_services.dart';
 import '../widgets/goal_empty_state.dart';
 
+import 'package:provider/provider.dart';
+import '../providers/connectivity_provider.dart';
+import '../repositories/goals_repository.dart';
+
 class ArchivedGoalsScreen extends StatefulWidget {
   const ArchivedGoalsScreen({super.key});
 
@@ -22,6 +26,8 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
     decimalDigits: 0,
   );
 
+  final GoalsRepository goalsRepository = GoalsRepository();
+
   @override
   void initState() {
     super.initState();
@@ -30,19 +36,27 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
   }
 
   Future<void> loadArchivedGoals() async {
+    setState(() {
+      isLoading = true;
+    });
+
     try {
-      final data = await ApiService.getArchivedGoals();
+      final data = await goalsRepository.getArchivedGoals();
+
+      if (!mounted) return;
 
       setState(() {
         archivedGoals = data;
         isLoading = false;
       });
     } catch (e) {
-      setState(() => isLoading = false);
+      if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      setState(() {
+        isLoading = false;
+      });
+
+      debugPrint(e.toString());
     }
   }
 
@@ -120,9 +134,11 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
                               100)
                           .clamp(0, 100);
 
-                  final archivedDate = DateFormat(
-                    'dd MMM yyyy',
-                  ).format(DateTime.parse(goal['completed_at']));
+                  final archivedDate = goal['completed_at'] != null
+                      ? DateFormat(
+                          'dd MMM yyyy',
+                        ).format(DateTime.parse(goal['completed_at']))
+                      : "Unknown";
 
                   return Card(
                     elevation: 2,
@@ -289,7 +305,7 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
 
                                 Expanded(
                                   child: Text(
-                                    goal['achievement'],
+                                    goal['achievement'] ?? "Goal Completed",
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -350,16 +366,27 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
 
                                 if (confirm != true) return;
 
-                                await ApiService.restoreGoal(goal['id']);
+                                final connectivity = context
+                                    .read<ConnectivityProvider>();
+
+                                if (connectivity.isOnline) {
+                                  await ApiService.restoreGoal(goal['id']);
+                                } else {
+                                  await goalsRepository.restoreGoalOffline(
+                                    goal['id'],
+                                  );
+                                }
 
                                 if (!mounted) return;
 
                                 loadArchivedGoals();
 
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      "Goal restored successfully.",
+                                      connectivity.isOnline
+                                          ? "Goal restored successfully."
+                                          : "Goal restored offline. It will sync automatically.",
                                     ),
                                   ),
                                 );

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 
+import 'package:provider/provider.dart';
+import '../providers/connectivity_provider.dart';
+import '../repositories/goals_repository.dart';
+
 class AddGoalScreen extends StatefulWidget {
   const AddGoalScreen({super.key});
 
@@ -13,6 +17,8 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   final amountController = TextEditingController();
 
   bool isLoading = false;
+
+  final GoalsRepository goalsRepository = GoalsRepository();
 
   Future<void> saveGoal() async {
     if (titleController.text.trim().isEmpty) {
@@ -45,15 +51,30 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
         isLoading = true;
       });
 
-      await ApiService.createGoal(
-        title: titleController.text.trim(),
-        targetAmount: amount,
-      );
+      final connectivity = context.read<ConnectivityProvider>();
+
+      if (connectivity.isOnline) {
+        await ApiService.createGoal(
+          title: titleController.text.trim(),
+          targetAmount: amount,
+        );
+      } else {
+        await goalsRepository.createGoalOffline(
+          title: titleController.text.trim(),
+          targetAmount: amount,
+        );
+      }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Goal created successfully!")),
+        SnackBar(
+          content: Text(
+            connectivity.isOnline
+                ? "Goal created successfully!"
+                : "Goal saved offline. It will sync automatically.",
+          ),
+        ),
       );
 
       Navigator.pop(context, true);

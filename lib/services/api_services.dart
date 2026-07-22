@@ -345,7 +345,7 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
-    throw Exception('Failed to load goal insights');
+    throw Exception("Insights ${response.statusCode}: ${response.body}");
   }
 
   static Future<List<dynamic>> getGoals() async {
@@ -440,7 +440,7 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
-    throw Exception('Failed to load goal forecast');
+    throw Exception("Forecast ${response.statusCode}: ${response.body}");
   }
 
   static Future<void> archiveGoal(int goalId) async {

@@ -12,6 +12,15 @@ import '../widgets/fade_slide_animation.dart';
 import 'add_goals_screen.dart';
 import 'archived_goals_screen.dart';
 
+import '../repositories/goals_repository.dart';
+import '../repositories/goals_forecast_repository.dart';
+import '../repositories/goal_insights_repository.dart';
+import '../repositories/goal_analytics_repository.dart';
+import '../repositories/goal_deadline_repository.dart';
+
+import 'package:provider/provider.dart';
+import '../providers/connectivity_provider.dart';
+
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
 
@@ -39,6 +48,19 @@ class _GoalsScreenState extends State<GoalsScreen>
     decimalDigits: 0,
   );
 
+  final GoalsRepository goalsRepository = GoalsRepository();
+
+  final GoalForecastRepository goalsForecastRepository =
+      GoalForecastRepository();
+
+  final GoalInsightsRepository goalInsightsRepository =
+      GoalInsightsRepository();
+
+  final GoalAnalyticsRepository goalAnalyticsRepository =
+      GoalAnalyticsRepository();
+
+  final GoalDeadlineRepository goalDeadlineRepository =
+      GoalDeadlineRepository();
   @override
   void initState() {
     super.initState();
@@ -49,16 +71,30 @@ class _GoalsScreenState extends State<GoalsScreen>
   }
 
   Future<void> loadGoals() async {
+    setState(() {
+      isLoading = true;
+    });
     try {
-      final data = await ApiService.getGoals();
+      final data = await goalsRepository.getGoals();
+
       Map<int, dynamic> loadedForecasts = {};
 
       for (final goal in data) {
-        final forecast = await ApiService.getGoalForecast(goal['id']);
+        final serverId = goal["server_id"];
 
-        loadedForecasts[goal['id']] = forecast;
+        if (goal["is_synced"] == 0 || serverId == null) {
+          loadedForecasts[goal["id"]] = null;
+          continue;
+        }
+
+        try {
+          loadedForecasts[goal["id"]] = await goalsForecastRepository
+              .getForecast(serverId);
+        } catch (_) {
+          loadedForecasts[goal["id"]] = null;
+        }
       }
-
+      if (!mounted) return;
       setState(() {
         goals = data;
         forecasts = loadedForecasts;
@@ -66,6 +102,7 @@ class _GoalsScreenState extends State<GoalsScreen>
       });
       await loadGoalInsights();
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -78,20 +115,15 @@ class _GoalsScreenState extends State<GoalsScreen>
 
   Future<void> loadGoalsAnalytics() async {
     try {
-      final data = await ApiService.getGoalAnalytics();
+      final data = await goalAnalyticsRepository.getGoalAnalytics();
+
+      if (!mounted) return;
 
       setState(() {
         goalAnalytics = data;
-        isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      debugPrint(e.toString());
     }
   }
 
@@ -100,10 +132,23 @@ class _GoalsScreenState extends State<GoalsScreen>
       final Map<int, dynamic> insightsMap = {};
 
       for (final goal in goals) {
-        final insight = await ApiService.getGoalInsights(goal['id']);
+        final serverId = goal["server_id"];
 
-        insightsMap[goal['id']] = insight;
+        if (goal["is_synced"] == 0 || serverId == null) {
+          insightsMap[goal["id"]] = null;
+          continue;
+        }
+
+        try {
+          insightsMap[goal["id"]] = await goalInsightsRepository.getInsights(
+            serverId,
+          );
+        } catch (_) {
+          insightsMap[goal["id"]] = null;
+        }
       }
+
+      if (!mounted) return;
 
       setState(() {
         goalInsights = insightsMap;
@@ -115,7 +160,7 @@ class _GoalsScreenState extends State<GoalsScreen>
 
   Future<void> loadUpcomingDeadlines() async {
     try {
-      final data = await ApiService.getUpcomingGoalDeadlines();
+      final data = await goalDeadlineRepository.getUpcomingDeadlines();
 
       for (final goal in data) {
         final days = int.tryParse(goal['days_remaining'].toString()) ?? 0;
@@ -167,16 +212,37 @@ class _GoalsScreenState extends State<GoalsScreen>
               onPressed: () async {
                 final amount = double.tryParse(controller.text) ?? 0;
 
-                final response = await ApiService.updateGoalProgress(
-                  goalId,
-                  amount,
-                );
+                final connectivity = context.read<ConnectivityProvider>();
 
-                final milestone = response['milestone'];
+                Map<String, dynamic>? response;
+
+                if (connectivity.isOnline) {
+                  response = await ApiService.updateGoalProgress(
+                    goalId,
+                    amount,
+                  );
+                } else {
+                  await goalsRepository.updateGoalProgressOffline(
+                    goalId,
+                    amount,
+                  );
+                }
+
+                final milestone = response?['milestone'];
 
                 if (!mounted) return;
 
                 Navigator.pop(context);
+
+                if (!connectivity.isOnline) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Savings added offline. Changes will sync automatically.",
+                      ),
+                    ),
+                  );
+                }
 
                 if (milestone != null) {
                   await NotificationService.showNotification(
@@ -649,7 +715,11 @@ class _GoalsScreenState extends State<GoalsScreen>
                         ? (saved / target).clamp(0.0, 1.0).toDouble()
                         : 0.0;
 
-                    final insight = goalInsights[goal['id']];
+                    final Map<String, dynamic>? insight =
+                        goalInsights[goal['id']] as Map<String, dynamic>?;
+
+                    final insightDays =
+                        (insight?['days_remaining'] as num?)?.ceil() ?? 0;
 
                     Color insightColor = Colors.green;
 
@@ -668,7 +738,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                       }
                     }
 
-                    final forecast = forecasts[goal['id']];
+                    final Map<String, dynamic>? forecast =
+                        forecasts[goal['id']] as Map<String, dynamic>?;
 
                     Color forecastColor = Colors.blue;
                     IconData forecastIcon = Icons.trending_flat;
@@ -936,8 +1007,12 @@ class _GoalsScreenState extends State<GoalsScreen>
                                           Expanded(
                                             child: buildInsightMetric(
                                               title: "Remaining",
+
                                               value: currency.format(
-                                                insight['remaining_amount'],
+                                                (insight['remaining_amount']
+                                                            as num?)
+                                                        ?.toDouble() ??
+                                                    0,
                                               ),
                                               icon:
                                                   Icons.account_balance_wallet,
@@ -950,8 +1025,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                                           Expanded(
                                             child: buildInsightMetric(
                                               title: "Days Left",
-                                              value:
-                                                  "${insight['days_remaining'].ceil()}",
+                                              value: "$insightDays",
                                               icon: Icons.calendar_today,
                                               color: insightColor,
                                             ),
@@ -964,7 +1038,9 @@ class _GoalsScreenState extends State<GoalsScreen>
                                       buildInsightMetric(
                                         title: "Monthly Needed",
                                         value: currency.format(
-                                          insight['monthly_needed'],
+                                          (insight['monthly_needed'] as num?)
+                                                  ?.toDouble() ??
+                                              0,
                                         ),
                                         icon: Icons.savings,
                                         color: insightColor,
@@ -1053,23 +1129,37 @@ class _GoalsScreenState extends State<GoalsScreen>
 
                                         if (confirm != true) return;
 
-                                        await ApiService.archiveGoal(
-                                          goal['id'],
-                                        );
+                                        final connectivity = context
+                                            .read<ConnectivityProvider>();
+
+                                        if (connectivity.isOnline) {
+                                          await ApiService.archiveGoal(
+                                            goal['id'],
+                                          );
+
+                                          // Update SQLite immediately
+                                          await goalsRepository
+                                              .archiveGoalOnline(goal['id']);
+                                        } else {
+                                          await goalsRepository
+                                              .archiveGoalOffline(goal['id']);
+                                        }
+
+                                        await loadGoals();
 
                                         if (!mounted) return;
 
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          const SnackBar(
+                                          SnackBar(
                                             content: Text(
-                                              'Goal archived successfully',
+                                              connectivity.isOnline
+                                                  ? "Goal archived successfully."
+                                                  : "Goal archived offline. It will sync automatically.",
                                             ),
                                           ),
                                         );
-
-                                        loadGoals();
                                       },
                                     ),
                                   ),
@@ -1232,7 +1322,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                                             child: buildForecastMetric(
                                               title: "Completion",
                                               value:
-                                                  forecast['estimated_completion_date'] ??
+                                                  (forecast['estimated_completion_date']
+                                                      as String?) ??
                                                   "Unknown",
                                               icon: Icons.calendar_today,
                                               color: forecastColor,
@@ -1245,7 +1336,10 @@ class _GoalsScreenState extends State<GoalsScreen>
                                             child: buildForecastMetric(
                                               title: "Daily",
                                               value: currency.format(
-                                                forecast['recommended_daily_saving'],
+                                                (forecast['recommended_daily_saving']
+                                                            as num?)
+                                                        ?.toDouble() ??
+                                                    0,
                                               ),
                                               icon: Icons.savings,
                                               color: forecastColor,
@@ -1260,7 +1354,10 @@ class _GoalsScreenState extends State<GoalsScreen>
                                         title: "Monthly Saving",
 
                                         value: currency.format(
-                                          forecast['recommended_monthly_saving'],
+                                          (forecast['recommended_monthly_saving']
+                                                      as num?)
+                                                  ?.toDouble() ??
+                                              0,
                                         ),
 
                                         icon: Icons.account_balance_wallet,
