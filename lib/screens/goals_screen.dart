@@ -74,35 +74,40 @@ class _GoalsScreenState extends State<GoalsScreen>
     setState(() {
       isLoading = true;
     });
+
     try {
       final data = await goalsRepository.getGoals();
 
-      Map<int, dynamic> loadedForecasts = {};
+      final Map<int, dynamic> loadedForecasts = {};
 
       for (final goal in data) {
-        final serverId = goal["server_id"];
-
-        if (goal["is_synced"] == 0 || serverId == null) {
-          loadedForecasts[goal["id"]] = null;
-          continue;
-        }
+        // Use server_id for synced goals, local id for offline goals
+        final forecastId = goal["is_synced"] == 1 && goal["server_id"] != null
+            ? goal["server_id"]
+            : goal["id"];
 
         try {
           loadedForecasts[goal["id"]] = await goalsForecastRepository
-              .getForecast(serverId);
-        } catch (_) {
+              .getForecast(forecastId);
+        } catch (e) {
+          debugPrint("Forecast failed for goal ${goal['id']}: $e");
+
           loadedForecasts[goal["id"]] = null;
         }
       }
+
       if (!mounted) return;
+
       setState(() {
         goals = data;
         forecasts = loadedForecasts;
         isLoading = false;
       });
+
       await loadGoalInsights();
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         isLoading = false;
       });

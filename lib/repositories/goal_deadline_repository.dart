@@ -70,8 +70,4 @@ class GoalDeadlineRepository {
       "updated_at": DateTime.now().toIso8601String(),
     };
   }
-
-  List<dynamic> _fromLocal(Map<String, dynamic> cache) {
-    return jsonDecode(cache["data"] as String);
-  }
 }
