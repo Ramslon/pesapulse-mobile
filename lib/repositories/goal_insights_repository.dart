@@ -21,18 +21,80 @@ class GoalInsightsRepository {
       );
 
       return insights;
-    } catch (e) {
-      final cached = await database.query(
-        "goal_insights_cache",
-        where: "goal_id=?",
-        whereArgs: [goalId],
-      );
+    } catch (_) {
+      return await _calculateInsights(database, goalId);
+    }
+  }
 
-      if (cached.isEmpty) {
-        throw Exception("No cached insights available");
-      }
+  Future<Map<String, dynamic>> _calculateInsights(
+    Database database,
+    int goalId,
+  ) async {
+    final rows = await database.query(
+      "goals",
+      where: "id=?",
+      whereArgs: [goalId],
+      limit: 1,
+    );
 
-      return _fromLocal(cached.first);
+    if (rows.isEmpty) {
+      throw Exception("Goal not found");
+    }
+
+    final goal = rows.first;
+
+    final target = (goal["target_amount"] as num?)?.toDouble() ?? 0;
+
+    final saved = (goal["saved_amount"] as num?)?.toDouble() ?? 0;
+
+    final remaining = (target - saved).clamp(0, double.infinity);
+
+    int daysRemaining = 0;
+
+    if (goal["target_date"] != null) {
+      final targetDate = DateTime.parse(goal["target_date"] as String);
+
+      daysRemaining = targetDate.difference(DateTime.now()).inDays;
+    }
+
+    double monthlyNeeded = 0;
+
+    if (daysRemaining > 0) {
+      monthlyNeeded = remaining / (daysRemaining / 30);
+    }
+
+    String status;
+
+    if (saved >= target) {
+      status = "completed";
+    } else if (daysRemaining <= 7) {
+      status = "urgent";
+    } else {
+      status = "on_track";
+    }
+
+    return {
+      "goal": goal["title"],
+      "remaining_amount": remaining,
+      "days_remaining": daysRemaining,
+      "monthly_needed": monthlyNeeded,
+      "status": status,
+      "message": _insightMessage(status, monthlyNeeded),
+    };
+  }
+
+  String _insightMessage(String status, double monthlyNeeded) {
+    switch (status) {
+      case "completed":
+        return "Congratulations! Goal completed.";
+
+      case "urgent":
+        return "Increase savings to reach your goal before the deadline.";
+
+      default:
+        return monthlyNeeded > 0
+            ? "Save ${monthlyNeeded.toStringAsFixed(0)} per month to stay on track."
+            : "You're on track toward your goal.";
     }
   }
 
@@ -42,9 +104,5 @@ class GoalInsightsRepository {
       "data": jsonEncode(insights),
       "updated_at": DateTime.now().toIso8601String(),
     };
-  }
-
-  Map<String, dynamic> _fromLocal(Map<String, dynamic> cache) {
-    return Map<String, dynamic>.from(jsonDecode(cache["data"] as String));
   }
 }

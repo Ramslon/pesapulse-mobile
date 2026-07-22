@@ -137,18 +137,17 @@ class _GoalsScreenState extends State<GoalsScreen>
       final Map<int, dynamic> insightsMap = {};
 
       for (final goal in goals) {
-        final serverId = goal["server_id"];
-
-        if (goal["is_synced"] == 0 || serverId == null) {
-          insightsMap[goal["id"]] = null;
-          continue;
-        }
+        final insightId = goal["is_synced"] == 1 && goal["server_id"] != null
+            ? goal["server_id"]
+            : goal["id"];
 
         try {
           insightsMap[goal["id"]] = await goalInsightsRepository.getInsights(
-            serverId,
+            insightId,
           );
-        } catch (_) {
+        } catch (e) {
+          debugPrint("Insights failed for goal ${goal['id']}: $e");
+
           insightsMap[goal["id"]] = null;
         }
       }
