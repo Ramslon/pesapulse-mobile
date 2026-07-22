@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
+import '../services/sync_events.dart';
 
 import '../widgets/goal_loading_skeleton.dart';
 import '../widgets/goal_stat_card.dart';
@@ -61,6 +62,8 @@ class _GoalsScreenState extends State<GoalsScreen>
 
   final GoalDeadlineRepository goalDeadlineRepository =
       GoalDeadlineRepository();
+
+  late VoidCallback _goalRefreshListener;
   @override
   void initState() {
     super.initState();
@@ -68,6 +71,22 @@ class _GoalsScreenState extends State<GoalsScreen>
     loadGoals();
     loadUpcomingDeadlines();
     loadGoalsAnalytics();
+
+    _goalRefreshListener = () async {
+      if (!mounted || isLoading) return;
+
+      await loadGoals();
+      await loadGoalsAnalytics();
+      await loadUpcomingDeadlines();
+    };
+
+    SyncEvents.instance.goalsRefresh.addListener(_goalRefreshListener);
+  }
+
+  @override
+  void dispose() {
+    SyncEvents.instance.goalsRefresh.removeListener(_goalRefreshListener);
+    super.dispose();
   }
 
   Future<void> loadGoals() async {

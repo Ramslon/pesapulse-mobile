@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import '../database/database_helper.dart';
 import 'api_services.dart';
 import 'sync_status.dart';
+import 'sync_events.dart';
 import '../services/settings_service.dart';
 import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
@@ -269,18 +270,23 @@ class SyncService {
       await goalDeadlineRepository.getUpcomingDeadlines();
 
       // Refresh forecast and insights cache for every synced goal
+      // Refresh forecast + insights cache for every synced goal
       for (final goal in goals) {
         final serverId = goal["server_id"];
 
-        if (goal["is_synced"] == 1 && serverId != null) {
-          try {
-            await goalForecastRepository.getForecast(serverId);
-          } catch (_) {}
-
-          try {
-            await goalInsightsRepository.getInsights(serverId);
-          } catch (_) {}
+        if (serverId == null || goal["is_synced"] == 0) {
+          continue;
         }
+
+        try {
+          await goalForecastRepository.getForecast(serverId);
+        } catch (_) {}
+
+        try {
+          await goalInsightsRepository.getInsights(serverId);
+        } catch (_) {}
+
+        SyncEvents.instance.notifyGoalsUpdated();
       }
     } catch (_) {}
   }

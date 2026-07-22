@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/api_services.dart';
+import '../services/sync_events.dart';
 import '../widgets/goal_empty_state.dart';
 
 import 'package:provider/provider.dart';
@@ -28,11 +29,26 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
 
   final GoalsRepository goalsRepository = GoalsRepository();
 
+  late VoidCallback _goalRefreshListener;
+
   @override
   void initState() {
     super.initState();
 
     loadArchivedGoals();
+    _goalRefreshListener = () {
+      if (mounted) {
+        loadArchivedGoals();
+      }
+    };
+
+    SyncEvents.instance.goalsRefresh.addListener(_goalRefreshListener);
+  }
+
+  @override
+  void dispose() {
+    SyncEvents.instance.goalsRefresh.removeListener(_goalRefreshListener);
+    super.dispose();
   }
 
   Future<void> loadArchivedGoals() async {
