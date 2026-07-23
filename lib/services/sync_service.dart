@@ -15,7 +15,6 @@ import '../repositories/goal_analytics_repository.dart';
 import '../repositories/goal_deadline_repository.dart';
 import '../repositories/goals_forecast_repository.dart';
 import '../repositories/goal_insights_repository.dart';
-import 'package:flutter/foundation.dart';
 
 class SyncService {
   SyncService._();
@@ -65,7 +64,6 @@ class SyncService {
   }
 
   Future<void> syncPendingOperations() async {
-    debugPrint("====== SYNC START ======");
     final database = await db.database;
 
     final queue = await database.query("sync_queue", orderBy: "id ASC");
@@ -90,29 +88,25 @@ class SyncService {
     await refreshOfflineCaches();
 
     await SettingsService.saveLastSync(DateTime.now());
-    debugPrint("====== SYNC END ======");
   }
 
   Future<void> _processItem(Map<String, dynamic> item) async {
-    debugPrint("=================================");
-    debugPrint("PROCESSING QUEUE ITEM");
-    debugPrint(item.toString());
-    debugPrint("=================================");
     final payload = jsonDecode(item["payload"]);
 
     switch (item["operation"]) {
       case "create":
         if (item["table_name"] == "goals") {
-          debugPrint("Calling ApiService.createGoal()");
-
           final createdGoal = await ApiService.createGoal(
             title: payload["title"],
             targetAmount: double.parse(payload["target_amount"].toString()),
             targetDate: payload["target_date"],
           );
-          debugPrint("Goal created on server:");
-          debugPrint(createdGoal.toString());
+
           final database = await db.database;
+
+          if (createdGoal["id"] == null) {
+            throw Exception("Server did not return a goal ID.");
+          }
 
           await database.update(
             "goals",
@@ -276,35 +270,17 @@ class SyncService {
 
   Future<void> refreshOfflineCaches() async {
     try {
-      // Dashboard
       await dashboardRepository.getDashboard();
+
       await insightsRepository.getInsights();
 
-      // Goals
-      final goals = await goalsRepository.getGoals();
+      await goalsRepository.getGoals();
 
       await goalAnalyticsRepository.getGoalAnalytics();
+
       await goalDeadlineRepository.getUpcomingDeadlines();
 
-      // Refresh forecast and insights cache for every synced goal
-      // Refresh forecast + insights cache for every synced goal
-      for (final goal in goals) {
-        final serverId = goal["server_id"];
-
-        if (serverId == null || goal["is_synced"] == 0) {
-          continue;
-        }
-
-        try {
-          await goalForecastRepository.getForecast(serverId);
-        } catch (_) {}
-
-        try {
-          await goalInsightsRepository.getInsights(serverId);
-        } catch (_) {}
-
-        SyncEvents.instance.notifyGoalsUpdated();
-      }
+      SyncEvents.instance.notifyGoalsUpdated();
     } catch (_) {}
   }
 }

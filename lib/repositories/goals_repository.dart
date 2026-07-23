@@ -4,7 +4,6 @@ import 'package:sqflite/sqflite.dart';
 
 import '../database/database_helper.dart';
 import '../services/api_services.dart';
-import 'package:flutter/foundation.dart';
 
 class GoalsRepository {
   final DatabaseHelper db = DatabaseHelper.instance;
@@ -17,6 +16,15 @@ class GoalsRepository {
       final archivedGoals = await ApiService.getArchivedGoals();
 
       final goals = [...activeGoals, ...archivedGoals];
+
+      final serverIds = goals.map((g) => g["id"]).toList();
+
+      await database.delete(
+        "goals",
+        where:
+            "server_id IS NOT NULL AND server_id NOT IN (${List.filled(serverIds.length, "?").join(",")})",
+        whereArgs: serverIds,
+      );
 
       for (final goal in goals) {
         final existing = await database.query(
@@ -217,6 +225,8 @@ class GoalsRepository {
   Future<void> archiveGoalOnline(int goalId) async {
     final database = await db.database;
 
+    await ApiService.archiveGoal(goalId);
+
     await database.update(
       "goals",
       {
@@ -225,7 +235,7 @@ class GoalsRepository {
         "is_synced": 1,
         "updated_at": DateTime.now().toIso8601String(),
       },
-      where: "id=?",
+      where: "server_id=?",
       whereArgs: [goalId],
     );
   }
@@ -253,22 +263,78 @@ class GoalsRepository {
     });
   }
 
+  Future<void> restoreGoalOnline(int goalId) async {
+    final database = await db.database;
+
+    try {
+      await ApiService.restoreGoal(goalId);
+    } catch (e) {
+      if (!e.toString().contains("Goal is already active")) {
+        rethrow;
+      }
+    }
+
+    await database.update(
+      "goals",
+      {
+        "is_archived": 0,
+        "updated_at": DateTime.now().toIso8601String(),
+        "is_synced": 1,
+      },
+      where: "id=?",
+      whereArgs: [goalId],
+    );
+  }
+
   Future<List<Map<String, dynamic>>> getArchivedGoals() async {
     final database = await db.database;
 
-    final rows = await database.query(
+    try {
+      final archivedGoals = await ApiService.getArchivedGoals();
+
+      for (final goal in archivedGoals) {
+        final existing = await database.query(
+          "goals",
+          where: "server_id=?",
+          whereArgs: [goal["id"]],
+          limit: 1,
+        );
+
+        final values = {
+          "server_id": goal["id"],
+          "title": goal["title"],
+          "target_amount": goal["target_amount"],
+          "saved_amount": goal["saved_amount"],
+          "achievement": goal["achievement"] ?? "",
+          "completed_percentage": goal["completed_percentage"] ?? 0,
+          "completed_at": goal["completed_at"],
+          "updated_at": goal["updated_at"],
+          "is_archived": 1,
+          "is_synced": 1,
+          "is_deleted": 0,
+        };
+
+        if (existing.isNotEmpty) {
+          await database.update(
+            "goals",
+            values,
+            where: "server_id=?",
+            whereArgs: [goal["id"]],
+          );
+        } else {
+          await database.insert("goals", values);
+        }
+      }
+    } catch (_) {
+      // offline → fall back to local DB
+    }
+
+    return await database.query(
       "goals",
-      where: "is_archived=?",
+      where: "is_archived=? AND is_deleted=0",
       whereArgs: [1],
       orderBy: "updated_at DESC",
     );
-
-    debugPrint("Archived rows:");
-    for (final row in rows) {
-      debugPrint(row.toString());
-    }
-
-    return rows;
   }
 
   Future<List<Map<String, dynamic>>> getActiveGoals() async {

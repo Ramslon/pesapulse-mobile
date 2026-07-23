@@ -32,8 +32,8 @@ class GoalInsightsRepository {
   ) async {
     final rows = await database.query(
       "goals",
-      where: "id=?",
-      whereArgs: [goalId],
+      where: "server_id=? OR id=?",
+      whereArgs: [goalId, goalId],
       limit: 1,
     );
 

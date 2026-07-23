@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../services/api_services.dart';
 import '../services/sync_events.dart';
 import '../widgets/goal_empty_state.dart';
 
@@ -30,6 +29,8 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
   final GoalsRepository goalsRepository = GoalsRepository();
 
   late VoidCallback _goalRefreshListener;
+
+  bool _hasChanges = false;
 
   @override
   void initState() {
@@ -96,6 +97,12 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
         automaticallyImplyLeading: true,
         title: const SizedBox.shrink(),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context, _hasChanges);
+          },
+        ),
       ),
 
       body: Column(
@@ -386,7 +393,9 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
                                     .read<ConnectivityProvider>();
 
                                 if (connectivity.isOnline) {
-                                  await ApiService.restoreGoal(goal['id']);
+                                  await goalsRepository.restoreGoalOnline(
+                                    goal['id'],
+                                  );
                                 } else {
                                   await goalsRepository.restoreGoalOffline(
                                     goal['id'],
@@ -395,7 +404,9 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
 
                                 if (!mounted) return;
 
-                                loadArchivedGoals();
+                                _hasChanges = true;
+                                SyncEvents.instance.notifyGoalsUpdated();
+                                await loadArchivedGoals();
 
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(

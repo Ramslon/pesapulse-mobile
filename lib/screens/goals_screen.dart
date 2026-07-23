@@ -64,20 +64,19 @@ class _GoalsScreenState extends State<GoalsScreen>
       GoalDeadlineRepository();
 
   late VoidCallback _goalRefreshListener;
+
+  bool _needsRefresh = true;
+
   @override
   void initState() {
     super.initState();
 
-    loadGoals();
-    loadUpcomingDeadlines();
-    loadGoalsAnalytics();
+    _initializeGoalsScreen();
 
     _goalRefreshListener = () async {
-      if (!mounted || isLoading) return;
+      if (!mounted) return;
 
-      await loadGoals();
-      await loadGoalsAnalytics();
-      await loadUpcomingDeadlines();
+      await _initializeGoalsScreen(forceRefresh: true);
     };
 
     SyncEvents.instance.goalsRefresh.addListener(_goalRefreshListener);
@@ -89,31 +88,42 @@ class _GoalsScreenState extends State<GoalsScreen>
     super.dispose();
   }
 
-  Future<void> loadGoals() async {
-    setState(() {
-      isLoading = true;
-    });
+  Future<void> _initializeGoalsScreen({bool forceRefresh = false}) async {
+    await loadGoals(forceRefresh: forceRefresh);
+
+    await Future.wait([
+      loadGoalInsights(),
+      loadGoalsAnalytics(),
+      loadUpcomingDeadlines(),
+    ]);
+  }
+
+  Future<void> loadGoals({bool forceRefresh = false}) async {
+    if (!forceRefresh && !_needsRefresh && goals.isNotEmpty) return;
+
+    _needsRefresh = false;
+
+    setState(() => isLoading = true);
 
     try {
       final data = await goalsRepository.getGoals();
 
-      final Map<int, dynamic> loadedForecasts = {};
+      final loadedForecasts = <int, dynamic>{};
 
-      for (final goal in data) {
-        // Use server_id for synced goals, local id for offline goals
-        final forecastId = goal["is_synced"] == 1 && goal["server_id"] != null
-            ? goal["server_id"]
-            : goal["id"];
+      await Future.wait(
+        data.map((goal) async {
+          final id = goal["is_synced"] == 1 && goal["server_id"] != null
+              ? goal["server_id"]
+              : goal["id"];
 
-        try {
-          loadedForecasts[goal["id"]] = await goalsForecastRepository
-              .getForecast(forecastId);
-        } catch (e) {
-          debugPrint("Forecast failed for goal ${goal['id']}: $e");
-
-          loadedForecasts[goal["id"]] = null;
-        }
-      }
+          try {
+            loadedForecasts[goal["id"]] = await goalsForecastRepository
+                .getForecast(id);
+          } catch (_) {
+            loadedForecasts[goal["id"]] = null;
+          }
+        }),
+      );
 
       if (!mounted) return;
 
@@ -127,9 +137,7 @@ class _GoalsScreenState extends State<GoalsScreen>
     } catch (e) {
       if (!mounted) return;
 
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
 
       ScaffoldMessenger.of(
         context,
@@ -152,10 +160,10 @@ class _GoalsScreenState extends State<GoalsScreen>
   }
 
   Future<void> loadGoalInsights() async {
-    try {
-      final Map<int, dynamic> insightsMap = {};
+    final Map<int, dynamic> insightsMap = {};
 
-      for (final goal in goals) {
+    await Future.wait(
+      goals.map((goal) async {
         final insightId = goal["is_synced"] == 1 && goal["server_id"] != null
             ? goal["server_id"]
             : goal["id"];
@@ -164,21 +172,17 @@ class _GoalsScreenState extends State<GoalsScreen>
           insightsMap[goal["id"]] = await goalInsightsRepository.getInsights(
             insightId,
           );
-        } catch (e) {
-          debugPrint("Insights failed for goal ${goal['id']}: $e");
-
+        } catch (_) {
           insightsMap[goal["id"]] = null;
         }
-      }
+      }),
+    );
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      setState(() {
-        goalInsights = insightsMap;
-      });
-    } catch (e) {
-      debugPrint(e.toString());
-    }
+    setState(() {
+      goalInsights = insightsMap;
+    });
   }
 
   Future<void> loadUpcomingDeadlines() async {
@@ -256,6 +260,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                     amount,
                   );
                 }
+                SyncEvents.instance.notifyGoalsUpdated();
 
                 final milestone = response?['milestone'];
 
@@ -459,7 +464,12 @@ class _GoalsScreenState extends State<GoalsScreen>
           );
 
           if (result == true) {
-            loadGoals();
+            _needsRefresh = true;
+
+            await loadGoals(forceRefresh: true);
+            await loadGoalInsights();
+            await loadGoalsAnalytics();
+            await loadUpcomingDeadlines();
           }
         },
       ),
@@ -527,16 +537,23 @@ class _GoalsScreenState extends State<GoalsScreen>
 
                                 IconButton(
                                   tooltip: "Archived Goals",
-                                  onPressed: () {
-                                    Navigator.push(
+                                  onPressed: () async {
+                                    final changed = await Navigator.push<bool>(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             const ArchivedGoalsScreen(),
                                       ),
-                                    ).then((_) {
-                                      loadGoals();
-                                    });
+                                    );
+
+                                    if (changed == true) {
+                                      _needsRefresh = true;
+
+                                      await loadGoals(forceRefresh: true);
+                                      await loadGoalInsights();
+                                      await loadGoalsAnalytics();
+                                      await loadUpcomingDeadlines();
+                                    }
                                   },
                                   icon: const Icon(Icons.archive),
                                 ),
@@ -1173,6 +1190,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                                           await goalsRepository
                                               .archiveGoalOffline(goal['id']);
                                         }
+                                        SyncEvents.instance
+                                            .notifyGoalsUpdated();
 
                                         await loadGoals();
 

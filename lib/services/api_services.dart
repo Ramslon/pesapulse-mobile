@@ -368,13 +368,11 @@ class ApiService {
 
     final response = await http.post(
       Uri.parse('$baseUrl/goals'),
-
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-
       body: jsonEncode({
         'title': title,
         'target_amount': targetAmount,
@@ -382,7 +380,13 @@ class ApiService {
       }),
     );
 
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode == 201) {
+      return body;
+    }
+
+    throw Exception(body["message"] ?? "Failed to create goal");
   }
 
   static Future<Map<String, dynamic>> updateGoalProgress(

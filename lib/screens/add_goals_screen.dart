@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 
+import '../services/sync_events.dart';
+
 import 'package:provider/provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../repositories/goals_repository.dart';
@@ -64,6 +66,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
           targetAmount: amount,
         );
       }
+      SyncEvents.instance.notifyGoalsUpdated();
 
       if (!mounted) return;
 
