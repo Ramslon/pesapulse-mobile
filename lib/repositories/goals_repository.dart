@@ -194,6 +194,35 @@ class GoalsRepository {
     });
   }
 
+  Future<Map<String, dynamic>> updateGoalProgressOnline(
+    int localGoalId,
+    int serverGoalId,
+    double amount,
+  ) async {
+    final database = await db.database;
+
+    final response = await ApiService.updateGoalProgress(serverGoalId, amount);
+
+    final goal = response["goal"];
+
+    await database.update(
+      "goals",
+      {
+        "saved_amount": goal["saved_amount"],
+        "updated_at": goal["updated_at"],
+        "completed_percentage": response["percentage"],
+        "completed_at": goal["saved_amount"] >= goal["target_amount"]
+            ? goal["updated_at"]
+            : null,
+        "is_synced": 1,
+      },
+      where: "id=?",
+      whereArgs: [localGoalId],
+    );
+
+    return response;
+  }
+
   Future<void> archiveGoalOffline(int goalId) async {
     final database = await db.database;
 

@@ -28,7 +28,7 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
 
   final GoalsRepository goalsRepository = GoalsRepository();
 
-  late VoidCallback _goalRefreshListener;
+  late VoidCallback _archivedListener;
 
   bool _hasChanges = false;
 
@@ -36,30 +36,40 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
 
   final Map<int, dynamic> _insightCache = {};
 
+  static List<Map<String, dynamic>> _archivedCache = [];
+
   @override
   void initState() {
     super.initState();
 
-    loadArchivedGoals();
-    _goalRefreshListener = () {
-      if (mounted) {
-        loadArchivedGoals();
-      }
+    _archivedListener = () {
+      loadArchivedGoals();
     };
+    SyncEvents.instance.archivedRefresh.addListener(_archivedListener);
+    if (_archivedCache.isNotEmpty) {
+      archivedGoals = List.from(_archivedCache);
+      isLoading = false;
 
-    SyncEvents.instance.goalsRefresh.addListener(_goalRefreshListener);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        loadArchivedGoals(background: true);
+      });
+    } else {
+      loadArchivedGoals();
+    }
   }
 
   @override
   void dispose() {
-    SyncEvents.instance.goalsRefresh.removeListener(_goalRefreshListener);
+    SyncEvents.instance.archivedRefresh.removeListener(_archivedListener);
     super.dispose();
   }
 
-  Future<void> loadArchivedGoals() async {
-    setState(() {
-      isLoading = true;
-    });
+  Future<void> loadArchivedGoals({bool background = false}) async {
+    if (!background) {
+      setState(() {
+        isLoading = true;
+      });
+    }
 
     try {
       final data = await goalsRepository.getArchivedGoals();
@@ -68,14 +78,20 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
 
       setState(() {
         archivedGoals = data;
-        isLoading = false;
+        _archivedCache = List.from(data);
+
+        if (!background) {
+          isLoading = false;
+        }
       });
     } catch (e) {
       if (!mounted) return;
 
-      setState(() {
-        isLoading = false;
-      });
+      if (!background) {
+        setState(() {
+          isLoading = false;
+        });
+      }
 
       debugPrint(e.toString());
     }
@@ -411,8 +427,16 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
                                 _hasChanges = true;
                                 _forecastCache.remove(goal['id']);
                                 _insightCache.remove(goal['id']);
+
+                                setState(() {
+                                  archivedGoals.removeWhere(
+                                    (g) => g["id"] == goal["id"],
+                                  );
+
+                                  _archivedCache = List.from(archivedGoals);
+                                });
                                 SyncEvents.instance.notifyGoalsUpdated();
-                                await loadArchivedGoals();
+                                SyncEvents.instance.notifyArchivedUpdated();
 
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(

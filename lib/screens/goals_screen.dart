@@ -210,6 +210,52 @@ class _GoalsScreenState extends State<GoalsScreen>
     });
   }
 
+  Future<void> refreshSingleGoal(int goalId) async {
+    final goal = goals.firstWhere((g) => g["id"] == goalId, orElse: () => {});
+
+    if (goal.isEmpty) return;
+
+    final requestId = goal["is_synced"] == 1 && goal["server_id"] != null
+        ? goal["server_id"]
+        : goal["id"];
+
+    final latestGoals = await goalsRepository.getGoals();
+
+    final latestGoal = latestGoals.firstWhere(
+      (g) => g["id"] == goalId,
+      orElse: () => {},
+    );
+
+    if (latestGoal.isNotEmpty && mounted) {
+      final index = goals.indexWhere((g) => g["id"] == goalId);
+
+      if (index != -1) {
+        setState(() {
+          goals[index] = latestGoal;
+        });
+      }
+    }
+    try {
+      final forecast = await goalsForecastRepository.getForecast(requestId);
+
+      if (mounted) {
+        setState(() {
+          forecasts[goalId] = forecast;
+        });
+      }
+    } catch (_) {}
+
+    try {
+      final insight = await goalInsightsRepository.getInsights(requestId);
+
+      if (mounted) {
+        setState(() {
+          goalInsights[goalId] = insight;
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> loadGoalsAnalytics() async {
     try {
       final data = await goalAnalyticsRepository.getGoalAnalytics();
@@ -312,11 +358,17 @@ class _GoalsScreenState extends State<GoalsScreen>
 
                 final connectivity = context.read<ConnectivityProvider>();
 
-                Map<String, dynamic>? response;
+                final goal = goals.firstWhere((g) => g["id"] == goalId);
 
+                final requestId =
+                    goal["is_synced"] == 1 && goal["server_id"] != null
+                    ? goal["server_id"]
+                    : goalId;
+                Map<String, dynamic>? response;
                 if (connectivity.isOnline) {
-                  response = await ApiService.updateGoalProgress(
+                  response = await goalsRepository.updateGoalProgressOnline(
                     goalId,
+                    requestId,
                     amount,
                   );
                 } else {
@@ -325,11 +377,15 @@ class _GoalsScreenState extends State<GoalsScreen>
                     amount,
                   );
                 }
+
                 _forecastCache.remove(goalId);
                 _insightCache.remove(goalId);
+
+                await refreshSingleGoal(goalId);
+
                 SyncEvents.instance.notifyGoalsUpdated();
 
-                final milestone = response?['milestone'];
+                final milestone = response?["milestone"];
 
                 if (!mounted) return;
 
@@ -375,8 +431,6 @@ class _GoalsScreenState extends State<GoalsScreen>
                     ),
                   );
                 }
-
-                await loadGoals();
               },
 
               child: const Text('Save'),
