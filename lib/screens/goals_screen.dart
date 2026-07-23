@@ -37,11 +37,14 @@ class _GoalsScreenState extends State<GoalsScreen>
 
   List upcomingDeadlines = [];
 
+  final Map<int, dynamic> _forecastCache = {};
+
+  final Map<int, dynamic> _insightCache = {};
+
+  Map<int, dynamic> forecasts = {};
   Map<int, dynamic> goalInsights = {};
 
   Map<String, dynamic>? goalAnalytics = {};
-
-  Map<int, dynamic> forecasts = {};
 
   final currency = NumberFormat.currency(
     locale: 'en_KE',
@@ -101,6 +104,11 @@ class _GoalsScreenState extends State<GoalsScreen>
   Future<void> loadGoals({bool forceRefresh = false}) async {
     if (!forceRefresh && !_needsRefresh && goals.isNotEmpty) return;
 
+    if (forceRefresh) {
+      _forecastCache.clear();
+      _insightCache.clear();
+    }
+
     _needsRefresh = false;
 
     setState(() => isLoading = true);
@@ -108,30 +116,16 @@ class _GoalsScreenState extends State<GoalsScreen>
     try {
       final data = await goalsRepository.getGoals();
 
-      final loadedForecasts = <int, dynamic>{};
-
-      await Future.wait(
-        data.map((goal) async {
-          final id = goal["is_synced"] == 1 && goal["server_id"] != null
-              ? goal["server_id"]
-              : goal["id"];
-
-          try {
-            loadedForecasts[goal["id"]] = await goalsForecastRepository
-                .getForecast(id);
-          } catch (_) {
-            loadedForecasts[goal["id"]] = null;
-          }
-        }),
-      );
-
       if (!mounted) return;
 
       setState(() {
         goals = data;
-        forecasts = loadedForecasts;
+
         isLoading = false;
       });
+
+      _refreshForecasts();
+      _refreshInsights();
 
       await loadGoalInsights();
     } catch (e) {
@@ -143,6 +137,77 @@ class _GoalsScreenState extends State<GoalsScreen>
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  }
+
+  Future<void> _refreshForecasts() async {
+    final map = <int, dynamic>{};
+
+    await Future.wait(
+      goals.map((goal) async {
+        final localId = goal["id"];
+
+        // Already loaded during this app session
+        if (_forecastCache.containsKey(localId)) {
+          map[localId] = _forecastCache[localId];
+          return;
+        }
+
+        final id = goal["is_synced"] == 1 && goal["server_id"] != null
+            ? goal["server_id"]
+            : localId;
+
+        try {
+          final forecast = await goalsForecastRepository.getForecast(id);
+
+          _forecastCache[localId] = forecast;
+
+          map[localId] = forecast;
+        } catch (_) {
+          map[localId] = null;
+        }
+      }),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      forecasts = map;
+    });
+  }
+
+  Future<void> _refreshInsights() async {
+    final map = <int, dynamic>{};
+
+    await Future.wait(
+      goals.map((goal) async {
+        final localId = goal["id"];
+
+        if (_insightCache.containsKey(localId)) {
+          map[localId] = _insightCache[localId];
+          return;
+        }
+
+        final id = goal["is_synced"] == 1 && goal["server_id"] != null
+            ? goal["server_id"]
+            : localId;
+
+        try {
+          final insight = await goalInsightsRepository.getInsights(id);
+
+          _insightCache[localId] = insight;
+
+          map[localId] = insight;
+        } catch (_) {
+          map[localId] = null;
+        }
+      }),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      goalInsights = map;
+    });
   }
 
   Future<void> loadGoalsAnalytics() async {
@@ -260,6 +325,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                     amount,
                   );
                 }
+                _forecastCache.remove(goalId);
+                _insightCache.remove(goalId);
                 SyncEvents.instance.notifyGoalsUpdated();
 
                 final milestone = response?['milestone'];
@@ -1190,6 +1257,9 @@ class _GoalsScreenState extends State<GoalsScreen>
                                           await goalsRepository
                                               .archiveGoalOffline(goal['id']);
                                         }
+
+                                        _forecastCache.remove(goal['id']);
+                                        _insightCache.remove(goal['id']);
                                         SyncEvents.instance
                                             .notifyGoalsUpdated();
 

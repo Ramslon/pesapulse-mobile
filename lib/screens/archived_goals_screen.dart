@@ -32,6 +32,10 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
 
   bool _hasChanges = false;
 
+  final Map<int, dynamic> _forecastCache = {};
+
+  final Map<int, dynamic> _insightCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -405,6 +409,8 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
                                 if (!mounted) return;
 
                                 _hasChanges = true;
+                                _forecastCache.remove(goal['id']);
+                                _insightCache.remove(goal['id']);
                                 SyncEvents.instance.notifyGoalsUpdated();
                                 await loadArchivedGoals();
 
