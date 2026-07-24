@@ -277,7 +277,7 @@ class GoalsRepository {
     // Restore locally
     await database.update(
       "goals",
-      {"is_archived": 0, "updated_at": now, "is_synced": 0},
+      {"is_archived": 0, "is_deleted": 0, "updated_at": now, "is_synced": 0},
       where: "id=?",
       whereArgs: [goalId],
     );
@@ -307,6 +307,7 @@ class GoalsRepository {
       "goals",
       {
         "is_archived": 0,
+        "is_deleted": 0,
         "updated_at": DateTime.now().toIso8601String(),
         "is_synced": 1,
       },
@@ -374,6 +375,59 @@ class GoalsRepository {
       where: "is_archived = ? AND is_deleted = ?",
       whereArgs: [0, 0],
       orderBy: "updated_at DESC",
+    );
+  }
+
+  Future<void> deleteGoal(
+    int localGoalId, {
+    int? serverGoalId,
+    bool isOnline = true,
+  }) async {
+    if (isOnline && serverGoalId != null) {
+      await deleteGoalOnline(serverGoalId);
+    } else {
+      await deleteGoalOffline(localGoalId);
+    }
+  }
+
+  Future<void> deleteGoalOffline(int goalId) async {
+    final database = await db.database;
+    final now = DateTime.now().toIso8601String();
+
+    // Mark the goal as deleted locally
+    await database.update(
+      "goals",
+      {"is_deleted": 1, "updated_at": now, "is_synced": 0},
+      where: "id=?",
+      whereArgs: [goalId],
+    );
+
+    // Queue the delete operation
+    await database.insert("sync_queue", {
+      "table_name": "goals",
+      "operation": "delete",
+      "record_id": goalId,
+      "payload": "{}", // no payload needed
+      "created_at": now,
+    });
+  }
+
+  Future<void> deleteGoalOnline(int serverGoalId) async {
+    final database = await db.database;
+
+    // Call API to delete goal
+    await ApiService.deleteGoal(serverGoalId);
+
+    // Mark as deleted locally
+    await database.update(
+      "goals",
+      {
+        "is_deleted": 1,
+        "updated_at": DateTime.now().toIso8601String(),
+        "is_synced": 1,
+      },
+      where: "server_id=?",
+      whereArgs: [serverGoalId],
     );
   }
 }

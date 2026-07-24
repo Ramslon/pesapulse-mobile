@@ -488,6 +488,21 @@ class ApiService {
     }
   }
 
+  static Future<void> deleteGoal(int goalId) async {
+    final token = await getToken();
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/goals/$goalId'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        jsonDecode(response.body)['message'] ?? 'Failed to delete goal',
+      );
+    }
+  }
+
   static Future<void> changePassword({
     required String currentPassword,
     required String newPassword,

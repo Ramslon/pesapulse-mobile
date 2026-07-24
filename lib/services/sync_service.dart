@@ -186,9 +186,15 @@ class SyncService {
 
         await database.update(
           "goals",
-          {"is_synced": 1},
+          {"is_synced": 1, "is_deleted": 0, "is_archived": 0},
           where: "id=?",
           whereArgs: [item["record_id"]],
+        );
+        // Remove any pending delete for this goal
+        await database.delete(
+          "sync_queue",
+          where: "table_name=? AND operation=? AND record_id=?",
+          whereArgs: ["goals", "delete", item["record_id"]],
         );
         break;
 
@@ -215,7 +221,23 @@ class SyncService {
         break;
 
       case "delete":
-        if (item["table_name"] == "budget") {
+        if (item["table_name"] == "goals") {
+          final serverId = await _getServerGoalId(item["record_id"] as int);
+
+          if (serverId == null) {
+            throw Exception("Goal has no server id.");
+          }
+
+          await ApiService.deleteGoal(serverId);
+
+          final database = await db.database;
+          await database.update(
+            "goals",
+            {"is_synced": 1},
+            where: "id=?",
+            whereArgs: [item["record_id"]],
+          );
+        } else if (item["table_name"] == "budget") {
           await ApiService.deleteBudget();
         } else {
           await ApiService.deleteExpense(item["record_id"]);
