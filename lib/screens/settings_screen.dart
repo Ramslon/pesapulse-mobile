@@ -1181,6 +1181,8 @@ https://github.com/ramslon/PesaPulse
 
                             await ApiService.logoutUser();
 
+                            settingsRepository.clearCache();
+
                             if (!mounted) return;
 
                             Navigator.pushReplacement(
