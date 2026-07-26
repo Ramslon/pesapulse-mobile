@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
-import '../services/settings_service.dart';
+
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../screens/login_screen.dart';
@@ -13,6 +13,7 @@ import '../screens/edit_profile_screen.dart';
 import '../screens/change_password_screen.dart';
 import '../providers/connectivity_provider.dart';
 import '../services/sync_service.dart';
+import '../services/sync_events.dart';
 
 import '../repositories/settings_repository.dart';
 
@@ -91,25 +92,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> loadDashboardStats() async {
-    try {
-      final goalsAnalytics = await ApiService.getGoalAnalytics();
+    final stats = await settingsRepository.getDashboardStatistics();
 
-      final expenses = await ApiService.getExpenses();
+    if (!mounted) return;
 
-      final budgetSummary = await ApiService.getBudgetSummary();
-
-      setState(() {
-        totalGoals = goalsAnalytics['total_goals'] ?? 0;
-
-        completedGoals = goalsAnalytics['completed_goals'] ?? 0;
-
-        totalExpenses = (expenses['data'] as List).length;
-
-        totalBudgets = budgetSummary['budget'] != null ? 1 : 0;
-      });
-    } catch (e) {
-      debugPrint('Stats Error: $e');
-    }
+    setState(() {
+      totalGoals = stats["totalGoals"]!;
+      completedGoals = stats["completedGoals"]!;
+      totalExpenses = stats["totalExpenses"]!;
+      totalBudgets = stats["totalBudgets"]!;
+    });
   }
 
   Future<void> loadLastSyncTime() async {
@@ -632,13 +624,24 @@ https://github.com/ramslon/PesaPulse
                           dailyReminder = value;
                         });
 
-                        await SettingsService.setDailyReminder(value);
+                        final connectivity = context
+                            .read<ConnectivityProvider>();
 
-                        await settingsRepository.updatePreferences({
-                          'daily_reminder': value,
-                          'expense_alerts': expenseAlerts,
-                          'weekly_summary': weeklySummary,
-                        });
+                        if (connectivity.isOnline) {
+                          await settingsRepository.updatePreferencesOnline(
+                            dailyReminder: dailyReminder,
+                            expenseAlerts: expenseAlerts,
+                            weeklySummary: weeklySummary,
+                          );
+                        } else {
+                          await settingsRepository.updatePreferencesOffline(
+                            dailyReminder: dailyReminder,
+                            expenseAlerts: expenseAlerts,
+                            weeklySummary: weeklySummary,
+                          );
+                        }
+
+                        SyncEvents.instance.notifySettingsUpdated();
 
                         NotificationService.showNotification(
                           title: 'Daily Reminder',
@@ -679,13 +682,25 @@ https://github.com/ramslon/PesaPulse
                         setState(() {
                           expenseAlerts = value;
                         });
-                        await SettingsService.setExpenseAlerts(value);
 
-                        await settingsRepository.updatePreferences({
-                          'daily_reminder': dailyReminder,
-                          'expense_alerts': value,
-                          'weekly_summary': weeklySummary,
-                        });
+                        final connectivity = context
+                            .read<ConnectivityProvider>();
+
+                        if (connectivity.isOnline) {
+                          await settingsRepository.updatePreferencesOnline(
+                            dailyReminder: dailyReminder,
+                            expenseAlerts: expenseAlerts,
+                            weeklySummary: weeklySummary,
+                          );
+                        } else {
+                          await settingsRepository.updatePreferencesOffline(
+                            dailyReminder: dailyReminder,
+                            expenseAlerts: expenseAlerts,
+                            weeklySummary: weeklySummary,
+                          );
+                        }
+
+                        SyncEvents.instance.notifySettingsUpdated();
 
                         NotificationService.showNotification(
                           title: 'Expense Alerts',
@@ -723,13 +738,25 @@ https://github.com/ramslon/PesaPulse
                         setState(() {
                           weeklySummary = value;
                         });
-                        await SettingsService.setWeeklySummary(value);
 
-                        await settingsRepository.updatePreferences({
-                          'daily_reminder': dailyReminder,
-                          'expense_alerts': expenseAlerts,
-                          'weekly_summary': value,
-                        });
+                        final connectivity = context
+                            .read<ConnectivityProvider>();
+
+                        if (connectivity.isOnline) {
+                          await settingsRepository.updatePreferencesOnline(
+                            dailyReminder: dailyReminder,
+                            expenseAlerts: expenseAlerts,
+                            weeklySummary: weeklySummary,
+                          );
+                        } else {
+                          await settingsRepository.updatePreferencesOffline(
+                            dailyReminder: dailyReminder,
+                            expenseAlerts: expenseAlerts,
+                            weeklySummary: weeklySummary,
+                          );
+                        }
+
+                        SyncEvents.instance.notifySettingsUpdated();
 
                         NotificationService.showNotification(
                           title: 'Weekly Summary',

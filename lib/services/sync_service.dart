@@ -243,6 +243,11 @@ class SyncService {
           await ApiService.deleteExpense(item["record_id"]);
         }
         break;
+
+      case "preferences":
+        await ApiService.updatePreferences(jsonDecode(item["payload"]));
+
+        break;
     }
   }
 

@@ -16,4 +16,6 @@ class SyncEvents {
   void notifyArchivedUpdated() {
     archivedRefresh.value++;
   }
+
+  void notifySettingsUpdated() {}
 }

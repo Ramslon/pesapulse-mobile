@@ -69,7 +69,7 @@ class SettingsService {
     return DateTime.tryParse(value);
   }
 
-  // ================= PROFILE =================
+  //  PROFILE
 
   static Future<void> saveProfile({
     required String name,
@@ -87,6 +87,33 @@ class SettingsService {
     return {
       "name": prefs.getString("profile_name") ?? "",
       "email": prefs.getString("profile_email") ?? "",
+    };
+  }
+
+  //  DASHBOARD
+
+  static Future<void> saveDashboardStats({
+    required int totalGoals,
+    required int completedGoals,
+    required int totalExpenses,
+    required int totalBudgets,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setInt("dashboard_total_goals", totalGoals);
+    await prefs.setInt("dashboard_completed_goals", completedGoals);
+    await prefs.setInt("dashboard_total_expenses", totalExpenses);
+    await prefs.setInt("dashboard_total_budgets", totalBudgets);
+  }
+
+  static Future<Map<String, int>> getDashboardStats() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return {
+      "totalGoals": prefs.getInt("dashboard_total_goals") ?? 0,
+      "completedGoals": prefs.getInt("dashboard_completed_goals") ?? 0,
+      "totalExpenses": prefs.getInt("dashboard_total_expenses") ?? 0,
+      "totalBudgets": prefs.getInt("dashboard_total_budgets") ?? 0,
     };
   }
 }

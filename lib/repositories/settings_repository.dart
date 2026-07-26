@@ -1,6 +1,8 @@
+import 'dart:convert';
 import '../models/user_preferences.dart';
 import '../services/api_services.dart';
 import '../services/settings_service.dart';
+import '../database/database_helper.dart';
 
 class SettingsRepository {
   // PROFILE
@@ -43,9 +45,81 @@ class SettingsRepository {
     await ApiService.updatePreferences(data);
   }
 
-  // ==========================
+  Future<void> updatePreferencesOffline({
+    required bool dailyReminder,
+    required bool expenseAlerts,
+    required bool weeklySummary,
+  }) async {
+    await SettingsService.setDailyReminder(dailyReminder);
+
+    await SettingsService.setExpenseAlerts(expenseAlerts);
+
+    await SettingsService.setWeeklySummary(weeklySummary);
+
+    final db = await DatabaseHelper.instance.database;
+
+    await db.insert("sync_queue", {
+      "table_name": "preferences",
+      "operation": "update",
+      "record_id": 0,
+      "payload": jsonEncode({
+        "daily_reminder": dailyReminder,
+        "expense_alerts": expenseAlerts,
+        "weekly_summary": weeklySummary,
+      }),
+      "created_at": DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<void> updatePreferencesOnline({
+    required bool dailyReminder,
+    required bool expenseAlerts,
+    required bool weeklySummary,
+  }) async {
+    await ApiService.updatePreferences({
+      "daily_reminder": dailyReminder,
+
+      "expense_alerts": expenseAlerts,
+
+      "weekly_summary": weeklySummary,
+    });
+
+    await SettingsService.setDailyReminder(dailyReminder);
+
+    await SettingsService.setExpenseAlerts(expenseAlerts);
+
+    await SettingsService.setWeeklySummary(weeklySummary);
+  }
+
   // DASHBOARD
-  // ==========================
+
+  Future getDashboardStatistics() async {
+    try {
+      final goalsAnalytics = await ApiService.getGoalAnalytics();
+
+      final expenses = await ApiService.getExpenses();
+
+      final budgetSummary = await ApiService.getBudgetSummary();
+
+      final stats = {
+        "totalGoals": goalsAnalytics["total_goals"] ?? 0,
+        "completedGoals": goalsAnalytics["completed_goals"] ?? 0,
+        "totalExpenses": (expenses["data"] as List).length,
+        "totalBudgets": budgetSummary["budget"] != null ? 1 : 0,
+      };
+
+      await SettingsService.saveDashboardStats(
+        totalGoals: stats["totalGoals"]!,
+        completedGoals: stats["completedGoals"]!,
+        totalExpenses: stats["totalExpenses"]!,
+        totalBudgets: stats["totalBudgets"]!,
+      );
+
+      return stats;
+    } catch (_) {
+      return await SettingsService.getDashboardStats();
+    }
+  }
 
   Future<Map<String, dynamic>> getGoalAnalytics() async {
     return await ApiService.getGoalAnalytics();
