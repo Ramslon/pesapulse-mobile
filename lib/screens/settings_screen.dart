@@ -14,6 +14,8 @@ import '../screens/change_password_screen.dart';
 import '../providers/connectivity_provider.dart';
 import '../services/sync_service.dart';
 
+import '../repositories/settings_repository.dart';
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -41,6 +43,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   DateTime? lastSyncTime;
   final DateFormat dateFormatter = DateFormat("dd MMM • hh:mm a");
 
+  final SettingsRepository settingsRepository = SettingsRepository();
+
   @override
   void initState() {
     super.initState();
@@ -52,28 +56,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> loadProfile() async {
-    try {
-      final user = await ApiService.getProfile();
+    final user = await settingsRepository.getProfile();
 
-      setState(() {
-        userName = user['name'] ?? '';
-        userEmail = user['email'] ?? '';
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+    if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
-    }
+    setState(() {
+      userName = user["name"] ?? "";
+      userEmail = user["email"] ?? "";
+      isLoading = false;
+    });
   }
 
   Future<void> loadSettings() async {
     try {
-      final prefs = await ApiService.getUserPreferences();
+      final prefs = await settingsRepository.getPreferences();
 
       if (!mounted) return;
 
@@ -85,9 +81,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       // fallback to local storage
 
-      dailyReminder = await SettingsService.getDailyReminder();
-      expenseAlerts = await SettingsService.getExpenseAlerts();
-      weeklySummary = await SettingsService.getWeeklySummary();
+      dailyReminder = await settingsRepository.getDailyReminder();
+      expenseAlerts = await settingsRepository.getExpenseAlerts();
+      weeklySummary = await settingsRepository.getWeeklySummary();
 
       if (!mounted) return;
       setState(() {});
@@ -117,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> loadLastSyncTime() async {
-    lastSyncTime = await SettingsService.getLastSync();
+    lastSyncTime = await settingsRepository.getLastSync();
 
     if (mounted) {
       setState(() {});
@@ -638,7 +634,7 @@ https://github.com/ramslon/PesaPulse
 
                         await SettingsService.setDailyReminder(value);
 
-                        await ApiService.updatePreferences({
+                        await settingsRepository.updatePreferences({
                           'daily_reminder': value,
                           'expense_alerts': expenseAlerts,
                           'weekly_summary': weeklySummary,
@@ -685,7 +681,7 @@ https://github.com/ramslon/PesaPulse
                         });
                         await SettingsService.setExpenseAlerts(value);
 
-                        await ApiService.updatePreferences({
+                        await settingsRepository.updatePreferences({
                           'daily_reminder': dailyReminder,
                           'expense_alerts': value,
                           'weekly_summary': weeklySummary,
@@ -729,7 +725,7 @@ https://github.com/ramslon/PesaPulse
                         });
                         await SettingsService.setWeeklySummary(value);
 
-                        await ApiService.updatePreferences({
+                        await settingsRepository.updatePreferences({
                           'daily_reminder': dailyReminder,
                           'expense_alerts': expenseAlerts,
                           'weekly_summary': value,

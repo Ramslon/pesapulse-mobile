@@ -68,4 +68,25 @@ class SettingsService {
 
     return DateTime.tryParse(value);
   }
+
+  // ================= PROFILE =================
+
+  static Future<void> saveProfile({
+    required String name,
+    required String email,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString("profile_name", name);
+    await prefs.setString("profile_email", email);
+  }
+
+  static Future<Map<String, dynamic>> getProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return {
+      "name": prefs.getString("profile_name") ?? "",
+      "email": prefs.getString("profile_email") ?? "",
+    };
+  }
 }
