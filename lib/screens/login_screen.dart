@@ -131,127 +131,152 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 Center(
-                  child: CircleAvatar(
-                    radius: 42,
-                    backgroundColor: Theme.of(
-                      context,
-                    ).primaryColor.withOpacity(.1),
-                    child: Icon(
-                      Icons.lock_open_rounded,
-                      size: 42,
-                      color: Theme.of(context).primaryColor,
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF66BB6A), Color(0xFF2E7D32)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withOpacity(.25),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: Colors.white,
+                      size: 34,
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 22),
 
                 Text(
-                  "Welcome Back",
+                  "Welcome Back 👋",
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    letterSpacing: .3,
                   ),
                 ),
 
                 const SizedBox(height: 8),
 
                 Text(
-                  "Sign in to continue managing your finances.",
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                  "Sign in to continue managing your budgets,\nexpenses, savings and financial goals.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 15,
+                    height: 1.45,
+                  ),
                 ),
-
-                const SizedBox(height: 22),
+                const SizedBox(height: 40),
 
                 Form(
                   key: _formKey,
                   autovalidateMode: _autoValidate
                       ? AutovalidateMode.onUserInteraction
                       : AutovalidateMode.disabled,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CustomTextField(
-                        controller: emailController,
-                        label: "Email Address",
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: Icons.email_outlined,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Please enter your email";
-                          }
-
-                          final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-
-                          if (!emailRegex.hasMatch(value.trim())) {
-                            return "Enter a valid email";
-                          }
-
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      CustomTextField(
-                        controller: passwordController,
-                        label: "Password",
-                        obscureText: true,
-                        prefixIcon: Icons.lock_outline,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter your password";
-                          }
-
-                          if (value.length < 8) {
-                            return "Password must be at least 8 characters";
-                          }
-
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 30),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-
-                        child: CustomButton(
-                          text: 'Login',
-                          isLoading: isLoading,
-                          onPressed: loginUser,
-                        ),
-                      ),
-
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {
-                            // TODO
-                          },
-                          child: const Text("Forgot Password?"),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                  child: Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
                         children: [
-                          const Text("Don't have an account?"),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const RegisterScreen(),
-                                ),
-                              );
+                          CustomTextField(
+                            controller: emailController,
+                            label: "Email Address",
+                            keyboardType: TextInputType.emailAddress,
+                            prefixIcon: Icons.email_outlined,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return "Please enter your email";
+                              }
+
+                              final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+
+                              if (!emailRegex.hasMatch(value.trim())) {
+                                return "Enter a valid email";
+                              }
+
+                              return null;
                             },
-                            child: const Text("Create one"),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          CustomTextField(
+                            controller: passwordController,
+                            label: "Password",
+                            obscureText: true,
+                            prefixIcon: Icons.lock_outline,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Please enter your password";
+                              }
+
+                              if (value.length < 8) {
+                                return "Password must be at least 8 characters";
+                              }
+
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 30),
+
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+
+                            child: CustomButton(
+                              text: 'Login',
+                              isLoading: isLoading,
+                              onPressed: loginUser,
+                            ),
+                          ),
+
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                // TODO
+                              },
+                              child: const Text("Forgot Password?"),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text("Don't have an account?"),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const RegisterScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const Text("Create one"),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],

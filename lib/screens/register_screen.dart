@@ -128,15 +128,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 10),
 
                 Center(
-                  child: CircleAvatar(
-                    radius: 42,
-                    backgroundColor: Theme.of(
-                      context,
-                    ).primaryColor.withOpacity(.1),
-                    child: Icon(
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromARGB(255, 200, 217, 226),
+                          Color.fromARGB(255, 195, 224, 222),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(.25),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
                       Icons.person_add_alt_1_rounded,
-                      size: 42,
-                      color: Theme.of(context).primaryColor,
+                      color: Colors.blue,
+                      size: 40,
                     ),
                   ),
                 ),
@@ -164,136 +180,146 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   autovalidateMode: _autoValidate
                       ? AutovalidateMode.onUserInteraction
                       : AutovalidateMode.disabled,
-                  child: Column(
-                    children: [
-                      CustomTextField(
-                        controller: nameController,
-                        label: "Full Name",
-                        prefixIcon: Icons.person_outline,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Please enter your full name";
-                          }
 
-                          if (value.trim().length < 3) {
-                            return "Name is too short";
-                          }
+                  child: Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          CustomTextField(
+                            controller: nameController,
+                            label: "Full Name",
+                            prefixIcon: Icons.person_outline,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return "Please enter your full name";
+                              }
 
-                          return null;
-                        },
-                      ),
+                              if (value.trim().length < 3) {
+                                return "Name is too short";
+                              }
 
-                      const SizedBox(height: 18),
+                              return null;
+                            },
+                          ),
 
-                      CustomTextField(
-                        controller: emailController,
-                        label: "Email Address",
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: Icons.email_outlined,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Please enter your email";
-                          }
+                          const SizedBox(height: 20),
 
-                          final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                          CustomTextField(
+                            controller: emailController,
+                            label: "Email Address",
+                            keyboardType: TextInputType.emailAddress,
+                            prefixIcon: Icons.email_outlined,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return "Please enter your email";
+                              }
 
-                          if (!emailRegex.hasMatch(value.trim())) {
-                            return "Enter a valid email";
-                          }
+                              final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
 
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 18),
+                              if (!emailRegex.hasMatch(value.trim())) {
+                                return "Enter a valid email";
+                              }
 
-                      CustomTextField(
-                        controller: passwordController,
-                        label: "Password",
-                        obscureText: true,
-                        prefixIcon: Icons.lock_outline,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter a password";
-                          }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
 
-                          if (value.length < 8) {
-                            return "Password must be at least 8 characters";
-                          }
+                          CustomTextField(
+                            controller: passwordController,
+                            label: "Password",
+                            obscureText: true,
+                            prefixIcon: Icons.lock_outline,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Please enter a password";
+                              }
 
-                          return null;
-                        },
-                      ),
+                              if (value.length < 8) {
+                                return "Password must be at least 8 characters";
+                              }
 
-                      const SizedBox(height: 35),
+                              return null;
+                            },
+                          ),
 
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: CustomButton(
-                          text: "Create Account",
-                          isLoading: isLoading,
-                          onPressed: registerUser,
-                        ),
-                      ),
+                          const SizedBox(height: 30),
 
-                      const SizedBox(height: 18),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.explore_outlined),
-                          label: const Text("Continue as Guest"),
-                          style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: CustomButton(
+                              text: "Create Account",
+                              isLoading: isLoading,
+                              onPressed: registerUser,
                             ),
                           ),
-                          onPressed: () async {
-                            await SessionService.loginAsGuest();
 
-                            if (!mounted) return;
+                          const SizedBox(height: 20),
 
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const HomeScreen(),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.explore_outlined),
+                              label: const Text("Continue as Guest"),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
+                              onPressed: () async {
+                                await SessionService.loginAsGuest();
 
-                      const SizedBox(height: 18),
+                                if (!mounted) return;
 
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.person_outline),
-                          label: const Text("Alreay have an account? Login"),
-                          style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomeScreen(),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                          onPressed: () async {
-                            await SessionService.loginUser();
 
-                            if (!mounted) return;
+                          const SizedBox(height: 20),
 
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const HomeScreen(),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.person_outline),
+                              label: const Text(
+                                "Alreay have an account? Login",
                               ),
-                            );
-                          },
-                        ),
-                      ),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              onPressed: () async {
+                                await SessionService.loginUser();
 
-                      const SizedBox(height: 25),
-                    ],
+                                if (!mounted) return;
+
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomeScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
