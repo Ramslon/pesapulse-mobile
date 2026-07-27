@@ -133,10 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     height: 64,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [
-                          Color.fromARGB(255, 200, 217, 226),
-                          Color.fromARGB(255, 195, 224, 222),
-                        ],
+                        colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -168,9 +165,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 const SizedBox(height: 8),
 
-                Text(
-                  "Join PesaPulse and start taking control of your finances today.",
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                Center(
+                  child: Text(
+                    "Join PesaPulse and start taking control\nof your finances today.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 15,
+                      height: 1.4,
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 35),
@@ -260,13 +264,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 22),
+
+                          Row(
+                            children: [
+                              Expanded(child: Divider()),
+
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  "OR",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+
+                              Expanded(child: Divider()),
+                            ],
+                          ),
+
+                          const SizedBox(height: 22),
 
                           SizedBox(
                             width: double.infinity,
                             height: 54,
                             child: OutlinedButton.icon(
-                              icon: const Icon(Icons.explore_outlined),
+                              icon: const Icon(Icons.travel_explore_rounded),
                               label: const Text("Continue as Guest"),
                               style: OutlinedButton.styleFrom(
                                 shape: RoundedRectangleBorder(
@@ -294,26 +319,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             width: double.infinity,
                             height: 54,
                             child: OutlinedButton.icon(
-                              icon: const Icon(Icons.person_outline),
+                              icon: const Icon(Icons.login_rounded),
                               label: const Text(
-                                "Alreay have an account? Login",
+                                "Already have an account? Sign In",
                               ),
                               style: OutlinedButton.styleFrom(
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
-                              onPressed: () async {
-                                await SessionService.loginUser();
-
-                                if (!mounted) return;
-
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const HomeScreen(),
-                                  ),
-                                );
+                              onPressed: () {
+                                Navigator.pop(context);
                               },
                             ),
                           ),
