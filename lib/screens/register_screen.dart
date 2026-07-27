@@ -141,7 +141,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 35),
+                const SizedBox(height: 22),
 
                 Text(
                   "Create Account",
