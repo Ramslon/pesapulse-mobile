@@ -10,6 +10,7 @@ import '../widgets/empty_state.dart';
 
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
+import '../services/guest_dialog_service.dart';
 import '../repositories/analytics_repository.dart';
 
 import 'dart:io';
@@ -54,6 +55,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   String recommendation = '';
   String categoryAdvice = '';
   String topCategory = '';
+
+  bool isGuest = false;
 
   final AnalyticsRepository analyticsRepository = AnalyticsRepository();
   late ConnectivityProvider _network;
@@ -970,6 +973,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         ),
 
                         onPressed: () async {
+                          if (isGuest) {
+                            await GuestDialogService.show(context);
+                            return;
+                          }
                           final file = await ExportService.exportExpensesPdf(
                             expenses,
                           );
@@ -1006,6 +1013,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         ),
 
                         onPressed: () async {
+                          if (isGuest) {
+                            await GuestDialogService.show(context);
+                            return;
+                          }
                           final file = await ExportService.exportExpensesCsv(
                             expenses,
                           );

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
+import '../services/session_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
+import '../screens/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -16,7 +18,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
 
+  final _formKey = GlobalKey<FormState>();
+
+  bool _autoValidate = false;
   void registerUser() async {
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) {
+      setState(() {
+        _autoValidate = true;
+      });
+      return;
+    }
     String name = nameController.text.trim();
     String email = emailController.text.trim();
     String password = passwordController.text.trim();
@@ -34,13 +47,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (response.containsKey('token')) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration successful')),
+          const SnackBar(
+            backgroundColor: Colors.green,
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 10),
+                Text("Account created successfully"),
+              ],
+            ),
+          ),
         );
 
-        Navigator.pop(context);
+        await Future.delayed(const Duration(milliseconds: 700));
+
+        if (!mounted) return;
+
+        await SessionService.loginUser();
+
+        Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? 'Registration failed')),
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(response["message"] ?? "Registration failed."),
+                ),
+              ],
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -48,57 +87,213 @@ class _RegisterScreenState extends State<RegisterScreen> {
         isLoading = false;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      SnackBar(
+        backgroundColor: Colors.red,
+        content: Row(
+          children: [
+            const Icon(Icons.cloud_off, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "Unable to connect. Please check your internet connection.",
+              ),
+            ),
+          ],
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
-
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
 
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CustomTextField(controller: nameController, label: 'Full Name'),
-
-                const SizedBox(height: 20),
-
-                CustomTextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-
-                  label: 'Email',
-                ),
-
-                const SizedBox(height: 20),
-
-                CustomTextField(
-                  controller: passwordController,
-                  obscureText: true,
-
-                  label: 'Password',
-                ),
-
                 const SizedBox(height: 30),
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  alignment: Alignment.centerLeft,
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
+                ),
 
-                  child: CustomButton(
-                    text: 'Register',
-                    isLoading: isLoading,
-                    onPressed: registerUser,
+                const SizedBox(height: 10),
+
+                Center(
+                  child: CircleAvatar(
+                    radius: 42,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).primaryColor.withOpacity(.1),
+                    child: Icon(
+                      Icons.person_add_alt_1_rounded,
+                      size: 42,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 35),
+
+                Text(
+                  "Create Account",
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  "Join PesaPulse and start taking control of your finances today.",
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                ),
+
+                const SizedBox(height: 35),
+
+                Form(
+                  key: _formKey,
+                  autovalidateMode: _autoValidate
+                      ? AutovalidateMode.onUserInteraction
+                      : AutovalidateMode.disabled,
+                  child: Column(
+                    children: [
+                      CustomTextField(
+                        controller: nameController,
+                        label: "Full Name",
+                        prefixIcon: Icons.person_outline,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return "Please enter your full name";
+                          }
+
+                          if (value.trim().length < 3) {
+                            return "Name is too short";
+                          }
+
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      CustomTextField(
+                        controller: emailController,
+                        label: "Email Address",
+                        keyboardType: TextInputType.emailAddress,
+                        prefixIcon: Icons.email_outlined,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return "Please enter your email";
+                          }
+
+                          final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+
+                          if (!emailRegex.hasMatch(value.trim())) {
+                            return "Enter a valid email";
+                          }
+
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 18),
+
+                      CustomTextField(
+                        controller: passwordController,
+                        label: "Password",
+                        obscureText: true,
+                        prefixIcon: Icons.lock_outline,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Please enter a password";
+                          }
+
+                          if (value.length < 8) {
+                            return "Password must be at least 8 characters";
+                          }
+
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 35),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: CustomButton(
+                          text: "Create Account",
+                          isLoading: isLoading,
+                          onPressed: registerUser,
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.explore_outlined),
+                          label: const Text("Continue as Guest"),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () async {
+                            await SessionService.loginAsGuest();
+
+                            if (!mounted) return;
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HomeScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.person_outline),
+                          label: const Text("Alreay have an account? Login"),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () async {
+                            await SessionService.loginUser();
+
+                            if (!mounted) return;
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HomeScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 25),
+                    ],
                   ),
                 ),
               ],

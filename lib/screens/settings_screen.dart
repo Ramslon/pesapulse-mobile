@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../services/api_services.dart';
 import '../services/notification_service.dart';
+import '../services/session_service.dart';
 
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
@@ -14,6 +15,7 @@ import '../screens/change_password_screen.dart';
 import '../providers/connectivity_provider.dart';
 import '../services/sync_service.dart';
 import '../services/sync_events.dart';
+import '../services/guest_dialog_service.dart';
 
 import '../repositories/settings_repository.dart';
 
@@ -46,9 +48,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   final SettingsRepository settingsRepository = SettingsRepository();
 
+  bool isGuest = false;
+  bool isLoggedIn = false;
+
   @override
   void initState() {
     super.initState();
+
+    loadSessionState();
 
     loadSettings();
     loadProfile();
@@ -57,15 +64,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> loadProfile() async {
-    final user = await settingsRepository.getProfile();
+    try {
+      final user = await settingsRepository.getProfile();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      userName = user["name"] ?? "";
-      userEmail = user["email"] ?? "";
-      isLoading = false;
-    });
+      setState(() {
+        userName = user['name'] ?? '';
+        userEmail = user['email'] ?? '';
+
+        isGuest =
+            (user["is_guest"] == true) || userEmail == "guest@pesapulse.app";
+
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
   }
 
   Future<void> loadSettings() async {
@@ -106,6 +129,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> loadLastSyncTime() async {
     lastSyncTime = await settingsRepository.getLastSync();
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> loadSessionState() async {
+    isGuest = await SessionService.isGuest();
+    isLoggedIn = await SessionService.isLoggedIn();
 
     if (mounted) {
       setState(() {});
@@ -394,7 +426,7 @@ https://github.com/ramslon/PesaPulse
                       const SizedBox(height: 15),
 
                       Text(
-                        "Welcome back!",
+                        isGuest ? "Guest Mode" : "Welcome back!",
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.grey.shade700,
@@ -403,7 +435,9 @@ https://github.com/ramslon/PesaPulse
                       ),
 
                       Text(
-                        userName.isEmpty ? 'User' : userName,
+                        isGuest
+                            ? "Guest User"
+                            : (userName.isEmpty ? "User" : userName),
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -414,7 +448,9 @@ https://github.com/ramslon/PesaPulse
                       const SizedBox(height: 5),
 
                       Text(
-                        userEmail,
+                        isGuest
+                            ? "Your data is stored only on this device."
+                            : userEmail,
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 15,
@@ -423,31 +459,96 @@ https://github.com/ramslon/PesaPulse
 
                       const SizedBox(height: 18),
 
+                      if (isGuest) ...[
+                        const SizedBox(height: 16),
+
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.orange.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                color: Colors.orange,
+                              ),
+
+                              const SizedBox(width: 12),
+
+                              Expanded(
+                                child: Text(
+                                  "You're using PesaPulse as a guest. Create an account to enable cloud sync, backups and multi-device access.",
+                                  style: TextStyle(
+                                    color: Colors.orange.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 18),
+                      ],
+
                       const Divider(),
 
                       const SizedBox(height: 18),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.green.shade100,
-                          child: const Icon(Icons.edit, color: Colors.green),
-                        ),
-                        title: const Text("Edit Profile"),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-                        onTap: () async {
-                          final updated = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const EditProfileScreen(),
-                            ),
-                          );
+                      if (!isGuest)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.green.shade100,
+                            child: const Icon(Icons.edit, color: Colors.green),
+                          ),
+                          title: const Text("Edit Profile"),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 18,
+                          ),
+                          onTap: () async {
+                            if (isGuest) {
+                              await GuestDialogService.show(context);
+                              return;
+                            }
 
-                          if (updated == true) {
-                            loadProfile();
-                          }
-                        },
-                      ),
+                            final updated = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const EditProfileScreen(),
+                              ),
+                            );
+
+                            if (updated == true) {
+                              loadProfile();
+                            }
+                          },
+                        )
+                      else
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.orange.shade100,
+                            child: const Icon(
+                              Icons.person_add_alt_1,
+                              color: Colors.orange,
+                            ),
+                          ),
+                          title: const Text("Create Account"),
+                          subtitle: const Text("Sync your data across devices"),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 18,
+                          ),
+                          onTap: () {
+                            Navigator.pushNamed(context, "/register");
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -1180,6 +1281,8 @@ https://github.com/ramslon/PesaPulse
                             if (confirm != true) return;
 
                             await ApiService.logoutUser();
+
+                            await SessionService.logout();
 
                             settingsRepository.clearCache();
 
