@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/screens/login_screen.dart';
 import '../services/api_services.dart';
 import '../services/session_service.dart';
 import '../widgets/custom_button.dart';
@@ -116,15 +117,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 30),
-
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  alignment: Alignment.centerLeft,
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
-                ),
-
                 const SizedBox(height: 10),
 
                 Center(
@@ -329,7 +321,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                               onPressed: () {
-                                Navigator.pop(context);
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginScreen(),
+                                  ),
+                                );
                               },
                             ),
                           ),

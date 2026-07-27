@@ -127,7 +127,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: EdgeInsets.zero,
                   alignment: Alignment.centerLeft,
                   icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                  ),
                 ),
 
                 Center(
