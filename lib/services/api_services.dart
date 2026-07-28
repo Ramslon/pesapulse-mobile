@@ -532,4 +532,56 @@ class ApiService {
 
     throw Exception(body['message'] ?? 'Failed to change password.');
   }
+
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/forgot-password'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'email': email}),
+    );
+
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> verifyOtp(
+    String email,
+    String otp,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/verify-otp'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'email': email, 'otp': otp}),
+    );
+
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String otp,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/reset-password'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+        'otp': otp,
+        'password': password,
+        'password_confirmation': confirmPassword,
+      }),
+    );
+
+    return jsonDecode(response.body);
+  }
 }

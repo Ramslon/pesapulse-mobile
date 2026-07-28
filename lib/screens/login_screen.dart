@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/screens/forgot_password_screen.dart';
 import 'register_screen.dart';
 import '../services/api_services.dart';
 import '../services/session_service.dart';
@@ -252,7 +253,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             alignment: Alignment.centerRight,
                             child: TextButton(
                               onPressed: () {
-                                // TODO
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ForgotPasswordScreen(),
+                                  ),
+                                );
                               },
                               child: const Text("Forgot Password?"),
                             ),
