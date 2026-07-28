@@ -37,9 +37,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         emailController.text.trim(),
       );
 
-      setState(() => isLoading = false);
-
       if (!mounted) return;
+
+      setState(() => isLoading = false);
 
       ScaffoldMessenger.of(
         context,
@@ -52,11 +52,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
+
       setState(() => isLoading = false);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
     }
   }
 

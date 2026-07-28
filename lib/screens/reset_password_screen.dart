@@ -43,16 +43,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() => isLoading = true);
 
     try {
-      final response = await ApiService.resetPassword(
+      await ApiService.resetPassword(
         email: widget.email,
         otp: widget.otp,
         password: passwordController.text.trim(),
         confirmPassword: confirmPasswordController.text.trim(),
       );
 
-      setState(() => isLoading = false);
-
       if (!mounted) return;
+
+      setState(() => isLoading = false);
 
       await showDialog(
         context: context,
@@ -62,7 +62,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           message:
               "Your password has been updated successfully.\n\nPlease log in using your new password.",
           onContinue: () {
-            Navigator.of(context).pop(); // Close dialog
+            Navigator.of(context).pop();
 
             Navigator.pushAndRemoveUntil(
               context,
@@ -73,11 +73,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
+
       setState(() => isLoading = false);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
     }
   }
 

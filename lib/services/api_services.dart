@@ -582,6 +582,12 @@ class ApiService {
       }),
     );
 
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    throw Exception(body["message"] ?? "Password reset failed.");
   }
 }
