@@ -64,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         if (!mounted) return;
 
-        await SessionService.loginUser();
+        await SessionService.loginUser(response["user"]["id"].toString());
 
         Navigator.pop(context, true);
       } else {

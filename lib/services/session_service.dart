@@ -7,12 +7,18 @@ class SessionService {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setBool(_guestKey, true);
+
+    await prefs.setString("owner_id", "guest");
+
+    await prefs.remove("token");
   }
 
-  static Future<void> loginUser() async {
+  static Future<void> loginUser(String ownerId) async {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setBool(_guestKey, false);
+
+    await prefs.setString("owner_id", ownerId);
   }
 
   static Future<bool> isGuest() async {
@@ -28,6 +34,8 @@ class SessionService {
 
     // remove authentication token
     await prefs.remove("token");
+
+    await prefs.remove("owner_id");
   }
 
   static Future<bool> isLoggedIn() async {
@@ -36,5 +44,11 @@ class SessionService {
     final token = prefs.getString("token");
 
     return token != null && token.isNotEmpty;
+  }
+
+  static Future<String> currentOwnerId() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return prefs.getString("owner_id") ?? "guest";
   }
 }

@@ -80,9 +80,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
         await prefs.setString('token', response['token']);
 
+        await prefs.setString("owner_id", response["user"]["id"].toString());
+
         ApiService.token = response['token'];
 
-        await SessionService.loginUser();
+        await SessionService.loginUser(response["user"]["id"].toString());
 
         if (!mounted) return;
 
