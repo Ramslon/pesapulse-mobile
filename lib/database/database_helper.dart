@@ -23,13 +23,18 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 14,
+      version: 18,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
   }
 
   Future<void> _createDatabase(Database db, int version) async {
+    await _createCoreTables(db);
+    await _createCacheTables(db);
+  }
+
+  Future<void> _createCoreTables(Database db) async {
     await db.execute('''
 CREATE TABLE expenses(
 id INTEGER PRIMARY KEY,
@@ -47,123 +52,17 @@ is_deleted INTEGER DEFAULT 0
 ''');
 
     await db.execute('''
-CREATE TABLE dashboard_cache(
-id INTEGER PRIMARY KEY,
-
-total_expenses INTEGER,
-total_count INTEGER,
-total_categories INTEGER,
-
-recent_expenses TEXT,
-
-updated_at TEXT
-)
-''');
-
-    await db.execute('''
-CREATE TABLE financial_insights_cache(
-id INTEGER PRIMARY KEY,
-
-budget_status TEXT,
-
-payload TEXT,
-
-updated_at TEXT
-)
-''');
-
-    await db.execute('''
-CREATE TABLE budget_summary_cache(
-id INTEGER PRIMARY KEY,
-
-budget REAL,
-spent REAL,
-remaining REAL,
-
-payload TEXT,
-
-updated_at TEXT
-);
-''');
-
-    await db.execute('''
-CREATE TABLE analytics_cache(
-id INTEGER PRIMARY KEY,
-
-expenses TEXT,
-
-goal_analytics TEXT,
-
-financial_insights TEXT,
-
-updated_at TEXT
-)
-''');
-
-    await db.execute('''
-CREATE TABLE goals_cache(
-id INTEGER PRIMARY KEY,
-
-goals TEXT,
-
-updated_at TEXT
-)
-''');
-
-    await db.execute('''
-CREATE TABLE goal_forecasts_cache(
-id INTEGER PRIMARY KEY,
-
-goal_id INTEGER UNIQUE,
-
-data TEXT,
-
-updated_at TEXT
-)
-''');
-
-    await db.execute('''
-CREATE TABLE goal_insights_cache(
-id INTEGER PRIMARY KEY,
-
-goal_id INTEGER UNIQUE,
-
-data TEXT,
-
-updated_at TEXT
-)
-''');
-
-    await db.execute('''
-CREATE TABLE goal_analytics_cache(
-id INTEGER PRIMARY KEY,
-
-data TEXT,
-
-updated_at TEXT
-)
-''');
-
-    await db.execute('''
-CREATE TABLE goal_deadlines_cache(
-id INTEGER PRIMARY KEY,
-
-data TEXT,
-
-updated_at TEXT
-)
-''');
-
-    await db.execute('''
     CREATE TABLE goals(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 server_id INTEGER UNIQUE,
 owner_id TEXT DEFAULT 'guest',
 title TEXT,
 target_amount REAL,
+target_date TEXT,
 saved_amount REAL,
 achievement TEXT,
 completed_percentage REAL,
+created_at TEXT,
 completed_at TEXT,
 updated_at TEXT,
 is_synced INTEGER DEFAULT 1,
@@ -214,35 +113,35 @@ created_at TEXT
 
     await db.execute('''
 CREATE TABLE settings(
-  key TEXT PRIMARY KEY,
-  value TEXT
+    owner_id TEXT DEFAULT 'guest',
+
+    key TEXT,
+
+    value TEXT,
+
+    PRIMARY KEY(owner_id, key)
 )
 ''');
   }
 
-  Future<void> _upgradeDatabase(
-    Database db,
-    int oldVersion,
-    int newVersion,
-  ) async {
-    if (oldVersion < 3) {
-      await db.execute('''
+  Future<void> _createCacheTables(Database db) async {
+    await db.execute('''
 CREATE TABLE dashboard_cache(
-id INTEGER PRIMARY KEY,
+owner_id TEXT PRIMARY KEY,
+
 total_expenses INTEGER,
 total_count INTEGER,
 total_categories INTEGER,
+
 recent_expenses TEXT,
-budget_status TEXT,
+
 updated_at TEXT
 )
 ''');
-    }
 
-    if (oldVersion < 4) {
-      await db.execute('''
+    await db.execute('''
 CREATE TABLE financial_insights_cache(
-id INTEGER PRIMARY KEY,
+owner_id TEXT PRIMARY KEY,
 
 budget_status TEXT,
 
@@ -251,25 +150,24 @@ payload TEXT,
 updated_at TEXT
 )
 ''');
-    }
 
-    if (oldVersion < 5) {
-      await db.execute('''
-    CREATE TABLE IF NOT EXISTS budget_summary_cache(
-      id INTEGER PRIMARY KEY,
-      budget REAL,
-      spent REAL,
-      remaining REAL,
-      payload TEXT,
-      updated_at TEXT
-    )
-    ''');
-    }
+    await db.execute('''
+CREATE TABLE budget_summary_cache(
+owner_id TEXT PRIMARY KEY,
 
-    if (oldVersion < 6) {
-      await db.execute('''
+budget REAL,
+spent REAL,
+remaining REAL,
+
+payload TEXT,
+
+updated_at TEXT
+)
+''');
+
+    await db.execute('''
 CREATE TABLE analytics_cache(
-id INTEGER PRIMARY KEY,
+owner_id TEXT PRIMARY KEY,
 
 expenses TEXT,
 
@@ -280,26 +178,22 @@ financial_insights TEXT,
 updated_at TEXT
 )
 ''');
-    }
 
-    if (oldVersion < 7) {
-      await db.execute('''
+    await db.execute('''
 CREATE TABLE goals_cache(
-id INTEGER PRIMARY KEY,
+owner_id TEXT PRIMARY KEY,
 
 goals TEXT,
 
 updated_at TEXT
 )
 ''');
-    }
 
-    if (oldVersion < 8) {
-      await db.execute('''
+    await db.execute('''
 CREATE TABLE goal_forecasts_cache(
-id INTEGER PRIMARY KEY,
+goal_id INTEGER PRIMARY KEY,
 
-goal_id INTEGER UNIQUE,
+owner_id TEXT,
 
 data TEXT,
 
@@ -307,43 +201,44 @@ updated_at TEXT
 )
 ''');
 
-      await db.execute('''
+    await db.execute('''
 CREATE TABLE goal_insights_cache(
-id INTEGER PRIMARY KEY,
+goal_id INTEGER PRIMARY KEY,
 
-goal_id INTEGER UNIQUE,
+owner_id TEXT,
 
 data TEXT,
 
 updated_at TEXT
 )
 ''');
-    }
 
-    if (oldVersion < 9) {
-      await db.execute('''
+    await db.execute('''
 CREATE TABLE goal_analytics_cache(
-id INTEGER PRIMARY KEY,
+owner_id TEXT PRIMARY KEY,
 
 data TEXT,
 
 updated_at TEXT
 )
 ''');
-    }
 
-    if (oldVersion < 10) {
-      await db.execute('''
+    await db.execute('''
 CREATE TABLE goal_deadlines_cache(
-id INTEGER PRIMARY KEY,
+owner_id TEXT PRIMARY KEY,
 
 data TEXT,
 
 updated_at TEXT
 )
 ''');
-    }
+  }
 
+  Future<void> _upgradeDatabase(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     if (oldVersion < 11) {}
 
     if (oldVersion < 12) {
@@ -396,6 +291,51 @@ updated_at TEXT
       await db.execute("""
     ALTER TABLE sync_queue
     ADD COLUMN owner_id TEXT DEFAULT 'guest'
+  """);
+    }
+
+    if (oldVersion < 15) {
+      await db.execute("DROP TABLE IF EXISTS dashboard_cache");
+      await db.execute("DROP TABLE IF EXISTS financial_insights_cache");
+      await db.execute("DROP TABLE IF EXISTS budget_summary_cache");
+      await db.execute("DROP TABLE IF EXISTS analytics_cache");
+      await db.execute("DROP TABLE IF EXISTS goals_cache");
+      await db.execute("DROP TABLE IF EXISTS goal_forecasts_cache");
+      await db.execute("DROP TABLE IF EXISTS goal_insights_cache");
+      await db.execute("DROP TABLE IF EXISTS goal_analytics_cache");
+      await db.execute("DROP TABLE IF EXISTS goal_deadlines_cache");
+
+      // Recreate them using the new schema
+      await _createCacheTables(db);
+    }
+
+    if (oldVersion < 16) {
+      await db.execute("DROP TABLE IF EXISTS settings");
+
+      await db.execute('''
+CREATE TABLE settings(
+    owner_id TEXT DEFAULT 'guest',
+
+    key TEXT,
+
+    value TEXT,
+
+    PRIMARY KEY(owner_id, key)
+)
+''');
+    }
+
+    if (oldVersion < 17) {
+      await db.execute("""
+    ALTER TABLE goals
+    ADD COLUMN target_date TEXT
+  """);
+    }
+
+    if (oldVersion < 18) {
+      await db.execute("""
+    ALTER TABLE goals
+    ADD COLUMN created_at TEXT
   """);
     }
   }

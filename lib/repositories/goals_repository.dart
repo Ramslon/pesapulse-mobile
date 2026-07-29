@@ -1,14 +1,13 @@
 import 'dart:convert';
 
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
 
-class GoalsRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
+class GoalsRepository extends BaseRepository {
   Future<List<dynamic>> getGoals() async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
@@ -22,25 +21,28 @@ class GoalsRepository {
       await database.delete(
         "goals",
         where:
-            "server_id IS NOT NULL AND server_id NOT IN (${List.filled(serverIds.length, "?").join(",")})",
-        whereArgs: serverIds,
+            "owner_id=? AND server_id IS NOT NULL AND server_id NOT IN (${List.filled(serverIds.length, "?").join(",")}) ",
+        whereArgs: [ownerId, ...serverIds],
       );
 
       for (final goal in goals) {
         final existing = await database.query(
           "goals",
-          where: "server_id=?",
-          whereArgs: [goal["id"]],
+          where: "server_id=? AND owner_id=?",
+          whereArgs: [goal["id"], ownerId],
           limit: 1,
         );
 
         final values = {
           "server_id": goal["id"],
+          "owner_id": ownerId,
           "title": goal["title"],
           "target_amount": goal["target_amount"],
+          "target_date": goal["target_date"],
           "saved_amount": goal["saved_amount"],
           "achievement": goal["achievement"] ?? "",
           "completed_percentage": goal["completed_percentage"] ?? 0,
+          "created_at": goal["created_at"] ?? DateTime.now().toIso8601String(),
           "completed_at": goal["completed_at"],
           "updated_at": goal["updated_at"] ?? DateTime.now().toIso8601String(),
           "is_archived": goal["is_archived"] == true ? 1 : 0,
@@ -52,24 +54,28 @@ class GoalsRepository {
           await database.update(
             "goals",
             values,
-            where: "server_id=?",
-            whereArgs: [goal["id"]],
+            where: "server_id=? AND owner_id=?",
+            whereArgs: [goal["id"], ownerId],
           );
         } else {
-          await database.insert("goals", values);
+          await database.insert(
+            "goals",
+            values,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
         }
       }
       return await database.query(
         "goals",
-        where: "is_archived = ? AND is_deleted = ?",
-        whereArgs: [0, 0],
+        where: "owner_id=? AND is_archived = ? AND is_deleted = ?",
+        whereArgs: [ownerId, 0, 0],
         orderBy: "updated_at DESC",
       );
     } catch (_) {
       return await database.query(
         "goals",
-        where: "is_archived=? AND is_deleted=?",
-        whereArgs: [0, 0],
+        where: "owner_id=? AND is_archived=? AND is_deleted=?",
+        whereArgs: [ownerId, 0, 0],
         orderBy: "updated_at DESC",
       );
     }
@@ -80,6 +86,7 @@ class GoalsRepository {
     required double targetAmount,
     String? targetDate,
   }) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     final now = DateTime.now().toIso8601String();
@@ -89,8 +96,8 @@ class GoalsRepository {
     final existing = await database.query(
       "goals",
       where:
-          "LOWER(title)=LOWER(?) AND target_amount=? AND is_deleted=0 AND is_archived=0",
-      whereArgs: [title.trim()],
+          "owner_id=? AND LOWER(title)=LOWER(?) AND target_amount=? AND is_deleted=0 AND is_archived=0",
+      whereArgs: [ownerId, title.trim(), targetAmount],
       limit: 1,
     );
 
@@ -101,8 +108,8 @@ class GoalsRepository {
     // Check queued creations
     final queued = await database.query(
       "sync_queue",
-      where: "table_name=? AND operation=?",
-      whereArgs: ["goals", "create"],
+      where: "owner_id=? AND  table_name=? AND operation=?",
+      whereArgs: [ownerId, "goals", "create"],
     );
 
     final duplicateQueued = queued.any((row) {
@@ -117,6 +124,7 @@ class GoalsRepository {
     }
 
     final payload = {
+      "owner_id": ownerId,
       "title": title,
       "target_amount": targetAmount,
       "target_date": targetDate,
@@ -125,12 +133,15 @@ class GoalsRepository {
     // Only insert after all validation passes
     await database.insert("goals", {
       "id": localId,
+      "owner_id": ownerId,
       "server_id": null,
       "title": title,
       "target_amount": targetAmount,
+      "target_date": targetDate,
       "saved_amount": 0,
       "achievement": "",
       "completed_percentage": 0,
+      "created_at": now,
       "completed_at": null,
       "updated_at": now,
       "is_synced": 0,
@@ -139,6 +150,7 @@ class GoalsRepository {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
 
     await database.insert("sync_queue", {
+      "owner_id": ownerId,
       "table_name": "goals",
       "operation": "create",
       "record_id": localId,
@@ -148,14 +160,15 @@ class GoalsRepository {
   }
 
   Future<void> updateGoalProgressOffline(int goalId, double amount) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     final now = DateTime.now().toIso8601String();
 
     final goal = await database.query(
       "goals",
-      where: "id=?",
-      whereArgs: [goalId],
+      where: "id=? AND owner_id=?",
+      whereArgs: [goalId, ownerId],
       limit: 1,
     );
 
@@ -176,16 +189,18 @@ class GoalsRepository {
     await database.update(
       "goals",
       {
+        "owner_id": ownerId,
         "saved_amount": newSaved,
         "completed_percentage": percentage,
         "updated_at": now,
         "is_synced": 0,
       },
-      where: "id=?",
-      whereArgs: [goalId],
+      where: "id=? AND owner_id=?",
+      whereArgs: [goalId, ownerId],
     );
 
     await database.insert("sync_queue", {
+      "owner_id": ownerId,
       "table_name": "goals",
       "operation": "update_progress",
       "record_id": goalId,
@@ -199,6 +214,7 @@ class GoalsRepository {
     int serverGoalId,
     double amount,
   ) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     final response = await ApiService.updateGoalProgress(serverGoalId, amount);
@@ -208,6 +224,7 @@ class GoalsRepository {
     await database.update(
       "goals",
       {
+        "owner_id": ownerId,
         "saved_amount": goal["saved_amount"],
         "updated_at": goal["updated_at"],
         "completed_percentage": response["percentage"],
@@ -216,14 +233,15 @@ class GoalsRepository {
             : null,
         "is_synced": 1,
       },
-      where: "id=?",
-      whereArgs: [localGoalId],
+      where: "id=? AND owner_id=?",
+      whereArgs: [localGoalId, ownerId],
     );
 
     return response;
   }
 
   Future<void> archiveGoalOffline(int goalId) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     final now = DateTime.now().toIso8601String();
@@ -232,17 +250,19 @@ class GoalsRepository {
     await database.update(
       "goals",
       {
+        "owner_id": ownerId,
         "is_archived": 1,
         "completed_at": now,
         "updated_at": now,
         "is_synced": 0,
       },
-      where: "id=?",
-      whereArgs: [goalId],
+      where: "id=? AND owner_id=?",
+      whereArgs: [goalId, ownerId],
     );
 
     // Queue the archive operation
     await database.insert("sync_queue", {
+      "owner_id": ownerId,
       "table_name": "goals",
       "operation": "archive",
       "record_id": goalId,
@@ -252,6 +272,7 @@ class GoalsRepository {
   }
 
   Future<void> archiveGoalOnline(int goalId) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     await ApiService.archiveGoal(goalId);
@@ -259,17 +280,19 @@ class GoalsRepository {
     await database.update(
       "goals",
       {
+        "owner_id": ownerId,
         "is_archived": 1,
         "completed_at": DateTime.now().toIso8601String(),
         "is_synced": 1,
         "updated_at": DateTime.now().toIso8601String(),
       },
-      where: "server_id=?",
-      whereArgs: [goalId],
+      where: "server_id=? AND owner_id=?",
+      whereArgs: [goalId, ownerId],
     );
   }
 
   Future<void> restoreGoalOffline(int goalId) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     final now = DateTime.now().toIso8601String();
@@ -277,13 +300,20 @@ class GoalsRepository {
     // Restore locally
     await database.update(
       "goals",
-      {"is_archived": 0, "is_deleted": 0, "updated_at": now, "is_synced": 0},
-      where: "id=?",
-      whereArgs: [goalId],
+      {
+        "owner_id": ownerId,
+        "is_archived": 0,
+        "is_deleted": 0,
+        "updated_at": now,
+        "is_synced": 0,
+      },
+      where: "owner_id=? AND id=?",
+      whereArgs: [ownerId, goalId],
     );
 
     // Queue restore operation
     await database.insert("sync_queue", {
+      "owner_id": ownerId,
       "table_name": "goals",
       "operation": "restore",
       "record_id": goalId,
@@ -293,6 +323,7 @@ class GoalsRepository {
   }
 
   Future<void> restoreGoalOnline(int goalId) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
@@ -306,17 +337,19 @@ class GoalsRepository {
     await database.update(
       "goals",
       {
+        "owner_id": ownerId,
         "is_archived": 0,
         "is_deleted": 0,
         "updated_at": DateTime.now().toIso8601String(),
         "is_synced": 1,
       },
-      where: "id=?",
-      whereArgs: [goalId],
+      where: "owner_id=? AND id=?",
+      whereArgs: [ownerId, goalId],
     );
   }
 
   Future<List<Map<String, dynamic>>> getArchivedGoals() async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
@@ -325,18 +358,21 @@ class GoalsRepository {
       for (final goal in archivedGoals) {
         final existing = await database.query(
           "goals",
-          where: "server_id=?",
-          whereArgs: [goal["id"]],
+          where: "server_id=? AND owner_id=?",
+          whereArgs: [goal["id"], ownerId],
           limit: 1,
         );
 
         final values = {
           "server_id": goal["id"],
+          "owner_id": ownerId,
           "title": goal["title"],
           "target_amount": goal["target_amount"],
+          "target_date": goal["target_date"],
           "saved_amount": goal["saved_amount"],
           "achievement": goal["achievement"] ?? "",
           "completed_percentage": goal["completed_percentage"] ?? 0,
+          "created_at": goal["created_at"],
           "completed_at": goal["completed_at"],
           "updated_at": goal["updated_at"],
           "is_archived": 1,
@@ -348,11 +384,15 @@ class GoalsRepository {
           await database.update(
             "goals",
             values,
-            where: "server_id=?",
-            whereArgs: [goal["id"]],
+            where: "server_id=? AND owner_id=?",
+            whereArgs: [goal["id"], ownerId],
           );
         } else {
-          await database.insert("goals", values);
+          await database.insert(
+            "goals",
+            values,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
         }
       }
     } catch (_) {
@@ -361,19 +401,20 @@ class GoalsRepository {
 
     return await database.query(
       "goals",
-      where: "is_archived=? AND is_deleted=0",
-      whereArgs: [1],
+      where: "owner_id=? AND is_archived=? AND is_deleted=0",
+      whereArgs: [ownerId, 1],
       orderBy: "updated_at DESC",
     );
   }
 
   Future<List<Map<String, dynamic>>> getActiveGoals() async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     return await database.query(
       "goals",
-      where: "is_archived = ? AND is_deleted = ?",
-      whereArgs: [0, 0],
+      where: "owner_id=? AND is_archived = ? AND is_deleted = ?",
+      whereArgs: [ownerId, 0, 0],
       orderBy: "updated_at DESC",
     );
   }
@@ -391,19 +432,21 @@ class GoalsRepository {
   }
 
   Future<void> deleteGoalOffline(int goalId) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
     final now = DateTime.now().toIso8601String();
 
     // Mark the goal as deleted locally
     await database.update(
       "goals",
-      {"is_deleted": 1, "updated_at": now, "is_synced": 0},
-      where: "id=?",
-      whereArgs: [goalId],
+      {"owner_id": ownerId, "is_deleted": 1, "updated_at": now, "is_synced": 0},
+      where: "id=? AND owner_id=?",
+      whereArgs: [goalId, ownerId],
     );
 
     // Queue the delete operation
     await database.insert("sync_queue", {
+      "owner_id": ownerId,
       "table_name": "goals",
       "operation": "delete",
       "record_id": goalId,
@@ -413,6 +456,7 @@ class GoalsRepository {
   }
 
   Future<void> deleteGoalOnline(int serverGoalId) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     // Call API to delete goal
@@ -422,12 +466,13 @@ class GoalsRepository {
     await database.update(
       "goals",
       {
+        "owner_id": ownerId,
         "is_deleted": 1,
         "updated_at": DateTime.now().toIso8601String(),
         "is_synced": 1,
       },
-      where: "server_id=?",
-      whereArgs: [serverGoalId],
+      where: "server_id=? AND owner_id=?",
+      whereArgs: [serverGoalId, ownerId],
     );
   }
 }

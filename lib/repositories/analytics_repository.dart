@@ -1,26 +1,29 @@
 import 'dart:convert';
 
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
 
-class AnalyticsRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
+class AnalyticsRepository extends BaseRepository {
   Future<Map<String, dynamic>> getAnalytics() async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
-      final expenses = await ApiService.getExpenses();
+      final results = await Future.wait([
+        ApiService.getExpenses(),
+        ApiService.getGoalAnalytics(),
+        ApiService.getFinancialInsights(),
+      ]);
 
-      final goalAnalytics = await ApiService.getGoalAnalytics();
-
-      final financialInsights = await ApiService.getFinancialInsights();
+      final expenses = results[0] as Map<String, dynamic>;
+      final goalAnalytics = results[1] as Map<String, dynamic>;
+      final financialInsights = results[2] as Map<String, dynamic>;
 
       await database.insert(
         "analytics_cache",
-        _toLocal(expenses, goalAnalytics, financialInsights),
+        _toLocal(expenses, goalAnalytics, financialInsights, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
@@ -30,7 +33,11 @@ class AnalyticsRepository {
         "financialInsights": financialInsights,
       };
     } catch (_) {
-      final cached = await database.query("analytics_cache", where: "id=1");
+      final cached = await database.query(
+        "analytics_cache",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
+      );
 
       if (cached.isEmpty) {
         throw Exception("No cached analytics");
@@ -44,9 +51,10 @@ class AnalyticsRepository {
     Map<String, dynamic> expenses,
     Map<String, dynamic> goals,
     Map<String, dynamic> insights,
+    String ownerId,
   ) {
     return {
-      "id": 1,
+      "owner_id": ownerId,
       "expenses": jsonEncode(expenses),
       "goal_analytics": jsonEncode(goals),
       "financial_insights": jsonEncode(insights),

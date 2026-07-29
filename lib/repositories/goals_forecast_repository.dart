@@ -1,14 +1,13 @@
 import 'dart:convert';
 
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
 
-class GoalForecastRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
+class GoalForecastRepository extends BaseRepository {
   Future<Map<String, dynamic>> getForecast(int goalId) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
@@ -16,24 +15,43 @@ class GoalForecastRepository {
 
       await database.insert(
         "goal_forecasts_cache",
-        _toLocal(goalId, forecast),
+        _toLocal(goalId, forecast, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
       return forecast;
     } catch (_) {
-      return await _calculateForecast(database, goalId);
+      final cached = await database.query(
+        "goal_forecasts_cache",
+        where: "goal_id=? AND owner_id=?",
+        whereArgs: [goalId, ownerId],
+      );
+
+      if (cached.isNotEmpty) {
+        return jsonDecode(cached.first["data"] as String);
+      }
+
+      final localForecast = await _calculateForecast(database, goalId, ownerId);
+
+      await database.insert(
+        "goal_forecasts_cache",
+        _toLocal(goalId, localForecast, ownerId),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      return localForecast;
     }
   }
 
   Future<Map<String, dynamic>> _calculateForecast(
     Database database,
     int goalId,
+    String ownerId,
   ) async {
     final rows = await database.query(
       "goals",
-      where: "server_id=? OR id=?",
-      whereArgs: [goalId, goalId],
+      where: "owner_id=? AND (server_id=? OR id=?)",
+      whereArgs: [ownerId, goalId, goalId],
       limit: 1,
     );
 
@@ -51,28 +69,35 @@ class GoalForecastRepository {
 
     final today = DateTime.now();
 
-    final targetDate = goal["target_date"] != null
-        ? DateTime.parse(goal["target_date"] as String)
+    if (goal["target_date"] == null) {
+      return {
+        "goal": goal["title"],
+        "forecast": "no_deadline",
+        "message": "No deadline has been set for this goal.",
+        "actual_progress": saved,
+        "remaining_amount": remainingAmount,
+      };
+    }
+
+    final targetDate = DateTime.parse(goal["target_date"] as String);
+
+    final created = goal["created_at"] != null
+        ? DateTime.parse(goal["created_at"] as String)
         : today;
 
     final remainingDays = targetDate.difference(today).inDays;
 
+    final safeRemainingDays = remainingDays < 0 ? 0 : remainingDays;
+
     double expectedProgress = 0;
 
-    if (goal["target_date"] != null) {
-      final created = goal["updated_at"] != null
-          ? DateTime.parse(goal["updated_at"] as String)
-          : today;
+    final totalDays = targetDate.difference(created).inDays;
 
-      final totalDays = targetDate.difference(created).inDays;
+    if (totalDays > 0) {
+      final elapsed = today.difference(created).inDays.clamp(0, totalDays);
 
-      if (totalDays > 0) {
-        final elapsed = today.difference(created).inDays.clamp(0, totalDays);
-
-        expectedProgress = target * (elapsed / totalDays);
-      }
+      expectedProgress = target * (elapsed / totalDays);
     }
-
     String forecast = "on_track";
 
     if (saved >= target) {
@@ -99,7 +124,9 @@ class GoalForecastRepository {
           .toIso8601String()
           .split("T")
           .first,
-      "recommended_daily_saving": daily,
+      "recommended_daily_saving": safeRemainingDays > 0
+          ? remainingAmount / safeRemainingDays
+          : 0,
       "recommended_monthly_saving": monthly,
     };
   }
@@ -120,8 +147,13 @@ class GoalForecastRepository {
     }
   }
 
-  Map<String, dynamic> _toLocal(int goalId, Map<String, dynamic> forecast) {
+  Map<String, dynamic> _toLocal(
+    int goalId,
+    Map<String, dynamic> forecast,
+    String ownerId,
+  ) {
     return {
+      "owner_id": ownerId,
       "goal_id": goalId,
       "data": jsonEncode(forecast),
       "updated_at": DateTime.now().toIso8601String(),

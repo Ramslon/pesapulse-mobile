@@ -1,14 +1,13 @@
 import 'dart:convert';
 
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
 
-class GoalAnalyticsRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
+class GoalAnalyticsRepository extends BaseRepository {
   Future<Map<String, dynamic>> getGoalAnalytics() async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
@@ -16,12 +15,21 @@ class GoalAnalyticsRepository {
 
       await database.insert(
         "goal_analytics_cache",
-        _toLocal(analytics),
+        _toLocal(analytics, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
       return analytics;
     } catch (_) {
+      final cached = await database.query(
+        "goal_analytics_cache",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
+      );
+
+      if (cached.isNotEmpty) {
+        return jsonDecode(cached.first["data"] as String);
+      }
       return await _calculateLocalAnalytics(database);
     }
   }
@@ -31,8 +39,8 @@ class GoalAnalyticsRepository {
   ) async {
     final goals = await database.query(
       "goals",
-      where: "is_deleted = ?",
-      whereArgs: [0],
+      where: "owner_id=? AND is_deleted=?",
+      whereArgs: [ownerId, 0],
     );
 
     final totalGoals = goals.length;
@@ -58,9 +66,12 @@ class GoalAnalyticsRepository {
     };
   }
 
-  Map<String, dynamic> _toLocal(Map<String, dynamic> analytics) {
+  Map<String, dynamic> _toLocal(
+    Map<String, dynamic> analytics,
+    String ownerId,
+  ) {
     return {
-      "id": 1,
+      "owner_id": ownerId,
       "data": jsonEncode(analytics),
       "updated_at": DateTime.now().toIso8601String(),
     };

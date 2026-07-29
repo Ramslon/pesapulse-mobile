@@ -1,39 +1,49 @@
 import 'dart:convert';
 
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
 
-class GoalInsightsRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
+class GoalInsightsRepository extends BaseRepository {
   Future<Map<String, dynamic>> getInsights(int goalId) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
-      final insights = await ApiService.getGoalInsights(goalId);
+      final localInsights = await _calculateInsights(database, goalId, ownerId);
 
       await database.insert(
         "goal_insights_cache",
-        _toLocal(goalId, insights),
+        _toLocal(goalId, localInsights, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      return insights;
+      return localInsights;
     } catch (_) {
-      return await _calculateInsights(database, goalId);
+      final cached = await database.query(
+        "goal_insights_cache",
+        where: "goal_id=? AND owner_id=?",
+        whereArgs: [goalId, ownerId],
+      );
+
+      if (cached.isNotEmpty) {
+        return jsonDecode(cached.first["data"] as String);
+      }
+
+      return await _calculateInsights(database, goalId, ownerId);
     }
   }
 
   Future<Map<String, dynamic>> _calculateInsights(
     Database database,
     int goalId,
+    String ownerId,
   ) async {
     final rows = await database.query(
       "goals",
-      where: "server_id=? OR id=?",
-      whereArgs: [goalId, goalId],
+      where: "owner_id=? AND (server_id=? OR id=?)",
+      whereArgs: [ownerId, goalId, goalId],
       limit: 1,
     );
 
@@ -98,8 +108,13 @@ class GoalInsightsRepository {
     }
   }
 
-  Map<String, dynamic> _toLocal(int goalId, Map<String, dynamic> insights) {
+  Map<String, dynamic> _toLocal(
+    int goalId,
+    Map<String, dynamic> insights,
+    String ownerId,
+  ) {
     return {
+      "owner_id": ownerId,
       "goal_id": goalId,
       "data": jsonEncode(insights),
       "updated_at": DateTime.now().toIso8601String(),

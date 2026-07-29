@@ -1,17 +1,15 @@
 import 'dart:convert';
 
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
 import '../services/sync_service.dart';
 
-class BudgetRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
-  Map<String, dynamic> _toLocal(Map<String, dynamic> summary) {
+class BudgetRepository extends BaseRepository {
+  Map<String, dynamic> _toLocal(Map<String, dynamic> summary, String ownerId) {
     return {
-      "id": 1,
+      "owner_id": ownerId,
 
       "budget": double.tryParse(summary["budget"].toString()) ?? 0,
 
@@ -30,6 +28,7 @@ class BudgetRepository {
   }
 
   Future<Map<String, dynamic>> getBudgetSummary() async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
@@ -37,7 +36,7 @@ class BudgetRepository {
 
       await database.insert(
         "budget_summary_cache",
-        _toLocal(summary),
+        _toLocal(summary, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
@@ -45,7 +44,8 @@ class BudgetRepository {
     } catch (_) {
       final cached = await database.query(
         "budget_summary_cache",
-        where: "id=1",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
       );
 
       if (cached.isEmpty) {
@@ -57,6 +57,7 @@ class BudgetRepository {
   }
 
   Future<void> saveBudget(double amount) async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
@@ -64,7 +65,7 @@ class BudgetRepository {
 
       await database.insert(
         "budget_summary_cache",
-        _toLocal(summary),
+        _toLocal(summary, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (_) {
@@ -72,7 +73,8 @@ class BudgetRepository {
 
       final cached = await database.query(
         "budget_summary_cache",
-        where: "id=1",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
       );
 
       Map<String, dynamic> summary;
@@ -89,11 +91,13 @@ class BudgetRepository {
 
       await database.insert(
         "budget_summary_cache",
-        _toLocal(summary),
+        _toLocal(summary, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
       await database.insert("sync_queue", {
+        "owner_id": ownerId,
+
         "table_name": "budget",
 
         "operation": "upsert",
@@ -110,16 +114,27 @@ class BudgetRepository {
   }
 
   Future<void> deleteBudget() async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
       await ApiService.deleteBudget();
 
-      await database.delete("budget_summary_cache");
+      await database.delete(
+        "budget_summary_cache",
+        where: " owner_id=?",
+        whereArgs: [ownerId],
+      );
     } catch (_) {
-      await database.delete("budget_summary_cache");
+      await database.delete(
+        "budget_summary_cache",
+        where: " owner_id=?",
+        whereArgs: [ownerId],
+      );
 
       await database.insert("sync_queue", {
+        "owner_id": ownerId,
+
         "table_name": "budget",
 
         "operation": "delete",

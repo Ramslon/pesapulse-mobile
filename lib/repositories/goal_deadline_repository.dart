@@ -1,14 +1,13 @@
 import 'dart:convert';
 
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
 
-class GoalDeadlineRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
+class GoalDeadlineRepository extends BaseRepository {
   Future<List<dynamic>> getUpcomingDeadlines() async {
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
@@ -16,26 +15,39 @@ class GoalDeadlineRepository {
 
       await database.insert(
         "goal_deadlines_cache",
-        _toLocal(deadlines),
+        _toLocal(deadlines, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
       return deadlines;
     } catch (_) {
-      return await _calculateUpcomingDeadlines(database);
+      final cached = await database.query(
+        "goal_deadlines_cache",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
+      );
+
+      if (cached.isNotEmpty) {
+        return jsonDecode(cached.first["data"] as String);
+      }
+
+      return await _calculateUpcomingDeadlines(database, ownerId);
     }
   }
 
   Future<List<Map<String, dynamic>>> _calculateUpcomingDeadlines(
     Database database,
+    String ownerId,
   ) async {
     final rows = await database.query(
       "goals",
       where: """
+      owner_id = ?
       is_deleted = 0
       AND is_archived = 0
       AND target_date IS NOT NULL
     """,
+      whereArgs: [ownerId],
     );
 
     final now = DateTime.now();
@@ -48,7 +60,6 @@ class GoalDeadlineRepository {
       final daysRemaining = targetDate.difference(now).inDays;
 
       deadlines.add({
-        "id": goal["id"],
         "title": goal["title"],
         "target_date": goal["target_date"],
         "days_remaining": daysRemaining,
@@ -63,9 +74,9 @@ class GoalDeadlineRepository {
     return deadlines;
   }
 
-  Map<String, dynamic> _toLocal(List<dynamic> deadlines) {
+  Map<String, dynamic> _toLocal(List<dynamic> deadlines, String ownerId) {
     return {
-      "id": 1,
+      "owner_id": ownerId,
       "data": jsonEncode(deadlines),
       "updated_at": DateTime.now().toIso8601String(),
     };
