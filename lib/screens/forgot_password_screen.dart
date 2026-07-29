@@ -37,6 +37,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         emailController.text.trim(),
       );
 
+      debugPrint("Forgot Password Response: $response");
+
       if (!mounted) return;
 
       setState(() => isLoading = false);

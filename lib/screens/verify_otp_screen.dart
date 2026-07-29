@@ -56,9 +56,9 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     try {
       final response = await ApiService.verifyOtp(widget.email, enteredOtp);
 
-      setState(() => isLoading = false);
-
       if (!mounted) return;
+
+      setState(() => isLoading = false);
 
       ScaffoldMessenger.of(
         context,
@@ -72,11 +72,13 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
+
       setState(() => isLoading = false);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
     }
   }
 
@@ -97,9 +99,9 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
+      );
     }
   }
 

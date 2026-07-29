@@ -559,7 +559,13 @@ class ApiService {
       body: jsonEncode({'email': email, 'otp': otp}),
     );
 
-    return jsonDecode(response.body);
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return data;
+    }
+
+    throw Exception(data['message'] ?? 'OTP verification failed.');
   }
 
   static Future<Map<String, dynamic>> resetPassword({

@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 13,
+      version: 14,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -33,6 +33,7 @@ class DatabaseHelper {
     await db.execute('''
 CREATE TABLE expenses(
 id INTEGER PRIMARY KEY,
+owner_id TEXT DEFAULT 'guest',
 server_id INTEGER,
 title TEXT,
 amount REAL,
@@ -157,6 +158,7 @@ updated_at TEXT
     CREATE TABLE goals(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 server_id INTEGER UNIQUE,
+owner_id TEXT DEFAULT 'guest',
 title TEXT,
 target_amount REAL,
 saved_amount REAL,
@@ -173,6 +175,7 @@ is_archived INTEGER DEFAULT 0
     await db.execute('''
 CREATE TABLE savings(
 id INTEGER PRIMARY KEY,
+owner_id TEXT DEFAULT 'guest',
 server_id INTEGER,
 goal_id INTEGER,
 amount REAL,
@@ -186,6 +189,7 @@ is_deleted INTEGER DEFAULT 0
     await db.execute('''
 CREATE TABLE budgets(
 id INTEGER PRIMARY KEY,
+owner_id TEXT DEFAULT 'guest',
 server_id INTEGER,
 category TEXT,
 amount REAL,
@@ -199,6 +203,7 @@ is_deleted INTEGER DEFAULT 0
     await db.execute('''
 CREATE TABLE sync_queue(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
+owner_id TEXT DEFAULT 'guest',
 table_name TEXT,
 operation TEXT,
 record_id INTEGER,
@@ -364,6 +369,33 @@ updated_at TEXT
       await db.execute("""
     CREATE UNIQUE INDEX IF NOT EXISTS idx_goals_server_id
     ON goals(server_id);
+  """);
+    }
+
+    if (oldVersion < 14) {
+      await db.execute("""
+    ALTER TABLE expenses
+    ADD COLUMN owner_id TEXT DEFAULT 'guest'
+  """);
+
+      await db.execute("""
+    ALTER TABLE budgets
+    ADD COLUMN owner_id TEXT DEFAULT 'guest'
+  """);
+
+      await db.execute("""
+    ALTER TABLE goals
+    ADD COLUMN owner_id TEXT DEFAULT 'guest'
+  """);
+
+      await db.execute("""
+    ALTER TABLE savings
+    ADD COLUMN owner_id TEXT DEFAULT 'guest'
+  """);
+
+      await db.execute("""
+    ALTER TABLE sync_queue
+    ADD COLUMN owner_id TEXT DEFAULT 'guest'
   """);
     }
   }
