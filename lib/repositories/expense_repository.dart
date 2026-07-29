@@ -1,18 +1,11 @@
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
-import '../services/session_service.dart';
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 import '../services/sync_service.dart';
+import 'base_repository.dart';
 
-class ExpenseRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
-  Future<String> _ownerId() async {
-    return await SessionService.currentOwnerId();
-  }
-
+class ExpenseRepository extends BaseRepository {
   Map<String, dynamic> _expenseToLocal(
     Map<String, dynamic> expense,
     String ownerId,
@@ -42,7 +35,7 @@ class ExpenseRepository {
 
   /// Get expenses
   Future<Map<String, dynamic>> getExpenses({int page = 1}) async {
-    final ownerId = await _ownerId();
+    final ownerId = await this.ownerId;
     try {
       final response = await ApiService.getExpenses(page: page);
 
@@ -88,7 +81,7 @@ class ExpenseRepository {
     required String expenseDate,
     required String description,
   }) async {
-    final ownerId = await _ownerId();
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     final expense = {
@@ -144,7 +137,7 @@ class ExpenseRepository {
     required String expenseDate,
     required String description,
   }) async {
-    final ownerId = await _ownerId();
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     final expense = {
@@ -192,7 +185,7 @@ class ExpenseRepository {
   }
 
   Future<void> deleteExpense(int id) async {
-    final ownerId = await _ownerId();
+    final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
