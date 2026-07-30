@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/sync_events.dart';
-import '../widgets/goal_empty_state.dart';
+import '../widgets/empty_state_helper.dart';
 
 import 'package:provider/provider.dart';
 import '../providers/connectivity_provider.dart';
@@ -104,12 +104,7 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
     }
 
     if (archivedGoals.isEmpty) {
-      return const GoalEmptyState(
-        icon: Icons.archive_outlined,
-        title: "No Archived Goals",
-        message:
-            "Completed goals that you archive will appear here for future reference.",
-      );
+      return buildEmptyState(context, EmptyStateType.archivedGoals);
     }
 
     return Scaffold(

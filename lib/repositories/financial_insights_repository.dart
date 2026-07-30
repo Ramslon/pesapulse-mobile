@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
+import '../services/session_service.dart';
 
 import '../services/api_services.dart';
 
@@ -26,6 +27,21 @@ class FinancialInsightsRepository extends BaseRepository {
     final database = await db.database;
     final ownerId = await this.ownerId;
 
+    // Guest users: never call the backend
+    if (await SessionService.isGuest()) {
+      final cached = await database.query(
+        "financial_insights_cache",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
+      );
+
+      if (cached.isNotEmpty) {
+        return _fromLocal(cached.first);
+      }
+
+      return _emptyInsights();
+    }
+
     try {
       final insights = await ApiService.getFinancialInsights();
 
@@ -43,11 +59,40 @@ class FinancialInsightsRepository extends BaseRepository {
         whereArgs: [ownerId],
       );
 
-      if (cached.isEmpty) {
-        throw Exception("No cached financial insights");
+      if (cached.isNotEmpty) {
+        return _fromLocal(cached.first);
       }
 
-      return _fromLocal(cached.first);
+      return _emptyInsights();
     }
+  }
+
+  Map<String, dynamic> _emptyInsights() {
+    return {
+      "budget": 0,
+      "spent": 0,
+      "remaining": 0,
+      "usage_percentage": 0,
+      "status": "healthy",
+      "budget_status": "healthy",
+      "recommendation": "Create a budget to receive financial insights.",
+      "top_category": null,
+      "category_advice": "",
+      "category_breakdown": [],
+      "daily_spending": {
+        "Mon": 0,
+        "Tue": 0,
+        "Wed": 0,
+        "Thu": 0,
+        "Fri": 0,
+        "Sat": 0,
+        "Sun": 0,
+      },
+      "highest_spending_day": {"day": null, "amount": 0},
+      "average_daily_spending": 0,
+      "estimated_month_end_spending": 0,
+      "financial_health_score": 100,
+      "financial_health_label": "No Data",
+    };
   }
 }

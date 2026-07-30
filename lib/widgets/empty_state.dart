@@ -4,23 +4,33 @@ class EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
+  final Widget? action;
+  final Color? iconColor; // optional color for avatar background
 
   const EmptyState({
     super.key,
     required this.icon,
     required this.title,
     required this.message,
+    this.action,
+    this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color bgColor = iconColor ?? Theme.of(context).colorScheme.primary;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 90, color: Colors.grey.shade400),
+            CircleAvatar(
+              radius: 45,
+              backgroundColor: bgColor.withOpacity(0.15),
+              child: Icon(icon, size: 50, color: bgColor),
+            ),
 
             const SizedBox(height: 24),
 
@@ -41,6 +51,8 @@ class EmptyState extends StatelessWidget {
                 height: 1.5,
               ),
             ),
+
+            if (action != null) ...[const SizedBox(height: 20), action!],
           ],
         ),
       ),

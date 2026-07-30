@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 
 import 'edit_expense_screen.dart';
-import '../widgets/empty_expense_state.dart';
+
+import '../widgets/empty_state_helper.dart';
 import '../widgets/no_filter_results_widget.dart';
 import '../widgets/expense_loading_skeleton.dart';
 import '../repositories/expense_repository.dart';
@@ -49,6 +51,8 @@ class _ExpenseListContentState extends State<ExpenseListContent>
   final ScrollController scrollController = ScrollController();
 
   bool isLoading = true;
+
+  bool isGuest = false;
 
   int currentPage = 1;
 
@@ -363,9 +367,12 @@ class _ExpenseListContentState extends State<ExpenseListContent>
     if (isLoading) {
       return const ExpenseLoadingSkeleton();
     }
-
     if (expenses.isEmpty) {
-      return const EmptyExpenseState();
+      return buildEmptyState(
+        context,
+        EmptyStateType.expenses,
+        isGuest: isGuest, // optional, if you want guest awareness
+      );
     }
 
     return RefreshIndicator(

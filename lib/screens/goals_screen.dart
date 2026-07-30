@@ -7,7 +7,8 @@ import '../services/sync_events.dart';
 
 import '../widgets/goal_loading_skeleton.dart';
 import '../widgets/goal_stat_card.dart';
-import '../widgets/goal_empty_state.dart';
+
+import '../widgets/empty_state_helper.dart';
 import '../widgets/fade_slide_animation.dart';
 
 import 'add_goals_screen.dart';
@@ -32,6 +33,8 @@ class GoalsScreen extends StatefulWidget {
 class _GoalsScreenState extends State<GoalsScreen>
     with AutomaticKeepAliveClientMixin {
   bool isLoading = true;
+
+  bool isGuest = false;
 
   List goals = [];
 
@@ -599,14 +602,12 @@ class _GoalsScreenState extends State<GoalsScreen>
         child: goals.isEmpty
             ? ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 120),
-
-                  GoalEmptyState(
-                    icon: Icons.flag_outlined,
-                    title: "No Financial Goals",
-                    message:
-                        "Create savings goals to track your progress and achieve your financial milestones.",
+                children: [
+                  const SizedBox(height: 120),
+                  buildEmptyState(
+                    context,
+                    EmptyStateType.goals,
+                    isGuest: isGuest, // optional, if you want guest awareness
                   ),
                 ],
               )

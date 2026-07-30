@@ -7,12 +7,14 @@ import '../widgets/analytics_card.dart';
 import '../widgets/financial_health_card.dart';
 import '../widgets/status_chip.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/empty_state_helper.dart';
 import '../widgets/budget_loading_skeleton.dart';
 import '../widgets/sync_status_icon.dart';
 import '../repositories/budget_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 import '../providers/connectivity_provider.dart';
 import 'package:provider/provider.dart';
+import 'add_expense_screen.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -25,6 +27,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     with AutomaticKeepAliveClientMixin {
   bool isLoading = true;
 
+  bool isGuest = false;
   double budget = 0;
   double spent = 0;
   double remaining = 0;
@@ -567,39 +570,20 @@ class _BudgetScreenState extends State<BudgetScreen>
       return const BudgetLoadingSkeleton();
     }
     if (budget <= 0) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          EmptyState(
-            icon: Icons.account_balance_wallet_outlined,
-
-            title: network.isOnline ? "No Budget Yet" : "No Cached Budget",
-
-            message: network.isOnline
-                ? "Create your monthly budget to start tracking your spending."
-                : "You're offline and no budget has been cached yet.\nConnect to the internet once to download or create your budget.",
-          ),
-
-          const SizedBox(height: 30),
-
-          if (network.isOnline)
-            FloatingActionButton.extended(
-              heroTag: "create_budget",
-              onPressed: () {
-                showCreateBudgetDialog();
-              },
-              icon: const Icon(Icons.add),
-              label: const Text("Create Budget"),
-            )
-          else
-            ElevatedButton.icon(
-              onPressed: refreshBudgetData,
-              icon: const Icon(Icons.refresh),
-              label: const Text("Retry"),
-            ),
-        ],
+      return Center(
+        child: buildEmptyState(
+          context,
+          EmptyStateType.budget,
+          isOnline: network.isOnline,
+          isGuest: isGuest,
+          refreshBudgetData: refreshBudgetData,
+          showCreateBudgetDialog: showCreateBudgetDialog,
+        ),
       );
     }
+
+    // replace with your chart widget
+
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         heroTag: "budgetFab",
@@ -1008,12 +992,25 @@ class _BudgetScreenState extends State<BudgetScreen>
                   child: Column(
                     children: [
                       categoryTotals.isEmpty
-                          ? const EmptyState(
+                          ? EmptyState(
                               icon: Icons.pie_chart_outline,
                               title: "No Spending Data",
                               message:
                                   "Add some expenses to view category analysis.",
+                              action: ElevatedButton.icon(
+                                icon: const Icon(Icons.receipt_long),
+                                label: const Text("Add Expense"),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const AddExpenseScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
                             )
+                          // replace with your chart widget
                           : SizedBox(
                               height: 280,
                               child: SpendingPieChart(
@@ -1126,12 +1123,25 @@ class _BudgetScreenState extends State<BudgetScreen>
                   child: Padding(
                     padding: EdgeInsets.all(cardPadding),
                     child: dailySpending.isEmpty
-                        ? const EmptyState(
+                        ? EmptyState(
                             icon: Icons.show_chart,
                             title: "No Spending History",
                             message:
                                 "Your daily spending trend will appear after recording expenses.",
+                            action: ElevatedButton.icon(
+                              icon: const Icon(Icons.receipt_long),
+                              label: const Text("Add Expense"),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const AddExpenseScreen(),
+                                  ),
+                                );
+                              },
+                            ),
                           )
+                        // replace with your chart widget
                         : SpendingTrendChart(dailySpending: dailySpending),
                   ),
                 ),

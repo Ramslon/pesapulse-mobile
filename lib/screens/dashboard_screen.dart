@@ -12,6 +12,7 @@ import '../screens/add_expense_screen.dart';
 import '../screens/add_goals_screen.dart';
 import '../screens/budget_page.dart';
 import '../widgets/offline_banner.dart';
+import '../widgets/empty_state_helper.dart';
 import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 
@@ -25,6 +26,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with AutomaticKeepAliveClientMixin {
   bool isLoading = true;
+
+  bool isGuest = false;
 
   int totalExpenses = 0;
   int totalCount = 0;
@@ -314,7 +317,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   Row(
                     children: [
                       QuickActionCard(
-                        icon: Icons.add,
+                        icon: Icons.receipt_long,
                         title: "Expense",
                         color: Colors.green,
                         onTap: () {
@@ -403,32 +406,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                           if (recentExpenses.isEmpty)
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 35),
-                              child: Column(
-                                children: const [
-                                  Icon(
-                                    Icons.receipt_long,
-                                    size: 48,
-                                    color: Colors.grey,
-                                  ),
-
-                                  SizedBox(height: 15),
-
-                                  Text(
-                                    "No expenses yet",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-
-                                  SizedBox(height: 6),
-
-                                  Text(
-                                    "Start tracking your spending by adding your first expense.",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                ],
+                              child: buildEmptyState(
+                                context,
+                                EmptyStateType.expenses,
+                                isGuest: isGuest, // optional guest awareness
                               ),
                             )
                           else
@@ -436,7 +417,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                               (expense) => Column(
                                 children: [
                                   RecentExpenseTile(expense: expense),
-
                                   if (expense != recentExpenses.last)
                                     const Divider(),
                                 ],

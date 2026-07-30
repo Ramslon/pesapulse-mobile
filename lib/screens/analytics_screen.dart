@@ -1,12 +1,17 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/screens/add_goals_screen.dart';
+import 'add_expense_screen.dart';
+import 'login_screen.dart';
+import 'register_screen.dart';
+import 'budget_page.dart';
 import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 import 'package:provider/provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../widgets/analytics_loading_skeleton.dart';
 import '../widgets/analytics_section_header.dart';
 import '../widgets/fade_slide_animation.dart';
-import '../widgets/empty_state.dart';
+import '../widgets/empty_state_helper.dart';
 
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
@@ -755,6 +760,221 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       return const AnalyticsLoadingSkeleton();
     }
 
+    final hasNoData = expenses.isEmpty && totalGoals == 0 && reports.isEmpty;
+
+    if (hasNoData) {
+      return buildEmptyState(
+        context,
+        EmptyStateType.analytics,
+        isGuest: isGuest, // guest awareness
+        // Override the default "Get Started" action to show your custom dialog
+        showCreateBudgetDialog: () {
+          showGeneralDialog(
+            context: context,
+            barrierDismissible: true,
+            barrierLabel: "Get Started",
+            transitionDuration: const Duration(milliseconds: 400),
+            pageBuilder: (context, animation, secondaryAnimation) {
+              return Center(
+                child: AlertDialog(
+                  title: const Text("Get Started"),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Expense option
+                        ListTile(
+                          leading: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.green.shade100,
+                            child: const Icon(
+                              Icons.receipt_long,
+                              color: Colors.green,
+                            ),
+                          ),
+                          title: const Text("Add Expense"),
+                          subtitle: const Text(
+                            "Track your spending and daily costs",
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 18,
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AddExpenseScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const Divider(),
+
+                        // Goal option
+                        ListTile(
+                          leading: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.orange.shade100,
+                            child: const Icon(Icons.flag, color: Colors.orange),
+                          ),
+                          title: const Text("Add Goal"),
+                          subtitle: const Text(
+                            "Save towards your financial goals",
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 18,
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AddGoalScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const Divider(),
+
+                        // Budget option
+                        ListTile(
+                          leading: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.blue.shade100,
+                            child: const Icon(
+                              Icons.account_balance_wallet,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          title: const Text("Add Budget"),
+                          subtitle: Text(
+                            isGuest
+                                ? "Create an account to manage budgets"
+                                : "Plan and manage your monthly budget",
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 18,
+                          ),
+                          enabled: !isGuest,
+                          onTap: isGuest
+                              ? null
+                              : () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const BudgetPage(),
+                                    ),
+                                  );
+                                },
+                        ),
+
+                        // Guest account options
+                        if (isGuest) ...[
+                          const SizedBox(height: 20),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "Account Options",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                          const Divider(),
+
+                          ListTile(
+                            leading: CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Colors.orange.shade500,
+                              child: const Icon(
+                                Icons.person_add_alt_1,
+                                color: Colors.white,
+                              ),
+                            ),
+                            title: const Text("Create Account"),
+                            subtitle: const Text(
+                              "Sync your data across devices",
+                            ),
+                            trailing: const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 18,
+                            ),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          const Divider(),
+                          ListTile(
+                            leading: CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Colors.blue.shade100,
+                              child: const Icon(
+                                Icons.login,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            title: const Text("Sign In"),
+                            subtitle: const Text("Already have an account?"),
+                            trailing: const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 18,
+                            ),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Close"),
+                    ),
+                  ],
+                ),
+              );
+            },
+            transitionBuilder: (context, animation, secondaryAnimation, child) {
+              final curved = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              );
+              return FadeTransition(
+                opacity: curved,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.2),
+                    end: Offset.zero,
+                  ).animate(curved),
+                  child: child,
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
+
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: refreshAnalytics,
@@ -1103,35 +1323,33 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
               SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
 
-              if (categoryTotals.isEmpty)
-                const EmptyState(
-                  icon: Icons.pie_chart_outline,
-                  title: "No Category Data",
-                  message:
-                      "Add some expenses to see how your spending is distributed.",
-                ),
-
-              Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(
-                    (screenSize.width * .045).clamp(16.0, 24.0),
-                  ),
-                  child: SizedBox(
-                    height: chartHeight,
-                    child: PieChart(
-                      PieChartData(
-                        sections: getSections(),
-                        centerSpaceRadius: chartHeight * .15,
-                        sectionsSpace: 4,
+              categoryTotals.isEmpty
+                  ? buildEmptyState(
+                      context,
+                      EmptyStateType.categories,
+                      isGuest: isGuest, // optional, if you want guest awareness
+                    )
+                  : Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(
+                          (screenSize.width * .045).clamp(16.0, 24.0),
+                        ),
+                        child: SizedBox(
+                          height: chartHeight,
+                          child: PieChart(
+                            PieChartData(
+                              sections: getSections(),
+                              centerSpaceRadius: chartHeight * .15,
+                              sectionsSpace: 4,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ),
               SizedBox(height: sectionSpacing * 1.2),
 
               const AnalyticsSectionHeader(
