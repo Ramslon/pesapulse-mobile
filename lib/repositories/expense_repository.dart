@@ -74,7 +74,7 @@ class ExpenseRepository extends BaseRepository {
     }
   }
 
-  Future<void> addExpense({
+  Future<void> createExpense({
     required String title,
     required String amount,
     required String category,
@@ -127,6 +127,43 @@ class ExpenseRepository extends BaseRepository {
 
       await SyncService.instance.getPendingChanges();
     }
+  }
+
+  Future<void> syncOfflineExpense({
+    required int localId,
+    required String title,
+    required String amount,
+    required String category,
+    required String expenseDate,
+    required String description,
+  }) async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final response = await ApiService.addExpense(
+      title,
+      amount,
+      category,
+      expenseDate,
+      description,
+    );
+
+    await database.update(
+      "expenses",
+      {
+        "owner_id": ownerId,
+        "server_id": response["id"],
+        "title": response["title"],
+        "amount": response["amount"],
+        "category": response["category"],
+        "expense_date": response["expense_date"],
+        "description": response["description"] ?? "",
+        "updated_at": response["updated_at"],
+        "is_synced": 1,
+      },
+      where: "id=? AND owner_id=?",
+      whereArgs: [localId, ownerId],
+    );
   }
 
   Future<void> updateExpense({
@@ -184,6 +221,60 @@ class ExpenseRepository extends BaseRepository {
     }
   }
 
+  Future<void> syncOfflineExpenseUpdate({
+    required int localId,
+    required int serverId,
+    required String title,
+    required String amount,
+    required String category,
+    required String expenseDate,
+    required String description,
+  }) async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    await ApiService.updateExpense(
+      serverId,
+      title,
+      amount,
+      category,
+      expenseDate,
+      description,
+    );
+
+    await database.update(
+      "expenses",
+      {
+        "title": title,
+        "amount": amount,
+        "category": category,
+        "expense_date": expenseDate,
+        "description": description,
+        "updated_at": DateTime.now().toIso8601String(),
+        "is_synced": 1,
+      },
+      where: "id=? AND owner_id=?",
+      whereArgs: [localId, ownerId],
+    );
+  }
+
+  Future<int?> getServerExpenseId(int localId) async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final rows = await database.query(
+      "expenses",
+      columns: ["server_id"],
+      where: "id=? AND owner_id=?",
+      whereArgs: [localId, ownerId],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) return null;
+
+    return rows.first["server_id"] as int?;
+  }
+
   Future<void> deleteExpense(int id) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
@@ -212,5 +303,21 @@ class ExpenseRepository extends BaseRepository {
       });
       await SyncService.instance.getPendingChanges();
     }
+  }
+
+  Future<void> syncOfflineExpenseDelete({
+    required int localId,
+    required int serverId,
+  }) async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    await ApiService.deleteExpense(serverId);
+
+    await database.delete(
+      "expenses",
+      where: "id=? AND owner_id=?",
+      whereArgs: [localId, ownerId],
+    );
   }
 }

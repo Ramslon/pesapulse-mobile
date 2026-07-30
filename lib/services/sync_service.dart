@@ -4,10 +4,10 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../database/database_helper.dart';
-import 'api_services.dart';
+
 import 'sync_status.dart';
 import 'sync_events.dart';
-import '../services/settings_service.dart';
+import '../repositories/settings_repository.dart';
 import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 import '../repositories/goals_repository.dart';
@@ -15,6 +15,8 @@ import '../repositories/goal_analytics_repository.dart';
 import '../repositories/goal_deadline_repository.dart';
 import '../repositories/goals_forecast_repository.dart';
 import '../repositories/goal_insights_repository.dart';
+import '../repositories/expense_repository.dart';
+import '../repositories/budget_repository.dart';
 
 class SyncService {
   SyncService._();
@@ -37,6 +39,12 @@ class SyncService {
 
   final GoalInsightsRepository goalInsightsRepository =
       GoalInsightsRepository();
+
+  final SettingsRepository settingsRepository = SettingsRepository();
+
+  final ExpenseRepository expenseRepository = ExpenseRepository();
+
+  final BudgetRepository budgetRepository = BudgetRepository();
 
   static final SyncService instance = SyncService._();
 
@@ -87,7 +95,7 @@ class SyncService {
 
     await refreshOfflineCaches();
 
-    await SettingsService.saveLastSync(DateTime.now());
+    await settingsRepository.saveLastSync(DateTime.now());
   }
 
   Future<void> _processItem(Map<String, dynamic> item) async {
@@ -96,40 +104,22 @@ class SyncService {
     switch (item["operation"]) {
       case "create":
         if (item["table_name"] == "goals") {
-          final createdGoal = await ApiService.createGoal(
+          await goalsRepository.syncOfflineGoal(
+            localId: item["record_id"] as int,
             title: payload["title"],
             targetAmount: double.parse(payload["target_amount"].toString()),
             targetDate: payload["target_date"],
           );
 
-          final database = await db.database;
-
-          if (createdGoal["id"] == null) {
-            throw Exception("Server did not return a goal ID.");
-          }
-
-          await database.update(
-            "goals",
-            {
-              "server_id": createdGoal["id"],
-              "title": createdGoal["title"],
-              "target_amount": createdGoal["target_amount"],
-              "saved_amount": createdGoal["saved_amount"],
-              "updated_at": createdGoal["updated_at"],
-              "is_synced": 1,
-            },
-            where: "id=?",
-            whereArgs: [item["record_id"]],
-          );
-
           return;
         }
-        await ApiService.addExpense(
-          payload["title"],
-          payload["amount"].toString(),
-          payload["category"],
-          payload["expense_date"],
-          payload["description"] ?? "",
+        await expenseRepository.syncOfflineExpense(
+          localId: item["record_id"] as int,
+          title: payload["title"],
+          amount: payload["amount"].toString(),
+          category: payload["category"],
+          expenseDate: payload["expense_date"],
+          description: payload["description"] ?? "",
         );
 
         break;
@@ -141,11 +131,11 @@ class SyncService {
           throw Exception("Goal has no server id.");
         }
 
-        await ApiService.updateGoalProgress(
+        await goalsRepository.updateGoalProgressOnline(
+          item["record_id"] as int,
           serverId,
           double.parse(payload["amount"].toString()),
         );
-
         final database = await db.database;
 
         await database.update(
@@ -163,7 +153,7 @@ class SyncService {
           throw Exception("Goal has no server id.");
         }
 
-        await ApiService.archiveGoal(serverId);
+        await goalsRepository.archiveGoalOnline(serverId);
         final database = await db.database;
 
         await database.update(
@@ -181,7 +171,7 @@ class SyncService {
           throw Exception("Goal has no server id.");
         }
 
-        await ApiService.restoreGoal(serverId);
+        await goalsRepository.restoreGoalOnline(serverId);
         final database = await db.database;
 
         await database.update(
@@ -199,13 +189,21 @@ class SyncService {
         break;
 
       case "update":
-        await ApiService.updateExpense(
-          item["record_id"],
-          payload["title"],
-          payload["amount"].toString(),
-          payload["category"],
-          payload["expense_date"],
-          payload["description"] ?? "",
+        final localId = item["record_id"] as int;
+        final serverId = await expenseRepository.getServerExpenseId(localId);
+
+        if (serverId == null) {
+          throw Exception("Expense has no server id.");
+        }
+
+        await expenseRepository.syncOfflineExpenseUpdate(
+          localId: localId,
+          serverId: serverId,
+          title: payload["title"],
+          amount: payload["amount"].toString(),
+          category: payload["category"],
+          expenseDate: payload["expense_date"],
+          description: payload["description"] ?? "",
         );
 
         break;
@@ -214,7 +212,7 @@ class SyncService {
         if (item["table_name"] == "budget") {
           final payload = jsonDecode(item["payload"]);
 
-          await ApiService.setBudget(
+          await budgetRepository.syncOfflineBudgetUpsert(
             double.parse(payload["amount"].toString()),
           );
         }
@@ -228,7 +226,7 @@ class SyncService {
             throw Exception("Goal has no server id.");
           }
 
-          await ApiService.deleteGoal(serverId);
+          await goalsRepository.deleteGoalOnline(serverId);
 
           final database = await db.database;
           await database.update(
@@ -238,14 +236,27 @@ class SyncService {
             whereArgs: [item["record_id"]],
           );
         } else if (item["table_name"] == "budget") {
-          await ApiService.deleteBudget();
+          await budgetRepository.syncOfflineBudgetDelete();
         } else {
-          await ApiService.deleteExpense(item["record_id"]);
+          final localId = item["record_id"] as int;
+
+          final serverId = await expenseRepository.getServerExpenseId(localId);
+
+          if (serverId == null) {
+            throw Exception("Expense has no server id.");
+          }
+
+          await expenseRepository.syncOfflineExpenseDelete(
+            localId: localId,
+            serverId: serverId,
+          );
         }
         break;
 
       case "preferences":
-        await ApiService.updatePreferences(jsonDecode(item["payload"]));
+        final payloadMap = jsonDecode(item["payload"]);
+
+        await settingsRepository.updatePreferences(payloadMap);
 
         break;
     }

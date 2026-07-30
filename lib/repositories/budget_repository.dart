@@ -113,6 +113,19 @@ class BudgetRepository extends BaseRepository {
     }
   }
 
+  Future<void> syncOfflineBudgetUpsert(double amount) async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final summary = await ApiService.setBudget(amount);
+
+    await database.insert(
+      "budget_summary_cache",
+      _toLocal(summary, ownerId),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   Future<void> deleteBudget() async {
     final ownerId = await this.ownerId;
     final database = await db.database;
@@ -148,5 +161,18 @@ class BudgetRepository extends BaseRepository {
 
       await SyncService.instance.getPendingChanges();
     }
+  }
+
+  Future<void> syncOfflineBudgetDelete() async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    await ApiService.deleteBudget();
+
+    await database.delete(
+      "budget_summary_cache",
+      where: "owner_id=?",
+      whereArgs: [ownerId],
+    );
   }
 }

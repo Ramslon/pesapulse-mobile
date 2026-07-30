@@ -1,26 +1,22 @@
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
 import 'dart:convert';
 
-class DashboardRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
-  Map<String, dynamic> _dashboardToLocal(Map<String, dynamic> dashboard) {
+class DashboardRepository extends BaseRepository {
+  Map<String, dynamic> _dashboardToLocal(
+    Map<String, dynamic> dashboard,
+    String ownerId,
+  ) {
     final summary = dashboard["summary"];
 
     return {
-      "id": 1,
-
+      "owner_id": ownerId,
       "total_expenses": summary["total_expenses"],
-
       "total_count": summary["total_count"],
-
       "total_categories": summary["categories"],
-
       "recent_expenses": jsonEncode(dashboard["recent_expenses"]),
-
       "updated_at": DateTime.now().toIso8601String(),
     };
   }
@@ -41,21 +37,24 @@ class DashboardRepository {
 
   Future<Map<String, dynamic>> getDashboard() async {
     final database = await db.database;
+    final ownerId = await this.ownerId;
 
     try {
       final dashboard = await ApiService.getDashboard();
 
-      final local = _dashboardToLocal(dashboard);
-
       await database.insert(
         "dashboard_cache",
-        local,
+        _dashboardToLocal(dashboard, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
       return dashboard;
     } catch (_) {
-      final cached = await database.query("dashboard_cache", where: "id=1");
+      final cached = await database.query(
+        "dashboard_cache",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
+      );
 
       if (cached.isEmpty) {
         throw Exception("No cached dashboard");

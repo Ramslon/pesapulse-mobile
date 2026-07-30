@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../services/api_services.dart';
-
 class GoalInsightsRepository extends BaseRepository {
   Future<Map<String, dynamic>> getInsights(int goalId) async {
     final ownerId = await this.ownerId;

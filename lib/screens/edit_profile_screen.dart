@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/api_services.dart';
+
+import '../repositories/settings_repository.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -14,6 +15,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
 
+  final SettingsRepository _settingsRepository = SettingsRepository();
+
   bool isLoading = true;
   bool isSaving = false;
 
@@ -25,7 +28,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> loadProfile() async {
     try {
-      final user = await ApiService.getProfile();
+      final user = await _settingsRepository.getProfile();
 
       setState(() {
         nameController.text = user['name'] ?? '';
@@ -47,7 +50,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => isSaving = true);
 
     try {
-      await ApiService.updateProfile(
+      await _settingsRepository.updateProfile(
         nameController.text.trim(),
         emailController.text.trim(),
       );

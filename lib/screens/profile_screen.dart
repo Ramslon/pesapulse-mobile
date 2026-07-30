@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../services/api_services.dart';
 import '../services/notification_service.dart';
-import '../services/settings_service.dart';
+import '../repositories/settings_repository.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +18,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController nameController = TextEditingController();
 
   final TextEditingController emailController = TextEditingController();
+
+  final SettingsRepository _settingsRepository = SettingsRepository();
 
   bool isLoading = false;
 
@@ -47,7 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       isLoading = true;
     });
     try {
-      final response = await ApiService.updateProfile(
+      final response = await _settingsRepository.updateProfile(
         nameController.text.trim(),
         emailController.text.trim(),
       );
@@ -75,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> loadProfile() async {
     try {
-      final profile = await ApiService.getProfile();
+      final profile = await _settingsRepository.getProfile();
 
       nameController.text = profile['name'] ?? '';
 
@@ -90,9 +91,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> loadSettings() async {
+    final repo = SettingsRepository();
     try {
-      final prefs = await ApiService.getUserPreferences();
-
+      final prefs = await repo.getPreferences();
       if (!mounted) return;
 
       setState(() {
@@ -101,33 +102,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         weeklySummary = prefs.weeklySummary;
       });
     } catch (e) {
-      // fallback to local storage
-
-      dailyReminder = await SettingsService.getDailyReminder();
-      expenseAlerts = await SettingsService.getExpenseAlerts();
-      weeklySummary = await SettingsService.getWeeklySummary();
-
-      if (!mounted) return;
-      setState(() {});
+      debugPrint(e.toString());
     }
   }
 
   Future<void> loadDashboardStats() async {
     try {
-      final goalsAnalytics = await ApiService.getGoalAnalytics();
-
-      final expenses = await ApiService.getExpenses();
-
-      final budgetSummary = await ApiService.getBudgetSummary();
+      final stats = await _settingsRepository.getDashboardStatistics(
+        forceRefresh: true,
+      );
 
       setState(() {
-        totalGoals = goalsAnalytics['total_goals'] ?? 0;
-
-        completedGoals = goalsAnalytics['completed_goals'] ?? 0;
-
-        totalExpenses = (expenses['data'] as List).length;
-
-        totalBudgets = budgetSummary['budget'] != null ? 1 : 0;
+        totalGoals = stats["totalGoals"];
+        completedGoals = stats["completedGoals"];
+        totalExpenses = stats["totalExpenses"];
+        totalBudgets = stats["totalBudgets"];
       });
     } catch (e) {
       debugPrint('Stats Error: $e');
@@ -294,13 +283,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         dailyReminder = value;
                       });
 
-                      await SettingsService.setDailyReminder(value);
+                      final repo = SettingsRepository();
 
-                      await ApiService.updatePreferences({
-                        'daily_reminder': value,
-                        'expense_alerts': expenseAlerts,
-                        'weekly_summary': weeklySummary,
-                      });
+                      await repo.updatePreferencesOnline(
+                        dailyReminder: value,
+                        expenseAlerts: expenseAlerts,
+                        weeklySummary: weeklySummary,
+                      );
 
                       NotificationService.showNotification(
                         title: 'Daily Reminder',
@@ -323,13 +312,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       setState(() {
                         expenseAlerts = value;
                       });
-                      await SettingsService.setExpenseAlerts(value);
+                      final repo = SettingsRepository();
 
-                      await ApiService.updatePreferences({
-                        'daily_reminder': dailyReminder,
-                        'expense_alerts': value,
-                        'weekly_summary': weeklySummary,
-                      });
+                      await repo.updatePreferencesOnline(
+                        dailyReminder: dailyReminder,
+                        expenseAlerts: value,
+                        weeklySummary: weeklySummary,
+                      );
 
                       NotificationService.showNotification(
                         title: 'Expense Alerts',
@@ -352,13 +341,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       setState(() {
                         weeklySummary = value;
                       });
-                      await SettingsService.setWeeklySummary(value);
 
-                      await ApiService.updatePreferences({
-                        'daily_reminder': dailyReminder,
-                        'expense_alerts': expenseAlerts,
-                        'weekly_summary': value,
-                      });
+                      final repo = SettingsRepository();
+
+                      await repo.updatePreferencesOnline(
+                        dailyReminder: dailyReminder,
+                        expenseAlerts: expenseAlerts,
+                        weeklySummary: value,
+                      );
 
                       NotificationService.showNotification(
                         title: 'Weekly Summary',

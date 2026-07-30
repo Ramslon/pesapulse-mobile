@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 import 'expense_list_content.dart';
 
-import '../services/settings_service.dart';
-import '../services/api_services.dart';
+import '../repositories/settings_repository.dart';
+import '../repositories/financial_insights_repository.dart';
+
 import '../providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -23,6 +24,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
+
+  final FinancialInsightsRepository _financialInsightsRepository =
+      FinancialInsightsRepository();
 
   final List<Widget> screens = const [
     DashboardScreen(),
@@ -130,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _syncPreferences() async {
     try {
-      await SettingsService.syncFromBackend();
+      await SettingsRepository().syncPreferencesFromBackend();
     } catch (e) {
       debugPrint("Settings sync failed: $e");
     }
@@ -146,13 +150,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadBudgetStatus() async {
-    final insights = await ApiService.getFinancialInsights();
+    try {
+      final insights = await _financialInsightsRepository.getInsights();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      budgetStatus = insights['budget_status'] ?? 'healthy';
-    });
+      setState(() {
+        budgetStatus = insights["budget_status"] ?? "healthy";
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        budgetStatus = "healthy";
+      });
+    }
   }
 
   List<NavigationDestination> get _navigationDestinations => [

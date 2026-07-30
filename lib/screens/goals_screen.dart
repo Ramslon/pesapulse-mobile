@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
-import '../services/api_services.dart';
+
 import '../services/notification_service.dart';
 import '../services/sync_events.dart';
 
@@ -1504,18 +1504,11 @@ class _GoalsScreenState extends State<GoalsScreen>
                                           final connectivity = context
                                               .read<ConnectivityProvider>();
 
-                                          if (connectivity.isOnline) {
-                                            await ApiService.archiveGoal(
-                                              goal['id'],
-                                            );
-
-                                            // Update SQLite immediately
-                                            await goalsRepository
-                                                .archiveGoalOnline(goal['id']);
-                                          } else {
-                                            await goalsRepository
-                                                .archiveGoalOffline(goal['id']);
-                                          }
+                                          await goalsRepository.archiveGoal(
+                                            goal["id"], // local id
+                                            serverGoalId: goal["server_id"],
+                                            isOnline: connectivity.isOnline,
+                                          );
 
                                           _forecastCache.remove(goal['id']);
                                           _insightCache.remove(goal['id']);

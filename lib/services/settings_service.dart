@@ -1,92 +1,107 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
+
+import '../database/database_helper.dart';
 import 'api_services.dart';
 
 class SettingsService {
+  static final DatabaseHelper _db = DatabaseHelper.instance;
+
+  static Future<void> setValue(String key, String value) async {
+    final database = await _db.database;
+
+    await database.insert("settings", {
+      "key": key,
+      "value": value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  static Future<String?> getValue(String key) async {
+    final database = await _db.database;
+
+    final rows = await database.query(
+      "settings",
+      where: "key=?",
+      whereArgs: [key],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    return rows.first["value"] as String?;
+  }
+
   // DAILY REMINDER
   static Future<void> setDailyReminder(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setBool('dailyReminder', value);
+    await setValue("dailyReminder", value.toString());
   }
 
   static Future<bool> getDailyReminder() async {
-    final prefs = await SharedPreferences.getInstance();
+    final value = await getValue("dailyReminder");
 
-    return prefs.getBool('dailyReminder') ?? true;
+    return value == null ? true : value == "true";
   }
 
   // EXPENSE ALERTS
   static Future<void> setExpenseAlerts(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setBool('expenseAlerts', value);
+    await setValue("expenseAlerts", value.toString());
   }
 
   static Future<bool> getExpenseAlerts() async {
-    final prefs = await SharedPreferences.getInstance();
+    final value = await getValue("expenseAlerts");
 
-    return prefs.getBool('expenseAlerts') ?? true;
+    return value == null ? true : value == "true";
   }
 
   // WEEKLY SUMMARY
   static Future<void> setWeeklySummary(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setBool('weeklySummary', value);
+    await setValue("weeklySummary", value.toString());
   }
 
   static Future<bool> getWeeklySummary() async {
-    final prefs = await SharedPreferences.getInstance();
+    final value = await getValue("weeklySummary");
 
-    return prefs.getBool('weeklySummary') ?? false;
+    return value == null ? false : value == "true";
   }
 
   static Future<void> syncFromBackend() async {
-    final prefs = await ApiService.getPreferences();
+    final preferences = await ApiService.getPreferences();
 
-    await setDailyReminder(prefs['daily_reminder'] ?? false);
+    await setDailyReminder(preferences["daily_reminder"] ?? false);
 
-    await setExpenseAlerts(prefs['expense_alerts'] ?? false);
+    await setExpenseAlerts(preferences["expense_alerts"] ?? false);
 
-    await setWeeklySummary(prefs['weekly_summary'] ?? false);
+    await setWeeklySummary(preferences["weekly_summary"] ?? false);
   }
 
-  static const String lastSyncKey = "last_sync";
-
   static Future<void> saveLastSync(DateTime time) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setString(lastSyncKey, time.toIso8601String());
+    await setValue("last_sync", time.toIso8601String());
   }
 
   static Future<DateTime?> getLastSync() async {
-    final prefs = await SharedPreferences.getInstance();
+    final value = await getValue("last_sync");
 
-    final value = prefs.getString(lastSyncKey);
-
-    if (value == null) return null;
+    if (value == null) {
+      return null;
+    }
 
     return DateTime.tryParse(value);
   }
-
   //  PROFILE
 
   static Future<void> saveProfile({
     required String name,
     required String email,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setString("profile_name", name);
-    await prefs.setString("profile_email", email);
+    await setValue("profile_name", name);
+    await setValue("profile_email", email);
   }
 
   static Future<Map<String, dynamic>> getProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-
     return {
-      "name": prefs.getString("profile_name") ?? "",
-      "email": prefs.getString("profile_email") ?? "",
+      "name": await getValue("profile_name") ?? "",
+      "email": await getValue("profile_email") ?? "",
     };
   }
 
@@ -98,22 +113,28 @@ class SettingsService {
     required int totalExpenses,
     required int totalBudgets,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
+    await setValue("dashboard_total_goals", totalGoals.toString());
 
-    await prefs.setInt("dashboard_total_goals", totalGoals);
-    await prefs.setInt("dashboard_completed_goals", completedGoals);
-    await prefs.setInt("dashboard_total_expenses", totalExpenses);
-    await prefs.setInt("dashboard_total_budgets", totalBudgets);
+    await setValue("dashboard_completed_goals", completedGoals.toString());
+
+    await setValue("dashboard_total_expenses", totalExpenses.toString());
+
+    await setValue("dashboard_total_budgets", totalBudgets.toString());
   }
 
   static Future<Map<String, int>> getDashboardStats() async {
-    final prefs = await SharedPreferences.getInstance();
-
     return {
-      "totalGoals": prefs.getInt("dashboard_total_goals") ?? 0,
-      "completedGoals": prefs.getInt("dashboard_completed_goals") ?? 0,
-      "totalExpenses": prefs.getInt("dashboard_total_expenses") ?? 0,
-      "totalBudgets": prefs.getInt("dashboard_total_budgets") ?? 0,
+      "totalGoals":
+          int.tryParse(await getValue("dashboard_total_goals") ?? "0") ?? 0,
+
+      "completedGoals":
+          int.tryParse(await getValue("dashboard_completed_goals") ?? "0") ?? 0,
+
+      "totalExpenses":
+          int.tryParse(await getValue("dashboard_total_expenses") ?? "0") ?? 0,
+
+      "totalBudgets":
+          int.tryParse(await getValue("dashboard_total_budgets") ?? "0") ?? 0,
     };
   }
 }

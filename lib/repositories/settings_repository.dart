@@ -1,15 +1,18 @@
 import 'dart:convert';
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
+import 'package:sqflite/sqflite.dart';
+
 import '../models/user_preferences.dart';
 import '../services/api_services.dart';
 import '../services/settings_service.dart';
-import '../database/database_helper.dart';
 
-class SettingsRepository {
+class SettingsRepository extends BaseRepository {
   Map<String, dynamic>? _profileCache;
 
   UserPreferences? _preferencesCache;
 
   Map<String, dynamic>? _dashboardCache;
+
   // PROFILE
 
   Future<Map<String, dynamic>> getProfile({bool forceRefresh = false}) async {
@@ -20,16 +23,17 @@ class SettingsRepository {
     try {
       final profile = await ApiService.getProfile();
 
-      await SettingsService.saveProfile(
-        name: profile["name"] ?? "",
-        email: profile["email"] ?? "",
-      );
+      await _saveSetting("profile_name", profile["name"] ?? "");
+      await _saveSetting("profile_email", profile["email"] ?? "");
 
       _profileCache = profile;
 
       return profile;
     } catch (_) {
-      final local = await SettingsService.getProfile();
+      final name = await _getSetting("profile_name") ?? "";
+      final email = await _getSetting("profile_email") ?? "";
+
+      final local = {"name": name, "email": email};
 
       _profileCache = local;
 
@@ -43,17 +47,15 @@ class SettingsRepository {
     if (response["user"] != null) {
       final user = response["user"];
 
-      await SettingsService.saveProfile(
-        name: user["name"],
-        email: user["email"],
-      );
+      await _saveSetting("profile_name", user["name"] ?? "");
+
+      await _saveSetting("profile_email", user["email"] ?? "");
 
       _profileCache = {"name": user["name"], "email": user["email"]};
     }
 
     return response;
   }
-
   // USER PREFERENCES
 
   Future<UserPreferences> getPreferences() async {
@@ -61,12 +63,18 @@ class SettingsRepository {
       return _preferencesCache!;
     }
 
+    final dailyReminder = (await _getSetting("daily_reminder")) == "true";
+
+    final expenseAlerts = (await _getSetting("expense_alerts")) == "true";
+
+    final weeklySummary = (await _getSetting("weekly_summary")) == "true";
+
     final prefs = UserPreferences(
-      darkMode: false, // until Dark Mode is added
-      notificationsEnabled: true, // until Notification toggle is added
-      dailyReminder: await SettingsService.getDailyReminder(),
-      expenseAlerts: await SettingsService.getExpenseAlerts(),
-      weeklySummary: await SettingsService.getWeeklySummary(),
+      darkMode: false,
+      notificationsEnabled: true,
+      dailyReminder: dailyReminder,
+      expenseAlerts: expenseAlerts,
+      weeklySummary: weeklySummary,
     );
 
     _preferencesCache = prefs;
@@ -83,11 +91,13 @@ class SettingsRepository {
     required bool expenseAlerts,
     required bool weeklySummary,
   }) async {
-    await SettingsService.setDailyReminder(dailyReminder);
+    final ownerId = await this.ownerId;
 
-    await SettingsService.setExpenseAlerts(expenseAlerts);
+    await _saveSetting("daily_reminder", dailyReminder.toString());
 
-    await SettingsService.setWeeklySummary(weeklySummary);
+    await _saveSetting("expense_alerts", expenseAlerts.toString());
+
+    await _saveSetting("weekly_summary", weeklySummary.toString());
 
     _preferencesCache = UserPreferences(
       darkMode: false,
@@ -97,9 +107,10 @@ class SettingsRepository {
       weeklySummary: weeklySummary,
     );
 
-    final db = await DatabaseHelper.instance.database;
+    final database = await db.database;
 
-    await db.insert("sync_queue", {
+    await database.insert("sync_queue", {
+      "owner_id": ownerId,
       "table_name": "preferences",
       "operation": "update",
       "record_id": 0,
@@ -119,17 +130,15 @@ class SettingsRepository {
   }) async {
     await ApiService.updatePreferences({
       "daily_reminder": dailyReminder,
-
       "expense_alerts": expenseAlerts,
-
       "weekly_summary": weeklySummary,
     });
 
-    await SettingsService.setDailyReminder(dailyReminder);
+    await _saveSetting("daily_reminder", dailyReminder.toString());
 
-    await SettingsService.setExpenseAlerts(expenseAlerts);
+    await _saveSetting("expense_alerts", expenseAlerts.toString());
 
-    await SettingsService.setWeeklySummary(weeklySummary);
+    await _saveSetting("weekly_summary", weeklySummary.toString());
 
     _preferencesCache = UserPreferences(
       darkMode: false,
@@ -163,22 +172,26 @@ class SettingsRepository {
         "totalBudgets": budgetSummary["budget"] != null ? 1 : 0,
       };
 
-      await SettingsService.saveDashboardStats(
-        totalGoals: stats["totalGoals"]!,
-        completedGoals: stats["completedGoals"]!,
-        totalExpenses: stats["totalExpenses"]!,
-        totalBudgets: stats["totalBudgets"]!,
-      );
+      await _saveSetting("dashboard_stats", jsonEncode(stats));
 
       _dashboardCache = stats;
 
       return stats;
     } catch (_) {
-      final stats = await SettingsService.getDashboardStats();
+      final cached = await _getSetting("dashboard_stats");
 
-      _dashboardCache = stats;
+      if (cached != null) {
+        _dashboardCache = jsonDecode(cached) as Map<String, dynamic>;
 
-      return stats;
+        return _dashboardCache!;
+      }
+
+      return {
+        "totalGoals": 0,
+        "completedGoals": 0,
+        "totalExpenses": 0,
+        "totalBudgets": 0,
+      };
     }
   }
 
@@ -198,25 +211,87 @@ class SettingsRepository {
   // LOCAL SETTINGS
   // ==========================
 
-  Future<bool> getDailyReminder() => SettingsService.getDailyReminder();
+  Future<bool> getDailyReminder() async =>
+      (await _getSetting("daily_reminder")) == "true";
 
-  Future<bool> getExpenseAlerts() => SettingsService.getExpenseAlerts();
+  Future<bool> getExpenseAlerts() async =>
+      (await _getSetting("expense_alerts")) == "true";
 
-  Future<bool> getWeeklySummary() => SettingsService.getWeeklySummary();
+  Future<bool> getWeeklySummary() async =>
+      (await _getSetting("weekly_summary")) == "true";
 
-  Future<void> setDailyReminder(bool value) =>
-      SettingsService.setDailyReminder(value);
+  Future<void> setDailyReminder(bool value) async =>
+      _saveSetting("daily_reminder", value.toString());
 
-  Future<void> setExpenseAlerts(bool value) =>
-      SettingsService.setExpenseAlerts(value);
+  Future<void> setExpenseAlerts(bool value) async =>
+      _saveSetting("expense_alerts", value.toString());
 
-  Future<void> setWeeklySummary(bool value) =>
-      SettingsService.setWeeklySummary(value);
+  Future<void> setWeeklySummary(bool value) async =>
+      _saveSetting("weekly_summary", value.toString());
 
-  Future<DateTime?> getLastSync() => SettingsService.getLastSync();
+  Future<DateTime?> getLastSync() async {
+    final value = await _getSetting("last_sync");
 
-  Future<void> saveLastSync(DateTime date) =>
-      SettingsService.saveLastSync(date);
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(value);
+  }
+
+  Future<void> saveLastSync(DateTime date) async {
+    await _saveSetting("last_sync", date.toIso8601String());
+  }
+
+  Future<void> _saveSetting(String key, String value) async {
+    final database = await db.database;
+
+    await database.insert("settings", {
+      "key": key,
+      "value": value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<String?> _getSetting(String key) async {
+    final database = await db.database;
+
+    final result = await database.query(
+      "settings",
+      where: "key=?",
+      whereArgs: [key],
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      return null;
+    }
+
+    return result.first["value"] as String?;
+  }
+
+  Future<void> syncPreferencesFromBackend() async {
+    final preferences = await ApiService.getPreferences();
+
+    await SettingsService.setDailyReminder(
+      preferences["daily_reminder"] ?? false,
+    );
+
+    await SettingsService.setExpenseAlerts(
+      preferences["expense_alerts"] ?? false,
+    );
+
+    await SettingsService.setWeeklySummary(
+      preferences["weekly_summary"] ?? false,
+    );
+
+    _preferencesCache = UserPreferences(
+      darkMode: false,
+      notificationsEnabled: true,
+      dailyReminder: preferences["daily_reminder"] ?? false,
+      expenseAlerts: preferences["expense_alerts"] ?? false,
+      weeklySummary: preferences["weekly_summary"] ?? false,
+    );
+  }
 
   void clearCache() {
     _profileCache = null;

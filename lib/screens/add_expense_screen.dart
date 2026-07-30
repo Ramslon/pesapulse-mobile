@@ -85,7 +85,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
     final repository = ExpenseRepository();
 
-    await repository.addExpense(
+    await repository.createExpense(
       title: title,
       amount: amount,
       category: category,

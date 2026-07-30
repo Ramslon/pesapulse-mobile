@@ -159,6 +159,93 @@ class GoalsRepository extends BaseRepository {
     });
   }
 
+  Future<void> createGoalOnline({
+    required String title,
+    required double targetAmount,
+    String? targetDate,
+  }) async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final goal = await ApiService.createGoal(
+      title: title,
+      targetAmount: targetAmount,
+      targetDate: targetDate,
+    );
+
+    await database.insert("goals", {
+      "server_id": goal["id"],
+      "owner_id": ownerId,
+      "title": goal["title"],
+      "target_amount": goal["target_amount"],
+      "target_date": goal["target_date"],
+      "saved_amount": goal["saved_amount"] ?? 0,
+      "achievement": goal["achievement"] ?? "",
+      "completed_percentage": goal["completed_percentage"] ?? 0,
+      "created_at": goal["created_at"],
+      "completed_at": goal["completed_at"],
+      "updated_at": goal["updated_at"],
+      "is_synced": 1,
+      "is_deleted": 0,
+      "is_archived": 0,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> syncOfflineGoal({
+    required int localId,
+    required String title,
+    required double targetAmount,
+    String? targetDate,
+  }) async {
+    final database = await db.database;
+
+    final goal = await ApiService.createGoal(
+      title: title,
+      targetAmount: targetAmount,
+      targetDate: targetDate,
+    );
+
+    await database.update(
+      "goals",
+      {
+        "server_id": goal["id"],
+        "title": goal["title"],
+        "target_amount": goal["target_amount"],
+        "target_date": goal["target_date"],
+        "saved_amount": goal["saved_amount"],
+        "achievement": goal["achievement"] ?? "",
+        "completed_percentage": goal["completed_percentage"] ?? 0,
+        "created_at": goal["created_at"],
+        "completed_at": goal["completed_at"],
+        "updated_at": goal["updated_at"],
+        "is_synced": 1,
+      },
+      where: "id=?",
+      whereArgs: [localId],
+    );
+  }
+
+  Future<void> createGoal({
+    required String title,
+    required double targetAmount,
+    String? targetDate,
+    required bool isOnline,
+  }) async {
+    if (isOnline) {
+      await createGoalOnline(
+        title: title,
+        targetAmount: targetAmount,
+        targetDate: targetDate,
+      );
+    } else {
+      await createGoalOffline(
+        title: title,
+        targetAmount: targetAmount,
+        targetDate: targetDate,
+      );
+    }
+  }
+
   Future<void> updateGoalProgressOffline(int goalId, double amount) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
@@ -474,5 +561,17 @@ class GoalsRepository extends BaseRepository {
       where: "server_id=? AND owner_id=?",
       whereArgs: [serverGoalId, ownerId],
     );
+  }
+
+  Future<void> archiveGoal(
+    int localGoalId, {
+    int? serverGoalId,
+    required bool isOnline,
+  }) async {
+    if (isOnline && serverGoalId != null) {
+      await archiveGoalOnline(serverGoalId);
+    } else {
+      await archiveGoalOffline(localGoalId);
+    }
   }
 }

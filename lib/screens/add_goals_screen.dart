@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/api_services.dart';
 
 import '../services/sync_events.dart';
 
@@ -55,17 +54,11 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
       final connectivity = context.read<ConnectivityProvider>();
 
-      if (connectivity.isOnline) {
-        await ApiService.createGoal(
-          title: titleController.text.trim(),
-          targetAmount: amount,
-        );
-      } else {
-        await goalsRepository.createGoalOffline(
-          title: titleController.text.trim(),
-          targetAmount: amount,
-        );
-      }
+      await goalsRepository.createGoal(
+        title: titleController.text.trim(),
+        targetAmount: amount,
+        isOnline: connectivity.isOnline,
+      );
       SyncEvents.instance.notifyGoalsUpdated();
 
       if (!mounted) return;

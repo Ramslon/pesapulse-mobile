@@ -1,16 +1,14 @@
 import 'dart:convert';
 
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../database/database_helper.dart';
 import '../services/api_services.dart';
 
-class FinancialInsightsRepository {
-  final DatabaseHelper db = DatabaseHelper.instance;
-
-  Map<String, dynamic> _toLocal(Map<String, dynamic> insights) {
+class FinancialInsightsRepository extends BaseRepository {
+  Map<String, dynamic> _toLocal(Map<String, dynamic> insights, String ownerId) {
     return {
-      "id": 1,
+      "owner_id": ownerId,
 
       "budget_status": insights["budget_status"],
 
@@ -26,13 +24,14 @@ class FinancialInsightsRepository {
 
   Future<Map<String, dynamic>> getInsights() async {
     final database = await db.database;
+    final ownerId = await this.ownerId;
 
     try {
       final insights = await ApiService.getFinancialInsights();
 
       await database.insert(
         "financial_insights_cache",
-        _toLocal(insights),
+        _toLocal(insights, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
@@ -40,7 +39,8 @@ class FinancialInsightsRepository {
     } catch (_) {
       final cached = await database.query(
         "financial_insights_cache",
-        where: "id=1",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
       );
 
       if (cached.isEmpty) {
