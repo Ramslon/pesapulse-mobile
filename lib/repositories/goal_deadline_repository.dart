@@ -43,7 +43,7 @@ class GoalDeadlineRepository extends BaseRepository {
       "goals",
       where: """
       owner_id = ?
-      is_deleted = 0
+      AND is_deleted = 0
       AND is_archived = 0
       AND target_date IS NOT NULL
     """,

@@ -11,6 +11,7 @@ import '../widgets/empty_state.dart';
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
 import '../services/guest_dialog_service.dart';
+import '../services/session_service.dart';
 import '../repositories/analytics_repository.dart';
 
 import 'dart:io';
@@ -64,7 +65,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   @override
   void initState() {
     super.initState();
-
+    loadSessionState();
     _network = context.read<ConnectivityProvider>();
 
     _network.addListener(_onConnectivityChanged);
@@ -76,6 +77,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshAnalytics();
     });
+  }
+
+  Future<void> loadSessionState() async {
+    isGuest = await SessionService.isGuest();
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _onConnectivityChanged() {
@@ -958,92 +967,128 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 ),
               ),
               const SizedBox(height: cardSpacing),
+              if (isGuest)
+                Card(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () async {
+                      await GuestDialogService.requireAccount(context);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Colors.orange.shade100,
+                            child: const Icon(
+                              Icons.picture_as_pdf,
+                              color: Colors.orange,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
 
-              FadeSlideAnimation(
-                delay: 400,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.picture_as_pdf),
-                        label: const Text('Export PDF'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                        ),
-
-                        onPressed: () async {
-                          if (isGuest) {
-                            await GuestDialogService.show(context);
-                            return;
-                          }
-                          final file = await ExportService.exportExpensesPdf(
-                            expenses,
-                          );
-                          await ReportHistoryService.saveReport(
-                            name: file.path.split('/').last,
-                            path: file.path,
-                          );
-
-                          await loadReports();
-
-                          await ExportService.shareFile(file);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'PDF report exported successfully',
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  "Export Reports",
+                                  style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                              ),
-                            );
-                          }
-                        },
+                                SizedBox(height: 4),
+                                Text(
+                                  "Create an account to export PDF and CSV reports.",
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const Icon(Icons.arrow_forward_ios, size: 18),
+                        ],
                       ),
                     ),
+                  ),
+                )
+              else
+                FadeSlideAnimation(
+                  delay: 400,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.picture_as_pdf),
+                          label: const Text('Export PDF'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
 
-                    const SizedBox(width: 12),
-
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.table_chart),
-                        label: const Text('Export CSV'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
-                          foregroundColor: Colors.white,
-                        ),
-
-                        onPressed: () async {
-                          if (isGuest) {
-                            await GuestDialogService.show(context);
-                            return;
-                          }
-                          final file = await ExportService.exportExpensesCsv(
-                            expenses,
-                          );
-
-                          await ReportHistoryService.saveReport(
-                            name: file.path.split('/').last,
-                            path: file.path,
-                          );
-                          await loadReports();
-
-                          await ExportService.shareFile(file);
-
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'CSV report exported successfully',
-                                ),
-                              ),
+                          onPressed: () async {
+                            await GuestDialogService.requireAccount(context);
+                            final file = await ExportService.exportExpensesPdf(
+                              expenses,
                             );
-                          }
-                        },
+                            await ReportHistoryService.saveReport(
+                              name: file.path.split('/').last,
+                              path: file.path,
+                            );
+
+                            await loadReports();
+
+                            await ExportService.shareFile(file);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'PDF report exported successfully',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.table_chart),
+                          label: const Text('Export CSV'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                          ),
+
+                          onPressed: () async {
+                            await GuestDialogService.requireAccount(context);
+                            final file = await ExportService.exportExpensesCsv(
+                              expenses,
+                            );
+
+                            await ReportHistoryService.saveReport(
+                              name: file.path.split('/').last,
+                              path: file.path,
+                            );
+                            await loadReports();
+
+                            await ExportService.shareFile(file);
+
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'CSV report exported successfully',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
               SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
 

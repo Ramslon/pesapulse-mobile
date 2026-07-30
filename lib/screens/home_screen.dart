@@ -14,6 +14,7 @@ import 'analytics_screen.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
 import 'package:flutter/services.dart';
+import '../services/session_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -133,6 +134,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _syncPreferences() async {
+    if (await SessionService.isGuest()) {
+      return;
+    }
+
     try {
       await SettingsRepository().syncPreferencesFromBackend();
     } catch (e) {

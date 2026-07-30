@@ -100,8 +100,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> loadSettings() async {
     final repo = SettingsRepository();
+
     try {
       final prefs = await repo.getPreferences();
+
       if (!mounted) return;
 
       setState(() {

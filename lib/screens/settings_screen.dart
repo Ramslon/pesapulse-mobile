@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/screens/register_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +16,6 @@ import '../screens/change_password_screen.dart';
 import '../providers/connectivity_provider.dart';
 import '../services/sync_service.dart';
 import '../services/sync_events.dart';
-import '../services/guest_dialog_service.dart';
 
 import '../repositories/settings_repository.dart';
 
@@ -64,18 +64,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> loadProfile() async {
+    if (await SessionService.isGuest()) {
+      if (!mounted) return;
+
+      setState(() {
+        userName = "Guest Account";
+        userEmail = "Login to sync your data";
+        isGuest = true;
+        isLoading = false;
+      });
+
+      return;
+    }
+
     try {
       final user = await settingsRepository.getProfile();
 
       if (!mounted) return;
 
       setState(() {
-        userName = user['name'] ?? '';
-        userEmail = user['email'] ?? '';
-
-        isGuest =
-            (user["is_guest"] == true) || userEmail == "guest@pesapulse.app";
-
+        userName = user["name"] ?? "";
+        userEmail = user["email"] ?? "";
         isLoading = false;
       });
     } catch (e) {
@@ -103,14 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         weeklySummary = prefs.weeklySummary;
       });
     } catch (e) {
-      // fallback to local storage
-
-      dailyReminder = await settingsRepository.getDailyReminder();
-      expenseAlerts = await settingsRepository.getExpenseAlerts();
-      weeklySummary = await settingsRepository.getWeeklySummary();
-
-      if (!mounted) return;
-      setState(() {});
+      debugPrint(e.toString());
     }
   }
 
@@ -511,11 +513,6 @@ https://github.com/ramslon/PesaPulse
                             size: 18,
                           ),
                           onTap: () async {
-                            if (isGuest) {
-                              await GuestDialogService.show(context);
-                              return;
-                            }
-
                             final updated = await Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -530,14 +527,10 @@ https://github.com/ramslon/PesaPulse
                         )
                       else
                         ListTile(
-                          contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
                             radius: 20,
-                            backgroundColor: Colors.orange.shade100,
-                            child: const Icon(
-                              Icons.person_add_alt_1,
-                              color: Colors.orange,
-                            ),
+                            backgroundColor: Colors.orange.shade500,
+                            child: const Icon(Icons.person_add_alt_1),
                           ),
                           title: const Text("Create Account"),
                           subtitle: const Text("Sync your data across devices"),
@@ -546,9 +539,35 @@ https://github.com/ramslon/PesaPulse
                             size: 18,
                           ),
                           onTap: () {
-                            Navigator.pushNamed(context, "/register");
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterScreen(),
+                              ),
+                            );
                           },
                         ),
+
+                      const Divider(),
+
+                      ListTile(
+                        leading: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.blue.shade100,
+                          child: const Icon(Icons.login, color: Colors.blue),
+                        ),
+                        title: const Text("Sign In"),
+                        subtitle: const Text("Already have an account?"),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -645,34 +664,34 @@ https://github.com/ramslon/PesaPulse
               const SizedBox(height: 30),
               _buildSectionTitle('Security', Icons.lock),
 
-              Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.orange.shade100,
-                    child: const Icon(Icons.lock_outline, color: Colors.orange),
-                  ),
-
-                  title: const Text(
-                    "Change Password",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-
-                  subtitle: const Text(
-                    "Update your account password securely.",
-                  ),
-
-                  trailing: const Icon(Icons.chevron_right),
-
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ChangePasswordScreen(),
+              if (!isGuest)
+                Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.orange.shade100,
+                      child: const Icon(
+                        Icons.lock_outline,
+                        color: Colors.orange,
                       ),
-                    );
-                  },
+                    ),
+                    title: const Text(
+                      "Change Password",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text(
+                      "Update your account password securely.",
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ChangePasswordScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
 
               const Divider(height: 1),
 
@@ -871,138 +890,174 @@ https://github.com/ramslon/PesaPulse
                   ],
                 ),
               ),
-
               const SizedBox(height: 30),
-
               _buildSectionTitle("Sync & Offline", Icons.sync),
 
-              Consumer<ConnectivityProvider>(
-                builder: (context, network, child) {
-                  return Card(
-                    child: Column(
+              if (isGuest)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Row(
                       children: [
-                        ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: network.isOnline
-                                ? Colors.green.shade100
-                                : Colors.orange.shade100,
-                            child: Icon(
-                              network.isOnline
-                                  ? Icons.cloud_done
-                                  : Icons.cloud_off,
-                              color: network.isOnline
-                                  ? Colors.green
-                                  : Colors.orange,
-                            ),
-                          ),
-
-                          title: Text(
-                            network.isOnline ? "Online" : "Offline",
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-
-                          subtitle: Text(
-                            network.isOnline
-                                ? "Your data is syncing normally."
-                                : "Changes will sync automatically when you're online.",
+                        CircleAvatar(
+                          backgroundColor: Colors.orange.shade100,
+                          child: const Icon(
+                            Icons.cloud_off,
+                            color: Colors.orange,
                           ),
                         ),
-
-                        const Divider(height: 1),
-
-                        ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.blue.shade100,
-                            child: const Icon(Icons.sync, color: Colors.blue),
-                          ),
-
-                          title: const Text(
-                            "Pending Changes",
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-
-                          subtitle: Text(
-                            "${network.pendingChanges} item(s) waiting to sync",
-                          ),
-                        ),
-
-                        const Divider(height: 1),
-
-                        ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.purple.shade100,
-                            child: const Icon(
-                              Icons.schedule,
-                              color: Colors.purple,
-                            ),
-                          ),
-
-                          title: const Text(
-                            "Last Sync",
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-
-                          subtitle: Text(formatLastSync(lastSyncTime)),
-                        ),
-
-                        const Divider(height: 1),
-
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              icon: network.isSyncing
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Icon(Icons.sync),
-                              label: Text(
-                                network.isSyncing ? "Syncing..." : "Sync Now",
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                "Cloud Sync Unavailable",
+                                style: TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              onPressed: network.isOnline
-                                  ? () async {
-                                      network.setSyncing(true);
-
-                                      try {
-                                        await SyncService.instance
-                                            .syncPendingOperations();
-
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              "Sync completed successfully",
-                                            ),
-                                          ),
-                                        );
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text("Sync failed: $e"),
-                                          ),
-                                        );
-                                      } finally {
-                                        network.setSyncing(false);
-                                      }
-                                    }
-                                  : null,
-                            ),
+                              SizedBox(height: 4),
+                              Text(
+                                "You're using PesaPulse as a guest. "
+                                "Create an account to enable cloud sync, automatic backups, "
+                                "and access your data across devices.",
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  );
-                },
-              ),
+                  ),
+                )
+              else
+                Consumer<ConnectivityProvider>(
+                  builder: (context, network, child) {
+                    return Card(
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: network.isOnline
+                                  ? Colors.green.shade100
+                                  : Colors.orange.shade100,
+                              child: Icon(
+                                network.isOnline
+                                    ? Icons.cloud_done
+                                    : Icons.cloud_off,
+                                color: network.isOnline
+                                    ? Colors.green
+                                    : Colors.orange,
+                              ),
+                            ),
+
+                            title: Text(
+                              network.isOnline ? "Online" : "Offline",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+
+                            subtitle: Text(
+                              network.isOnline
+                                  ? "Your data is syncing normally."
+                                  : "Changes will sync automatically when you're online.",
+                            ),
+                          ),
+
+                          const Divider(height: 1),
+
+                          ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.blue.shade100,
+                              child: const Icon(Icons.sync, color: Colors.blue),
+                            ),
+
+                            title: const Text(
+                              "Pending Changes",
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+
+                            subtitle: Text(
+                              "${network.pendingChanges} item(s) waiting to sync",
+                            ),
+                          ),
+
+                          const Divider(height: 1),
+
+                          ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.purple.shade100,
+                              child: const Icon(
+                                Icons.schedule,
+                                color: Colors.purple,
+                              ),
+                            ),
+
+                            title: const Text(
+                              "Last Sync",
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+
+                            subtitle: Text(formatLastSync(lastSyncTime)),
+                          ),
+
+                          const Divider(height: 1),
+
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                icon: network.isSyncing
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.sync),
+                                label: Text(
+                                  network.isSyncing ? "Syncing..." : "Sync Now",
+                                ),
+                                onPressed: network.isOnline
+                                    ? () async {
+                                        network.setSyncing(true);
+
+                                        try {
+                                          await SyncService.instance
+                                              .syncPendingOperations();
+
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                "Sync completed successfully",
+                                              ),
+                                            ),
+                                          );
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text("Sync failed: $e"),
+                                            ),
+                                          );
+                                        } finally {
+                                          network.setSyncing(false);
+                                        }
+                                      }
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
 
               const SizedBox(height: 30),
 
@@ -1350,20 +1405,12 @@ https://github.com/ramslon/PesaPulse
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
-                      "Version 2.1.0",
+                      "Version 1.0.0",
                       style: TextStyle(
                         color: Colors.green,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Text(
-                    "Designed & Developed\nwith ❤️ in Kenya",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade600, height: 1.5),
                   ),
 
                   const SizedBox(height: 16),

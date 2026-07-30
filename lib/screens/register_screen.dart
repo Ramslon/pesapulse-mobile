@@ -295,10 +295,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                               onPressed: () async {
-                                await SessionService.loginAsGuest();
-
                                 settingsRepository.clearCache();
                                 await SettingsService.clearUserSettings();
+
+                                await SessionService.loginAsGuest();
 
                                 if (!mounted) return;
 
@@ -307,7 +307,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   MaterialPageRoute(
                                     builder: (_) => const HomeScreen(),
                                   ),
-                                  (route) => false,
+                                  (route) => true,
                                 );
                               },
                             ),

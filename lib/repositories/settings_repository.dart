@@ -72,13 +72,23 @@ class SettingsRepository extends BaseRepository {
       return _preferencesCache!;
     }
 
+    if (await SessionService.isGuest()) {
+      _preferencesCache = UserPreferences(
+        dailyReminder: false,
+        expenseAlerts: false,
+        weeklySummary: false,
+        darkMode: false,
+        notificationsEnabled: true,
+      );
+
+      return _preferencesCache!;
+    }
+
     final dailyReminder = (await _getSetting("daily_reminder")) == "true";
-
     final expenseAlerts = (await _getSetting("expense_alerts")) == "true";
-
     final weeklySummary = (await _getSetting("weekly_summary")) == "true";
 
-    final prefs = UserPreferences(
+    _preferencesCache = UserPreferences(
       darkMode: false,
       notificationsEnabled: true,
       dailyReminder: dailyReminder,
@@ -86,12 +96,12 @@ class SettingsRepository extends BaseRepository {
       weeklySummary: weeklySummary,
     );
 
-    _preferencesCache = prefs;
-
-    return prefs;
+    return _preferencesCache!;
   }
 
   Future<void> updatePreferences(Map<String, dynamic> data) async {
+    if (await SessionService.isGuest()) return;
+
     await ApiService.updatePreferences(data);
   }
 
@@ -132,21 +142,13 @@ class SettingsRepository extends BaseRepository {
     });
   }
 
-  Future<void> updatePreferencesOnline({
+  Future<void> _savePreferencesLocally({
     required bool dailyReminder,
     required bool expenseAlerts,
     required bool weeklySummary,
   }) async {
-    await ApiService.updatePreferences({
-      "daily_reminder": dailyReminder,
-      "expense_alerts": expenseAlerts,
-      "weekly_summary": weeklySummary,
-    });
-
     await _saveSetting("daily_reminder", dailyReminder.toString());
-
     await _saveSetting("expense_alerts", expenseAlerts.toString());
-
     await _saveSetting("weekly_summary", weeklySummary.toString());
 
     _preferencesCache = UserPreferences(
@@ -158,11 +160,52 @@ class SettingsRepository extends BaseRepository {
     );
   }
 
+  Future<void> updatePreferencesOnline({
+    required bool dailyReminder,
+    required bool expenseAlerts,
+    required bool weeklySummary,
+  }) async {
+    // Guest users only save locally
+    if (await SessionService.isGuest()) {
+      await _savePreferencesLocally(
+        dailyReminder: dailyReminder,
+        expenseAlerts: expenseAlerts,
+        weeklySummary: weeklySummary,
+      );
+      return;
+    }
+
+    // Logged-in users sync to backend
+
+    await ApiService.updatePreferences({
+      "daily_reminder": dailyReminder,
+      "expense_alerts": expenseAlerts,
+      "weekly_summary": weeklySummary,
+    });
+
+    await _savePreferencesLocally(
+      dailyReminder: dailyReminder,
+      expenseAlerts: expenseAlerts,
+      weeklySummary: weeklySummary,
+    );
+  }
+
   // DASHBOARD
 
   Future<Map<String, dynamic>> getDashboardStatistics({
     bool forceRefresh = false,
   }) async {
+    final ownerId = await this.ownerId;
+
+    if (ownerId == "guest") {
+      return {
+        "totalGoals": 0,
+        "completedGoals": 0,
+        "totalExpenses": 0,
+        "totalBudgets": 0,
+      };
+    }
+
     if (!forceRefresh && _dashboardCache != null) {
       return _dashboardCache!;
     }
@@ -188,12 +231,10 @@ class SettingsRepository extends BaseRepository {
 
       return stats;
     } catch (_) {
-      final ownerId = await this.ownerId;
-
       final cached = await _getSetting("dashboard_stats_$ownerId");
+
       if (cached != null) {
         _dashboardCache = jsonDecode(cached) as Map<String, dynamic>;
-
         return _dashboardCache!;
       }
 
@@ -281,6 +322,9 @@ class SettingsRepository extends BaseRepository {
   }
 
   Future<void> syncPreferencesFromBackend() async {
+    if (await SessionService.isGuest()) {
+      return;
+    }
     final preferences = await ApiService.getPreferences();
 
     await SettingsService.setDailyReminder(

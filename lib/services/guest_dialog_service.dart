@@ -8,6 +8,15 @@ class GuestDialogService {
     return await SessionService.isGuest();
   }
 
+  static Future<bool> requireAccount(BuildContext context) async {
+    if (await isGuest()) {
+      await show(context);
+      return false;
+    }
+
+    return true;
+  }
+
   static Future<void> show(BuildContext context) async {
     await showDialog(
       context: context,

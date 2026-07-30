@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../database/database_helper.dart';
 import 'api_services.dart';
+import '../services/session_service.dart';
 
 class SettingsService {
   static final DatabaseHelper _db = DatabaseHelper.instance;
@@ -66,6 +67,10 @@ class SettingsService {
   }
 
   static Future<void> syncFromBackend() async {
+    if (await SessionService.isGuest()) {
+      return;
+    }
+
     final preferences = await ApiService.getPreferences();
 
     await setDailyReminder(preferences["daily_reminder"] ?? false);
@@ -107,39 +112,10 @@ class SettingsService {
 
   //  DASHBOARD
 
-  static Future<void> saveDashboardStats({
-    required int totalGoals,
-    required int completedGoals,
-    required int totalExpenses,
-    required int totalBudgets,
-  }) async {
-    await setValue("dashboard_total_goals", totalGoals.toString());
-
-    await setValue("dashboard_completed_goals", completedGoals.toString());
-
-    await setValue("dashboard_total_expenses", totalExpenses.toString());
-
-    await setValue("dashboard_total_budgets", totalBudgets.toString());
-  }
-
-  static Future<Map<String, int>> getDashboardStats() async {
-    return {
-      "totalGoals":
-          int.tryParse(await getValue("dashboard_total_goals") ?? "0") ?? 0,
-
-      "completedGoals":
-          int.tryParse(await getValue("dashboard_completed_goals") ?? "0") ?? 0,
-
-      "totalExpenses":
-          int.tryParse(await getValue("dashboard_total_expenses") ?? "0") ?? 0,
-
-      "totalBudgets":
-          int.tryParse(await getValue("dashboard_total_budgets") ?? "0") ?? 0,
-    };
-  }
-
   static Future<void> clearUserSettings() async {
     final db = await DatabaseHelper.instance.database;
+
+    final ownerId = await SessionService.currentOwnerId();
 
     await db.delete(
       "settings",
@@ -147,10 +123,10 @@ class SettingsService {
       whereArgs: [
         "profile_name",
         "profile_email",
-        "dashboard_total_goals",
-        "dashboard_completed_goals",
-        "dashboard_total_expenses",
-        "dashboard_total_budgets",
+        "dashboard_stats_$ownerId",
+        "dailyReminder",
+        "expenseAlerts",
+        "weeklySummary",
         "last_sync",
       ],
     );
