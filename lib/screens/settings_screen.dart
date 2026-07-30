@@ -1280,20 +1280,21 @@ https://github.com/ramslon/PesaPulse
 
                             if (confirm != true) return;
 
-                            await ApiService.logoutUser();
-
                             await SessionService.logout();
 
                             settingsRepository.clearCache();
 
                             if (!mounted) return;
 
-                            Navigator.pushReplacement(
+                            Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const LoginScreen(),
                               ),
+                              (route) => false,
                             );
+
+                            ApiService.logoutUser().catchError((_) {});
                           },
                         ),
                       ),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
+import 'package:pesapulse_mobile/services/session_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../models/user_preferences.dart';
@@ -14,8 +15,16 @@ class SettingsRepository extends BaseRepository {
   Map<String, dynamic>? _dashboardCache;
 
   // PROFILE
-
   Future<Map<String, dynamic>> getProfile({bool forceRefresh = false}) async {
+    // Guest users should never see another user's cached profile
+    if (await SessionService.isGuest()) {
+      final guestProfile = {"name": "Guest Account", "email": ""};
+
+      _profileCache = guestProfile;
+
+      return guestProfile;
+    }
+
     if (!forceRefresh && _profileCache != null) {
       return _profileCache!;
     }
@@ -172,14 +181,16 @@ class SettingsRepository extends BaseRepository {
         "totalBudgets": budgetSummary["budget"] != null ? 1 : 0,
       };
 
-      await _saveSetting("dashboard_stats", jsonEncode(stats));
+      final ownerId = await this.ownerId;
 
+      await _saveSetting("dashboard_stats_$ownerId", jsonEncode(stats));
       _dashboardCache = stats;
 
       return stats;
     } catch (_) {
-      final cached = await _getSetting("dashboard_stats");
+      final ownerId = await this.ownerId;
 
+      final cached = await _getSetting("dashboard_stats_$ownerId");
       if (cached != null) {
         _dashboardCache = jsonDecode(cached) as Map<String, dynamic>;
 

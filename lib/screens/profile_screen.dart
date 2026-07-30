@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/notification_service.dart';
+import '../services/guest_dialog_service.dart';
 import '../repositories/settings_repository.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
@@ -44,9 +45,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void updateProfile() async {
+    if (await GuestDialogService.isGuest()) {
+      await GuestDialogService.show(context);
+      return;
+    }
+
     setState(() {
       isLoading = true;
     });
+
     try {
       final response = await _settingsRepository.updateProfile(
         nameController.text.trim(),
@@ -56,9 +63,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await loadProfile();
 
       if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(response['message'])));
+      ).showSnackBar(SnackBar(content: Text(response["message"])));
     } catch (e) {
       if (!mounted) return;
 

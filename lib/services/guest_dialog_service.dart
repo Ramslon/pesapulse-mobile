@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../services/session_service.dart';
+import '../screens/register_screen.dart';
+
 class GuestDialogService {
+  static Future<bool> isGuest() async {
+    return await SessionService.isGuest();
+  }
+
   static Future<void> show(BuildContext context) async {
     await showDialog(
       context: context,
@@ -15,7 +22,8 @@ class GuestDialogService {
         ),
         content: const Text(
           "This feature requires an account.\n\n"
-          "Create a free account to unlock cloud sync, profile management, backups, AI features and access your data on multiple devices.",
+          "Create a free account to unlock cloud sync, backups, AI features, "
+          "and access your data across devices.",
         ),
         actions: [
           TextButton(
@@ -25,8 +33,10 @@ class GuestDialogService {
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
-
-              Navigator.pushNamed(context, "/register");
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RegisterScreen()),
+              );
             },
             child: const Text("Create Account"),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../repositories/settings_repository.dart';
+import '../services/guest_dialog_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -45,6 +46,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> updateProfile() async {
+    if (await GuestDialogService.isGuest()) {
+      await GuestDialogService.show(context);
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isSaving = true);
@@ -58,18 +64,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
+        const SnackBar(content: Text("Profile updated successfully")),
       );
 
       Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
-    }
-
-    if (mounted) {
-      setState(() => isSaving = false);
+    } finally {
+      if (mounted) {
+        setState(() => isSaving = false);
+      }
     }
   }
 

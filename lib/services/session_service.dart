@@ -13,6 +13,13 @@ class SessionService {
     await prefs.remove("token");
   }
 
+  static Future<void> logoutGuest() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.remove(_guestKey);
+    await prefs.remove("owner_id");
+  }
+
   static Future<void> loginUser(String ownerId) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -23,7 +30,6 @@ class SessionService {
 
   static Future<bool> isGuest() async {
     final prefs = await SharedPreferences.getInstance();
-
     return prefs.getBool(_guestKey) ?? false;
   }
 

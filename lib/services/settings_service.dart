@@ -137,4 +137,22 @@ class SettingsService {
           int.tryParse(await getValue("dashboard_total_budgets") ?? "0") ?? 0,
     };
   }
+
+  static Future<void> clearUserSettings() async {
+    final db = await DatabaseHelper.instance.database;
+
+    await db.delete(
+      "settings",
+      where: "key IN (?,?,?,?,?,?,?)",
+      whereArgs: [
+        "profile_name",
+        "profile_email",
+        "dashboard_total_goals",
+        "dashboard_completed_goals",
+        "dashboard_total_expenses",
+        "dashboard_total_budgets",
+        "last_sync",
+      ],
+    );
+  }
 }

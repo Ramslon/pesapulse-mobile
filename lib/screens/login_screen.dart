@@ -90,9 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
         showSuccess("Welcome back!");
 
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
         );
       } else {
         if (!mounted) return;
@@ -275,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               const Text("Don't have an account?"),
                               TextButton(
                                 onPressed: () {
-                                  Navigator.push(
+                                  Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => const RegisterScreen(),

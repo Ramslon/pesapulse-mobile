@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/repositories/settings_repository.dart';
 import 'package:pesapulse_mobile/screens/login_screen.dart';
 import '../services/api_services.dart';
 import '../services/session_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../screens/home_screen.dart';
@@ -17,6 +19,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final SettingsRepository settingsRepository = SettingsRepository();
+
   bool isLoading = false;
 
   final _formKey = GlobalKey<FormState>();
@@ -293,13 +297,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               onPressed: () async {
                                 await SessionService.loginAsGuest();
 
+                                settingsRepository.clearCache();
+                                await SettingsService.clearUserSettings();
+
                                 if (!mounted) return;
 
-                                Navigator.pushReplacement(
+                                Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => const HomeScreen(),
                                   ),
+                                  (route) => false,
                                 );
                               },
                             ),
