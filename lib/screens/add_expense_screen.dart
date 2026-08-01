@@ -64,75 +64,65 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   bool isLoading = false;
 
   void addExpense() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    String title = titleController.text.trim();
-
-    String amount = amountController.text.trim();
-
-    String category = selectedCategory;
-
-    String description = descriptionController.text.trim();
-
-    String expenseDate = dateController.text.trim();
-
+    if (!_formKey.currentState!.validate()) return;
     if (isLoading) return;
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
     final repository = ExpenseRepository();
 
-    await repository.createExpense(
-      title: title,
-      amount: amount,
-      category: category,
-      expenseDate: expenseDate,
-      description: description,
-    );
+    try {
+      await repository.createExpense(
+        title: titleController.text.trim(),
+        amount: amountController.text.trim(),
+        category: selectedCategory,
+        expenseDate: dateController.text.trim(),
+        description: descriptionController.text.trim(),
+      );
 
-    await SyncService.instance.getPendingChanges();
+      // Trigger sync in background (don’t block UI)
+      SyncService.instance.getPendingChanges();
 
-    setState(() {
-      isLoading = false;
-    });
+      // Budget alerts can also run in background
+      NotificationService.checkBudgetAlerts();
 
-    await NotificationService.checkBudgetAlerts();
+      if (!mounted) return;
 
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(20),
-        duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: Colors.green.shade600,
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                "Expense saved successfully!",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(20),
+          duration: const Duration(seconds: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: Colors.green.shade600,
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Expense saved successfully!",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    if (!mounted) return;
-
-    Navigator.pop(context, true);
+      Navigator.pop(context, true); // return flag to trigger refresh
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error saving expense: $e")));
+      setState(() => isLoading = false);
+    }
   }
 
   Future<void> pickExpenseDate() async {
@@ -565,7 +555,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                 child: CustomButton(
                                   text: "Save Expense",
                                   isLoading: isLoading,
-                                  onPressed: addExpense,
+                                  onPressed: isLoading ? null : addExpense,
                                 ),
                               ),
                             ),

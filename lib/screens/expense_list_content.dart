@@ -10,15 +10,18 @@ import '../widgets/no_filter_results_widget.dart';
 import '../widgets/expense_loading_skeleton.dart';
 import '../repositories/expense_repository.dart';
 import '../services/sync_service.dart';
+import '../screens/add_expense_screen.dart';
 
 class ExpenseListContent extends StatefulWidget {
-  const ExpenseListContent({super.key});
+  final void Function(Future<void> Function())? onRefreshReady;
+
+  const ExpenseListContent({super.key, this.onRefreshReady});
 
   @override
-  State<ExpenseListContent> createState() => _ExpenseListContentState();
+  ExpenseListContentState createState() => ExpenseListContentState();
 }
 
-class _ExpenseListContentState extends State<ExpenseListContent>
+class ExpenseListContentState extends State<ExpenseListContent>
     with AutomaticKeepAliveClientMixin {
   List expenses = [];
 
@@ -95,6 +98,8 @@ class _ExpenseListContentState extends State<ExpenseListContent>
     super.initState();
 
     fetchExpenses();
+
+    widget.onRefreshReady?.call(refreshExpenses);
 
     scrollController.addListener(() {
       if (scrollController.position.pixels ==
@@ -364,51 +369,62 @@ class _ExpenseListContentState extends State<ExpenseListContent>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    if (isLoading) {
-      return const ExpenseLoadingSkeleton();
-    }
-    if (expenses.isEmpty) {
-      return buildEmptyState(
-        context,
-        EmptyStateType.expenses,
-        isGuest: isGuest, // optional, if you want guest awareness
-      );
-    }
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: "expenseFabInner",
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        icon: const Icon(Icons.add),
+        label: const Text("New Expense"),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+          );
+          if (result == true) {
+            await refreshExpenses();
+          }
+        },
+      ),
+      body: isLoading
+          ? const ExpenseLoadingSkeleton()
+          : filteredExpenses.isEmpty
+          ? buildEmptyState(context, EmptyStateType.expenses, isGuest: isGuest)
+          : RefreshIndicator(
+              onRefresh: refreshExpenses,
+              color: Theme.of(context).colorScheme.primary,
+              child: CustomScrollView(
+                key: const PageStorageKey("expenses"),
+                controller: scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                slivers: [
+                  SliverToBoxAdapter(child: _buildHeader()),
 
-    return RefreshIndicator(
-      onRefresh: refreshExpenses,
-      color: Theme.of(context).colorScheme.primary,
-      child: CustomScrollView(
-        key: const PageStorageKey("expenses"),
-        controller: scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        slivers: [
-          SliverToBoxAdapter(child: _buildHeader()),
+                  SliverToBoxAdapter(child: _buildSummaryCard()),
 
-          SliverToBoxAdapter(child: _buildSummaryCard()),
+                  SliverToBoxAdapter(child: _buildSearchBar()),
 
-          SliverToBoxAdapter(child: _buildSearchBar()),
+                  SliverToBoxAdapter(child: _buildDateFilters()),
 
-          SliverToBoxAdapter(child: _buildDateFilters()),
+                  SliverToBoxAdapter(child: const SizedBox(height: 15)),
 
-          SliverToBoxAdapter(child: const SizedBox(height: 15)),
+                  SliverToBoxAdapter(child: _buildCategoryFilters()),
 
-          SliverToBoxAdapter(child: _buildCategoryFilters()),
+                  SliverToBoxAdapter(child: const SizedBox(height: 20)),
 
-          SliverToBoxAdapter(child: const SizedBox(height: 20)),
+                  _buildExpenseList(),
 
-          _buildExpenseList(),
-
-          if (hasMore)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Center(child: CircularProgressIndicator()),
+                  if (hasMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    ),
+                ],
               ),
             ),
-        ],
-      ),
     );
   }
 

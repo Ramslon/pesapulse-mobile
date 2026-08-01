@@ -20,10 +20,10 @@ class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
 
   @override
-  State<BudgetScreen> createState() => _BudgetScreenState();
+  BudgetScreenState createState() => BudgetScreenState();
 }
 
-class _BudgetScreenState extends State<BudgetScreen>
+class BudgetScreenState extends State<BudgetScreen>
     with AutomaticKeepAliveClientMixin {
   bool isLoading = true;
 
@@ -125,6 +125,10 @@ class _BudgetScreenState extends State<BudgetScreen>
   void initState() {
     super.initState();
     loadBudget();
+  }
+
+  Future<void> refreshBudget() async {
+    await loadBudget();
   }
 
   Future<void> loadBudget() async {

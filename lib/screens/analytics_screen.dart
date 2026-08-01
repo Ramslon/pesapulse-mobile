@@ -1,10 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:pesapulse_mobile/screens/add_goals_screen.dart';
-import 'add_expense_screen.dart';
-import 'login_screen.dart';
-import 'register_screen.dart';
-import 'budget_page.dart';
 import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 import 'package:provider/provider.dart';
 import '../providers/connectivity_provider.dart';
@@ -761,821 +756,652 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     }
 
     final hasNoData = expenses.isEmpty && totalGoals == 0 && reports.isEmpty;
-
-    if (hasNoData) {
-      return buildEmptyState(
-        context,
-        EmptyStateType.analytics,
-        isGuest: isGuest, // guest awareness
-        // Override the default "Get Started" action to show your custom dialog
-        showCreateBudgetDialog: () {
-          showGeneralDialog(
-            context: context,
-            barrierDismissible: true,
-            barrierLabel: "Get Started",
-            transitionDuration: const Duration(milliseconds: 400),
-            pageBuilder: (context, animation, secondaryAnimation) {
-              return Center(
-                child: AlertDialog(
-                  title: const Text("Get Started"),
-                  content: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Expense option
-                        ListTile(
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.green.shade100,
-                            child: const Icon(
-                              Icons.receipt_long,
-                              color: Colors.green,
-                            ),
-                          ),
-                          title: const Text("Add Expense"),
-                          subtitle: const Text(
-                            "Track your spending and daily costs",
-                          ),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 18,
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AddExpenseScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        const Divider(),
-
-                        // Goal option
-                        ListTile(
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.orange.shade100,
-                            child: const Icon(Icons.flag, color: Colors.orange),
-                          ),
-                          title: const Text("Add Goal"),
-                          subtitle: const Text(
-                            "Save towards your financial goals",
-                          ),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 18,
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AddGoalScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        const Divider(),
-
-                        // Budget option
-                        ListTile(
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.blue.shade100,
-                            child: const Icon(
-                              Icons.account_balance_wallet,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          title: const Text("Add Budget"),
-                          subtitle: Text(
-                            isGuest
-                                ? "Create an account to manage budgets"
-                                : "Plan and manage your monthly budget",
-                          ),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 18,
-                          ),
-                          enabled: !isGuest,
-                          onTap: isGuest
-                              ? null
-                              : () {
-                                  Navigator.pop(context);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const BudgetPage(),
-                                    ),
-                                  );
-                                },
-                        ),
-
-                        // Guest account options
-                        if (isGuest) ...[
-                          const SizedBox(height: 20),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "Account Options",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ),
-                          const Divider(),
-
-                          ListTile(
-                            leading: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.orange.shade500,
-                              child: const Icon(
-                                Icons.person_add_alt_1,
-                                color: Colors.white,
-                              ),
-                            ),
-                            title: const Text("Create Account"),
-                            subtitle: const Text(
-                              "Sync your data across devices",
-                            ),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 18,
-                            ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const RegisterScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                          const Divider(),
-                          ListTile(
-                            leading: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.blue.shade100,
-                              child: const Icon(
-                                Icons.login,
-                                color: Colors.blue,
-                              ),
-                            ),
-                            title: const Text("Sign In"),
-                            subtitle: const Text("Already have an account?"),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 18,
-                            ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Close"),
-                    ),
-                  ],
-                ),
-              );
-            },
-            transitionBuilder: (context, animation, secondaryAnimation, child) {
-              final curved = CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOut,
-              );
-              return FadeTransition(
-                opacity: curved,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.2),
-                    end: Offset.zero,
-                  ).animate(curved),
-                  child: child,
-                ),
-              );
-            },
-          );
-        },
-      );
-    }
-
+    // at least one dataset exists
+    final hasPartialData =
+        !hasNoData && (expenses.isEmpty || totalGoals == 0 || reports.isEmpty);
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: refreshAnalytics,
-        child: SingleChildScrollView(
-          key: const PageStorageKey("analytics"),
+      body: isGuest
+          ? buildEmptyState(context, EmptyStateType.analyticsGuest)
+          : hasNoData
+          ? buildEmptyState(context, EmptyStateType.analyticsNoData)
+          : RefreshIndicator(
+              onRefresh: refreshAnalytics,
+              child: SingleChildScrollView(
+                key: const PageStorageKey("analytics"),
 
-          padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
 
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
 
-            children: [
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 500),
-                tween: Tween(begin: .95, end: 1),
+                  children: [
+                    if (hasPartialData)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: buildEmptyState(
+                          context,
+                          EmptyStateType.analyticsInProgress,
+                        ),
+                      ),
 
-                builder: (_, value, child) {
-                  return Transform.scale(scale: value, child: child);
-                },
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 500),
+                      tween: Tween(begin: .95, end: 1),
 
-                child: Card(
-                  elevation: 2,
+                      builder: (_, value, child) {
+                        return Transform.scale(scale: value, child: child);
+                      },
 
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(22),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Card(
+                        elevation: 2,
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(22),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Analytics Overview",
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SyncStatusIcon(),
+
+                              const SizedBox(height: 6),
+
+                              Text(
+                                "Track your spending and financial progress",
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+
+                              const SizedBox(height: 22),
+
+                              Text(
+                                "KES ${totalSpending.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(height: 6),
+
+                              Text(
+                                "Total Spending",
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: sectionSpacing),
+
+                    Row(
                       children: [
-                        Text(
-                          "Analytics Overview",
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: buildStatCard(
+                            'Goals',
+                            totalGoals.toString(),
+                            Icons.flag,
+                            Colors.indigo,
                           ),
                         ),
-
-                        const SyncStatusIcon(),
-
-                        const SizedBox(height: 6),
-
-                        Text(
-                          "Track your spending and financial progress",
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-
-                        const SizedBox(height: 22),
-
-                        Text(
-                          "KES ${totalSpending.toStringAsFixed(2)}",
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: buildStatCard(
+                            'Completed',
+                            completedGoals.toString(),
+                            Icons.emoji_events,
+                            Colors.green,
                           ),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        Text(
-                          "Total Spending",
-                          style: TextStyle(color: Colors.grey.shade600),
                         ),
                       ],
                     ),
-                  ),
-                ),
-              ),
 
-              SizedBox(height: sectionSpacing),
+                    const SizedBox(height: 12),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: buildStatCard(
-                      'Goals',
-                      totalGoals.toString(),
-                      Icons.flag,
-                      Colors.indigo,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: buildStatCard(
-                      'Completed',
-                      completedGoals.toString(),
-                      Icons.emoji_events,
-                      Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: buildStatCard(
-                      'Active',
-                      activeGoals.toString(),
-                      Icons.track_changes,
-                      Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: buildStatCard(
-                      'Rate',
-                      '${completionRate.toStringAsFixed(0)}%',
-                      Icons.trending_up,
-                      Colors.blue,
-                    ),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: sectionSpacing),
-
-              FadeSlideAnimation(
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(22),
-
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-
-                    color: getFinancialHealthColor(),
-                  ),
-
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.white.withOpacity(.2),
-                            child: Icon(
-                              getFinancialHealthIcon(),
-                              color: Colors.white,
-                              size: 40,
-                            ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: buildStatCard(
+                            'Active',
+                            activeGoals.toString(),
+                            Icons.track_changes,
+                            Colors.orange,
                           ),
-
-                          const SizedBox(width: 12),
-
-                          const Expanded(
-                            child: Text(
-                              "Financial Health",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      TweenAnimationBuilder<double>(
-                        duration: const Duration(milliseconds: 900),
-                        tween: Tween(begin: 0, end: healthScore),
-                        builder: (context, value, child) {
-                          return Text(
-                            '${value.toStringAsFixed(0)}/100',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 42,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 5),
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
                         ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: buildStatCard(
+                            'Rate',
+                            '${completionRate.toStringAsFixed(0)}%',
+                            Icons.trending_up,
+                            Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: sectionSpacing),
+
+                    FadeSlideAnimation(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(22),
+
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(.18),
                           borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          healthStatus,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
 
-                      const SizedBox(height: cardSpacing),
-
-                      Text(
-                        recommendation,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          height: 1.4,
-                          fontSize: 15,
+                          color: getFinancialHealthColor(),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: cardSpacing),
-              if (isGuest)
-                Card(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () async {
-                      await GuestDialogService.requireAccount(context);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.orange.shade100,
-                            child: const Icon(
-                              Icons.picture_as_pdf,
-                              color: Colors.orange,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
 
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  "Export Reports",
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: Colors.white.withOpacity(.2),
+                                  child: Icon(
+                                    getFinancialHealthIcon(),
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  "Create an account to export PDF and CSV reports.",
+
+                                const SizedBox(width: 12),
+
+                                const Expanded(
+                                  child: Text(
+                                    "Financial Health",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
 
-                          const Icon(Icons.arrow_forward_ios, size: 18),
-                        ],
+                            const SizedBox(height: 24),
+
+                            TweenAnimationBuilder<double>(
+                              duration: const Duration(milliseconds: 900),
+                              tween: Tween(begin: 0, end: healthScore),
+                              builder: (context, value, child) {
+                                return Text(
+                                  '${value.toStringAsFixed(0)}/100',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 42,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                );
+                              },
+                            ),
+
+                            const SizedBox(height: 5),
+
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(.18),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                healthStatus,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: cardSpacing),
+
+                            Text(
+                              recommendation,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                height: 1.4,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                )
-              else
-                FadeSlideAnimation(
-                  delay: 400,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.picture_as_pdf),
-                          label: const Text('Export PDF'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                          ),
-
-                          onPressed: () async {
+                    const SizedBox(height: cardSpacing),
+                    if (isGuest)
+                      Card(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () async {
                             await GuestDialogService.requireAccount(context);
-                            final file = await ExportService.exportExpensesPdf(
-                              expenses,
-                            );
-                            await ReportHistoryService.saveReport(
-                              name: file.path.split('/').last,
-                              path: file.path,
-                            );
-
-                            await loadReports();
-
-                            await ExportService.shareFile(file);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'PDF report exported successfully',
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Colors.orange.shade100,
+                                  child: const Icon(
+                                    Icons.picture_as_pdf,
+                                    color: Colors.orange,
                                   ),
                                 ),
-                              );
-                            }
-                          },
-                        ),
-                      ),
+                                const SizedBox(width: 14),
 
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.table_chart),
-                          label: const Text('Export CSV'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                          ),
-
-                          onPressed: () async {
-                            await GuestDialogService.requireAccount(context);
-                            final file = await ExportService.exportExpensesCsv(
-                              expenses,
-                            );
-
-                            await ReportHistoryService.saveReport(
-                              name: file.path.split('/').last,
-                              path: file.path,
-                            );
-                            await loadReports();
-
-                            await ExportService.shareFile(file);
-
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'CSV report exported successfully',
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: const [
+                                      Text(
+                                        "Export Reports",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        "Create an account to export PDF and CSV reports.",
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
 
-              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
-
-              FadeSlideAnimation(delay: 100, child: buildRecommendationCard()),
-
-              SizedBox(height: sectionSpacing),
-
-              const AnalyticsSectionHeader(
-                icon: Icons.pie_chart,
-                title: "Category Breakdown",
-              ),
-
-              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
-
-              categoryTotals.isEmpty
-                  ? buildEmptyState(
-                      context,
-                      EmptyStateType.categories,
-                      isGuest: isGuest, // optional, if you want guest awareness
-                    )
-                  : Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(
-                          (screenSize.width * .045).clamp(16.0, 24.0),
-                        ),
-                        child: SizedBox(
-                          height: chartHeight,
-                          child: PieChart(
-                            PieChartData(
-                              sections: getSections(),
-                              centerSpaceRadius: chartHeight * .15,
-                              sectionsSpace: 4,
+                                const Icon(Icons.arrow_forward_ios, size: 18),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                    ),
-              SizedBox(height: sectionSpacing * 1.2),
+                      )
+                    else
+                      FadeSlideAnimation(
+                        delay: 400,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.picture_as_pdf),
+                                label: const Text('Export PDF'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                ),
 
-              const AnalyticsSectionHeader(
-                icon: Icons.flag,
-                title: "Goal Status",
-              ),
-              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
+                                onPressed: () async {
+                                  await GuestDialogService.requireAccount(
+                                    context,
+                                  );
+                                  final file =
+                                      await ExportService.exportExpensesPdf(
+                                        expenses,
+                                      );
+                                  await ReportHistoryService.saveReport(
+                                    name: file.path.split('/').last,
+                                    path: file.path,
+                                  );
 
-              FadeSlideAnimation(
-                delay: 200,
+                                  await loadReports();
 
-                child: Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(
-                      (screenSize.width * .045).clamp(16.0, 24.0),
-                    ),
-                    child: SizedBox(
-                      height: chartHeight,
-                      child: PieChart(
-                        PieChartData(
-                          sections: getGoalSections(),
-                          centerSpaceRadius: chartHeight * .15,
-                          sectionsSpace: 4,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: sectionSpacing * 1.2),
-
-              const AnalyticsSectionHeader(
-                icon: Icons.show_chart,
-                title: "Monthly Spending Trend",
-              ),
-
-              const SizedBox(height: cardSpacing),
-
-              FadeSlideAnimation(
-                delay: 300,
-
-                child: Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(
-                      (screenSize.width * .045).clamp(16.0, 24.0),
-                    ),
-                    child: SizedBox(
-                      height: chartHeight,
-                      child: BarChart(
-                        BarChartData(
-                          borderData: FlBorderData(show: false),
-
-                          titlesData: FlTitlesData(
-                            leftTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: true),
-                            ),
-
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-
-                                getTitlesWidget: (value, meta) {
-                                  const months = [
-                                    '',
-                                    'Jan',
-                                    'Feb',
-                                    'Mar',
-                                    'Apr',
-                                    'May',
-                                    'Jun',
-                                    'Jul',
-                                    'Aug',
-                                    'Sep',
-                                    'Oct',
-                                    'Nov',
-                                    'Dec',
-                                  ];
-
-                                  return Text(months[value.toInt()]);
+                                  await ExportService.shareFile(file);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'PDF report exported successfully',
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 },
                               ),
                             ),
-                          ),
 
-                          barGroups: getMonthlyBars(),
+                            const SizedBox(width: 12),
+
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.table_chart),
+                                label: const Text('Export CSV'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  foregroundColor: Colors.white,
+                                ),
+
+                                onPressed: () async {
+                                  await GuestDialogService.requireAccount(
+                                    context,
+                                  );
+                                  final file =
+                                      await ExportService.exportExpensesCsv(
+                                        expenses,
+                                      );
+
+                                  await ReportHistoryService.saveReport(
+                                    name: file.path.split('/').last,
+                                    path: file.path,
+                                  );
+                                  await loadReports();
+
+                                  await ExportService.shareFile(file);
+
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'CSV report exported successfully',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    SizedBox(
+                      height: (screenSize.height * .02).clamp(16.0, 24.0),
+                    ),
+
+                    FadeSlideAnimation(
+                      delay: 100,
+                      child: buildRecommendationCard(),
+                    ),
+
+                    SizedBox(height: sectionSpacing),
+
+                    const AnalyticsSectionHeader(
+                      icon: Icons.pie_chart,
+                      title: "Category Breakdown",
+                    ),
+
+                    SizedBox(
+                      height: (screenSize.height * .02).clamp(16.0, 24.0),
+                    ),
+
+                    categoryTotals.isEmpty
+                        ? buildEmptyState(
+                            context,
+                            EmptyStateType.categories,
+                            isGuest:
+                                isGuest, // optional, if you want guest awareness
+                          )
+                        : Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(
+                                (screenSize.width * .045).clamp(16.0, 24.0),
+                              ),
+                              child: SizedBox(
+                                height: chartHeight,
+                                child: PieChart(
+                                  PieChartData(
+                                    sections: getSections(),
+                                    centerSpaceRadius: chartHeight * .15,
+                                    sectionsSpace: 4,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                    SizedBox(height: sectionSpacing * 1.2),
+
+                    const AnalyticsSectionHeader(
+                      icon: Icons.flag,
+                      title: "Goal Status",
+                    ),
+                    SizedBox(
+                      height: (screenSize.height * .02).clamp(16.0, 24.0),
+                    ),
+
+                    FadeSlideAnimation(
+                      delay: 200,
+
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(
+                            (screenSize.width * .045).clamp(16.0, 24.0),
+                          ),
+                          child: SizedBox(
+                            height: chartHeight,
+                            child: PieChart(
+                              PieChartData(
+                                sections: getGoalSections(),
+                                centerSpaceRadius: chartHeight * .15,
+                                sectionsSpace: 4,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
 
-              Center(
-                child: Text(
-                  '$completedGoals of $totalGoals goals completed',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+                    SizedBox(height: sectionSpacing * 1.2),
 
-              SizedBox(height: sectionSpacing * 1.2),
+                    const AnalyticsSectionHeader(
+                      icon: Icons.show_chart,
+                      title: "Monthly Spending Trend",
+                    ),
 
-              const AnalyticsSectionHeader(
-                icon: Icons.lightbulb,
-                title: "Smart Insights",
-              ),
+                    const SizedBox(height: cardSpacing),
 
-              SizedBox(height: (screenSize.height * .02).clamp(16.0, 24.0)),
+                    FadeSlideAnimation(
+                      delay: 300,
 
-              FadeSlideAnimation(
-                delay: 350,
-                child: Column(
-                  children: [
-                    ...insights.map(
-                      (insight) => Card(
-                        child: ListTile(
-                          leading: const Icon(
-                            Icons.lightbulb,
-                            color: Colors.amber,
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(
+                            (screenSize.width * .045).clamp(16.0, 24.0),
                           ),
-                          title: Text(insight),
+                          child: SizedBox(
+                            height: chartHeight,
+                            child: BarChart(
+                              BarChartData(
+                                borderData: FlBorderData(show: false),
+
+                                titlesData: FlTitlesData(
+                                  leftTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: true),
+                                  ),
+
+                                  bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+
+                                      getTitlesWidget: (value, meta) {
+                                        const months = [
+                                          '',
+                                          'Jan',
+                                          'Feb',
+                                          'Mar',
+                                          'Apr',
+                                          'May',
+                                          'Jun',
+                                          'Jul',
+                                          'Aug',
+                                          'Sep',
+                                          'Oct',
+                                          'Nov',
+                                          'Dec',
+                                        ];
+
+                                        return Text(months[value.toInt()]);
+                                      },
+                                    ),
+                                  ),
+                                ),
+
+                                barGroups: getMonthlyBars(),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
+                    ),
+                    SizedBox(
+                      height: (screenSize.height * .02).clamp(16.0, 24.0),
+                    ),
+
+                    Center(
+                      child: Text(
+                        '$completedGoals of $totalGoals goals completed',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: sectionSpacing * 1.2),
+
+                    const AnalyticsSectionHeader(
+                      icon: Icons.lightbulb,
+                      title: "Smart Insights",
+                    ),
+
+                    SizedBox(
+                      height: (screenSize.height * .02).clamp(16.0, 24.0),
+                    ),
+
+                    FadeSlideAnimation(
+                      delay: 350,
+                      child: Column(
+                        children: [
+                          ...insights.map(
+                            (insight) => Card(
+                              child: ListTile(
+                                leading: const Icon(
+                                  Icons.lightbulb,
+                                  color: Colors.amber,
+                                ),
+                                title: Text(insight),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: sectionSpacing * 1.2),
+
+                    const AnalyticsSectionHeader(
+                      icon: Icons.description,
+                      title: "Reports Center",
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Text(
+                      '${reports.length} Reports Generated',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: internalSpacing),
+
+                    reports.isEmpty
+                        ? Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(22),
+                              child: Center(
+                                child: Text('No reports generated yet'),
+                              ),
+                            ),
+                          )
+                        : Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: Column(
+                              children: reports.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final report = entry.value;
+                                return ListTile(
+                                  leading: Icon(
+                                    report['name']
+                                            .toString()
+                                            .toLowerCase()
+                                            .endsWith('.pdf')
+                                        ? Icons.picture_as_pdf
+                                        : Icons.table_chart,
+                                  ),
+
+                                  title: Text(report['name']),
+
+                                  subtitle: Text(
+                                    report['created_at'].toString().substring(
+                                      0,
+                                      10,
+                                    ),
+                                  ),
+
+                                  onTap: () => previewReport(report),
+
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.share),
+                                        onPressed: () =>
+                                            shareExistingReport(report['path']),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete),
+                                        onPressed: () => deleteReport(index),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await ReportHistoryService.clearReports();
+
+                        await loadReports();
+                      },
+
+                      icon: const Icon(Icons.delete),
+
+                      label: const Text('Clear Report History'),
                     ),
                   ],
                 ),
               ),
-
-              SizedBox(height: sectionSpacing * 1.2),
-
-              const AnalyticsSectionHeader(
-                icon: Icons.description,
-                title: "Reports Center",
-              ),
-
-              const SizedBox(height: 10),
-
-              Text(
-                '${reports.length} Reports Generated',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: internalSpacing),
-
-              reports.isEmpty
-                  ? Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(22),
-                        child: Center(child: Text('No reports generated yet')),
-                      ),
-                    )
-                  : Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: Column(
-                        children: reports.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final report = entry.value;
-                          return ListTile(
-                            leading: Icon(
-                              report['name'].toString().toLowerCase().endsWith(
-                                    '.pdf',
-                                  )
-                                  ? Icons.picture_as_pdf
-                                  : Icons.table_chart,
-                            ),
-
-                            title: Text(report['name']),
-
-                            subtitle: Text(
-                              report['created_at'].toString().substring(0, 10),
-                            ),
-
-                            onTap: () => previewReport(report),
-
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.share),
-                                  onPressed: () =>
-                                      shareExistingReport(report['path']),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () => deleteReport(index),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-
-              ElevatedButton.icon(
-                onPressed: () async {
-                  await ReportHistoryService.clearReports();
-
-                  await loadReports();
-                },
-
-                icon: const Icon(Icons.delete),
-
-                label: const Text('Clear Report History'),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

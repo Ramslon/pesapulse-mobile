@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'empty_state.dart';
 import '../screens/add_expense_screen.dart';
 import '../screens/add_goals_screen.dart';
+import '../screens/analytics_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/budget_page.dart';
 import '../screens/register_screen.dart';
+import '../widgets/get_started_dialog.dart';
 
 enum EmptyStateType {
   expenses,
   goals,
   budget,
   categories,
-  analytics,
+  analyticsGuest,
+  analyticsNoData,
+  analyticsInProgress,
   archivedGoals,
   generic,
 }
@@ -184,59 +188,57 @@ Widget buildEmptyState(
         ),
       );
 
-    case EmptyStateType.analytics:
-      themedColor = Colors.purple;
-      themedIcon = Icons.analytics_outlined;
-      if (isGuest) {
-        return EmptyState(
-          icon: themedIcon,
-          title: "Guest Mode",
-          message: "Register or sign in to unlock full analytics and reports.",
-          iconColor: themedColor,
-          action: Column(
-            children: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: themedColor),
-                icon: const Icon(Icons.person_add_alt_1, color: Colors.white),
-                label: const Text(
-                  "Register",
-                  style: TextStyle(color: Colors.white),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: themedColor),
-                icon: const Icon(Icons.login, color: Colors.white),
-                label: const Text(
-                  "Sign In",
-                  style: TextStyle(color: Colors.white),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      }
+    case EmptyStateType.analyticsGuest:
       return EmptyState(
-        icon: themedIcon,
+        icon: Icons.analytics_outlined,
+        title: "Guest Mode",
+        message: "Register or sign in to unlock full analytics and reports.",
+        iconColor: Colors.purple,
+        action: Column(
+          children: [
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+              icon: const Icon(Icons.person_add_alt_1, color: Colors.white),
+              label: const Text(
+                "Register",
+                style: TextStyle(color: Colors.white),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+              icon: const Icon(Icons.login, color: Colors.white),
+              label: const Text(
+                "Sign In",
+                style: TextStyle(color: Colors.white),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+
+    case EmptyStateType.analyticsNoData:
+      return EmptyState(
+        icon: Icons.analytics_outlined,
         title: "No Analytics Yet",
         message:
             "Your analytics will appear once you add expenses, goals, or budgets.",
-        iconColor: themedColor,
+        iconColor: Colors.purple,
         action: ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(backgroundColor: themedColor),
-          icon: Icon(themedIcon, color: Colors.white),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+          icon: const Icon(Icons.analytics_outlined, color: Colors.white),
           label: const Text(
             "Get Started",
             style: TextStyle(color: Colors.white),
@@ -247,189 +249,8 @@ Widget buildEmptyState(
               barrierDismissible: true,
               barrierLabel: "Get Started",
               transitionDuration: const Duration(milliseconds: 400),
-              pageBuilder: (context, animation, secondaryAnimation) {
-                return Center(
-                  child: AlertDialog(
-                    title: const Text("Get Started"),
-                    content: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Expense option
-                          ListTile(
-                            leading: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.green.shade100,
-                              child: const Icon(
-                                Icons.receipt_long,
-                                color: Colors.green,
-                              ),
-                            ),
-                            title: const Text("Add Expense"),
-                            subtitle: const Text(
-                              "Track your spending and daily costs",
-                            ),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 18,
-                            ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const AddExpenseScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                          const Divider(),
-
-                          // Goal option
-                          ListTile(
-                            leading: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.orange.shade100,
-                              child: const Icon(
-                                Icons.flag,
-                                color: Colors.orange,
-                              ),
-                            ),
-                            title: const Text("Add Goal"),
-                            subtitle: const Text(
-                              "Save towards your financial goals",
-                            ),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 18,
-                            ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const AddGoalScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                          const Divider(),
-
-                          // Budget option
-                          ListTile(
-                            leading: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.blue.shade100,
-                              child: const Icon(
-                                Icons.account_balance_wallet,
-                                color: Colors.blue,
-                              ),
-                            ),
-                            title: const Text("Add Budget"),
-                            subtitle: Text(
-                              isGuest
-                                  ? "Create an account to manage budgets"
-                                  : "Plan and manage your monthly budget",
-                            ),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 18,
-                            ),
-                            enabled: !isGuest,
-                            onTap: isGuest
-                                ? null
-                                : () {
-                                    Navigator.pop(context);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const BudgetPage(),
-                                      ),
-                                    );
-                                  },
-                          ),
-
-                          // Guest account options
-                          if (isGuest) ...[
-                            const SizedBox(height: 20),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                "Account Options",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey.shade700,
-                                ),
-                              ),
-                            ),
-                            const Divider(),
-
-                            ListTile(
-                              leading: CircleAvatar(
-                                radius: 20,
-                                backgroundColor: Colors.orange.shade500,
-                                child: const Icon(
-                                  Icons.person_add_alt_1,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              title: const Text("Create Account"),
-                              subtitle: const Text(
-                                "Sync your data across devices",
-                              ),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 18,
-                              ),
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const RegisterScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                            const Divider(),
-                            ListTile(
-                              leading: CircleAvatar(
-                                radius: 20,
-                                backgroundColor: Colors.blue.shade100,
-                                child: const Icon(
-                                  Icons.login,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                              title: const Text("Sign In"),
-                              subtitle: const Text("Already have an account?"),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 18,
-                              ),
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const LoginScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Close"),
-                      ),
-                    ],
-                  ),
-                );
-              },
+              pageBuilder: (_, __, ___) =>
+                  Center(child: GetStartedDialog(isGuest: false)),
               transitionBuilder:
                   (context, animation, secondaryAnimation, child) {
                     final curved = CurvedAnimation(
@@ -440,7 +261,7 @@ Widget buildEmptyState(
                       opacity: curved,
                       child: SlideTransition(
                         position: Tween<Offset>(
-                          begin: const Offset(0, 0.2), // slide up from bottom
+                          begin: const Offset(0, 0.2),
                           end: Offset.zero,
                         ).animate(curved),
                         child: child,
@@ -449,6 +270,49 @@ Widget buildEmptyState(
                   },
             );
           },
+        ),
+      );
+
+    case EmptyStateType.analyticsInProgress:
+      return Card(
+        color: Colors.purple.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
+          leading: const Icon(Icons.analytics_outlined, color: Colors.purple),
+          title: const Text("Analytics In Progress"),
+          subtitle: const Text(
+            "Add more data (expenses, goals, budgets) to unlock full analytics.",
+          ),
+          trailing: TextButton(
+            child: const Text("View Details"),
+            onPressed: () {
+              showGeneralDialog(
+                context: context,
+                barrierDismissible: true,
+                barrierLabel: "Partial Data",
+                transitionDuration: const Duration(milliseconds: 400),
+                pageBuilder: (_, __, ___) =>
+                    Center(child: GetStartedDialog(isGuest: false)),
+                transitionBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                      final curved = CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOut,
+                      );
+                      return FadeTransition(
+                        opacity: curved,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.2),
+                            end: Offset.zero,
+                          ).animate(curved),
+                          child: child,
+                        ),
+                      );
+                    },
+              );
+            },
+          ),
         ),
       );
 

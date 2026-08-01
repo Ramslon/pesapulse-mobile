@@ -29,19 +29,27 @@ class _HomeScreenState extends State<HomeScreen> {
   final FinancialInsightsRepository _financialInsightsRepository =
       FinancialInsightsRepository();
 
-  final List<Widget> screens = const [
-    DashboardScreen(),
+  final GlobalKey<ExpenseListContentState> expenseKey = GlobalKey();
+  final GlobalKey<BudgetScreenState> budgetKey = GlobalKey();
 
-    ExpenseListContent(),
+  late List<Widget> screens;
 
-    BudgetScreen(),
+  @override
+  void initState() {
+    super.initState();
 
-    AnalyticsScreen(),
+    screens = [
+      const DashboardScreen(),
+      ExpenseListContent(key: expenseKey),
+      BudgetScreen(key: budgetKey),
+      const AnalyticsScreen(),
+      const GoalsScreen(),
+      const SettingsScreen(),
+    ];
 
-    GoalsScreen(),
-
-    SettingsScreen(),
-  ];
+    _syncPreferences();
+    loadBudgetStatus();
+  }
 
   final List<String> titles = const [
     'Dashboard',
@@ -123,14 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
       ],
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-
-    _syncPreferences();
-    loadBudgetStatus();
   }
 
   Future<void> _syncPreferences() async {
@@ -315,13 +315,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (index == currentIndex) return;
                   HapticFeedback.lightImpact();
 
-                  if (index == 2 || currentIndex == 2) {
-                    loadBudgetStatus();
-                  }
-
                   setState(() {
                     currentIndex = index;
                   });
+
+                  if (index == 1) {
+                    expenseKey.currentState?.refreshExpenses();
+                  }
+                  if (index == 2) {
+                    budgetKey.currentState?.refreshBudget();
+                  }
                 },
 
                 height: isLandscape ? 60 : 72,
