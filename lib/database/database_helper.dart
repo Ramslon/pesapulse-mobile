@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 18,
+      version: 19,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -156,6 +156,7 @@ CREATE TABLE budget_summary_cache(
 owner_id TEXT PRIMARY KEY,
 
 budget REAL,
+budget_count INTEGER DEFAULT 0,
 spent REAL,
 remaining REAL,
 
@@ -336,6 +337,13 @@ CREATE TABLE settings(
       await db.execute("""
     ALTER TABLE goals
     ADD COLUMN created_at TEXT
+  """);
+    }
+
+    if (oldVersion < 19) {
+      await db.execute("""
+    ALTER TABLE  budget_summary_cache
+    ADD COLUMN budget_count INTEGER DEFAULT 0
   """);
     }
   }

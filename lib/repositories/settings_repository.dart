@@ -221,7 +221,7 @@ class SettingsRepository extends BaseRepository {
         "totalGoals": goalsAnalytics["total_goals"] ?? 0,
         "completedGoals": goalsAnalytics["completed_goals"] ?? 0,
         "totalExpenses": (expenses["data"] as List).length,
-        "totalBudgets": budgetSummary["budget"] != null ? 1 : 0,
+        "totalBudgets": budgetSummary["budget_count"] ?? 0,
       };
 
       final ownerId = await this.ownerId;
