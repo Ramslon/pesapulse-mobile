@@ -5,7 +5,7 @@ class EmptyState extends StatelessWidget {
   final String title;
   final String message;
   final Widget? action;
-  final Color? iconColor; // optional color for avatar background
+  final Color? iconColor;
 
   const EmptyState({
     super.key,
@@ -18,7 +18,13 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color bgColor = iconColor ?? Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final Color accentColor = iconColor ?? theme.colorScheme.primary;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color subTextColor = isDark
+        ? Colors.grey.shade400
+        : Colors.grey.shade600;
 
     return Center(
       child: Padding(
@@ -28,8 +34,8 @@ class EmptyState extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 45,
-              backgroundColor: bgColor.withOpacity(0.15),
-              child: Icon(icon, size: 50, color: bgColor),
+              backgroundColor: accentColor.withOpacity(0.15),
+              child: Icon(icon, size: 50, color: accentColor),
             ),
 
             const SizedBox(height: 24),
@@ -37,7 +43,12 @@ class EmptyState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+                decoration: TextDecoration.none,
+              ),
             ),
 
             const SizedBox(height: 12),
@@ -46,9 +57,10 @@ class EmptyState extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: subTextColor,
                 fontSize: 15,
                 height: 1.5,
+                decoration: TextDecoration.none,
               ),
             ),
 
