@@ -17,7 +17,6 @@ import '../providers/connectivity_provider.dart';
 import '../services/sync_service.dart';
 import '../services/sync_events.dart';
 import '../widgets/auth_message_helper.dart';
-import '../widgets/offline_banner.dart';
 import '../widgets/sync_status_icon.dart';
 
 import '../repositories/settings_repository.dart';
@@ -403,10 +402,6 @@ https://github.com/ramslon/PesaPulse
             child: SyncStatusIcon(), // quick glance sync state
           ),
         ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(30),
-          child: OfflineBanner(), //  pinned under AppBar
-        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {

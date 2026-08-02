@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
-import 'package:pesapulse_mobile/screens/home_screen.dart';
 
 import 'edit_expense_screen.dart';
 
@@ -374,17 +373,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
     return Scaffold(
       appBar: AppBar(
         title: const Text(""),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
-          },
-        ),
+
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
@@ -464,8 +453,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
             "Expenses",
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
-
-          SyncStatusIcon(),
 
           SizedBox(height: 6),
 
