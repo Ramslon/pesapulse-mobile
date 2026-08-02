@@ -381,7 +381,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
           ),
         ],
         bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(30),
+          preferredSize: Size.fromHeight(40),
           child: OfflineBanner(), // pinned under AppBar
         ),
       ),

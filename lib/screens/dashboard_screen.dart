@@ -153,7 +153,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(30),
+          preferredSize: const Size.fromHeight(40),
           child: const OfflineBanner(), //  pinned under AppBar
         ),
       ),

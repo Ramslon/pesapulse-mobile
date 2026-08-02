@@ -13,6 +13,7 @@ import 'settings_screen.dart';
 import 'analytics_screen.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
+import '../widgets/auth_message_helper.dart';
 import 'package:flutter/services.dart';
 import '../services/session_service.dart';
 
@@ -46,6 +47,10 @@ class _HomeScreenState extends State<HomeScreen> {
       const GoalsScreen(),
       const SettingsScreen(),
     ];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AuthMessageHelper.showSuccess(context, "You’re now in Guest Mode");
+    });
 
     _syncPreferences();
     loadBudgetStatus();
@@ -265,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         centerTitle: true,
-
+        automaticallyImplyLeading: false,
         title: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
           transitionBuilder: (child, animation) {
