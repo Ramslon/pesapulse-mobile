@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:pesapulse_mobile/screens/forgot_password_screen.dart';
 import 'register_screen.dart';
 import '../services/api_services.dart';
@@ -7,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
+import '../widgets/auth_message_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -88,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (!mounted) return;
 
-        showSuccess("Welcome back!");
+        AuthMessageHelper.showSuccess(context, "Welcome back!");
 
         Navigator.pushAndRemoveUntil(
           context,
@@ -98,18 +100,11 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         if (!mounted) return;
 
-        showError(response["message"] ?? "Incorrect email or password.");
+        AuthMessageHelper.showError(context, response["message"]);
       }
     } catch (e) {
       if (!mounted) return;
-
-      showError(
-        "Unable to connect. Please check your internet connection and try again.",
-      );
-    } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      AuthMessageHelper.showOffline(context);
     }
   }
 

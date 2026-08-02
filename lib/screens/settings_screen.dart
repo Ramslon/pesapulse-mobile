@@ -16,6 +16,7 @@ import '../screens/change_password_screen.dart';
 import '../providers/connectivity_provider.dart';
 import '../services/sync_service.dart';
 import '../services/sync_events.dart';
+import '../widgets/auth_message_helper.dart';
 
 import '../repositories/settings_repository.dart';
 
@@ -94,9 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         isLoading = false;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      AuthMessageHelper.showOffline(context);
     }
   }
 

@@ -6,6 +6,7 @@ import '../services/session_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
+import '../widgets/auth_message_helper.dart';
 import '../screens/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -30,82 +31,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) {
-      setState(() {
-        _autoValidate = true;
-      });
+      setState(() => _autoValidate = true);
       return;
     }
-    String name = nameController.text.trim();
-    String email = emailController.text.trim();
-    String password = passwordController.text.trim();
 
-    setState(() {
-      isLoading = true;
-    });
+    final name = nameController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    setState(() => isLoading = true);
 
     try {
       final response = await ApiService.registerUser(name, email, password);
 
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
 
       if (response.containsKey('token')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.green,
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 10),
-                Text("Account created successfully"),
-              ],
-            ),
-          ),
-        );
+        if (!mounted) return;
+
+        AuthMessageHelper.showSuccess(context, "Account created successfully!");
 
         await Future.delayed(const Duration(milliseconds: 700));
-
-        if (!mounted) return;
 
         await SessionService.loginUser(response["user"]["id"].toString());
 
         Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(response["message"] ?? "Registration failed."),
-                ),
-              ],
-            ),
-          ),
+        if (!mounted) return;
+
+        AuthMessageHelper.showError(
+          context,
+          response["message"] ?? "Registration failed.",
         );
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
 
-      SnackBar(
-        backgroundColor: Colors.red,
-        content: Row(
-          children: [
-            const Icon(Icons.cloud_off, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                "Unable to connect. Please check your internet connection.",
-              ),
-            ),
-          ],
-        ),
-      );
+      if (!mounted) return;
+
+      AuthMessageHelper.showOffline(context);
     }
   }
 

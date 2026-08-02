@@ -3,6 +3,7 @@ import 'dart:async';
 import '../services/api_services.dart';
 import 'package:flutter/services.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/auth_message_helper.dart';
 
 import 'reset_password_screen.dart';
 
@@ -41,9 +42,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
   Future<void> verifyOtp() async {
     if (enteredOtp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter the complete OTP.")),
-      );
+      AuthMessageHelper.showError(context, "Please enter the complete OTP.");
       return;
     }
 
@@ -60,9 +59,8 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
       setState(() => isLoading = false);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(response["message"])));
+      // Use helper for success message
+      AuthMessageHelper.showSuccess(context, response["message"]);
 
       Navigator.pushReplacement(
         context,
@@ -76,9 +74,8 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
       setState(() => isLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
-      );
+      // Use helper for offline/error
+      AuthMessageHelper.showOffline(context);
     }
   }
 
@@ -88,9 +85,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(response["message"])));
+      AuthMessageHelper.showSuccess(context, response["message"]);
 
       // Restart timers
       startCountdown();
@@ -99,9 +94,8 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
-      );
+      // Use helper for offline/error
+      AuthMessageHelper.showOffline(context);
     }
   }
 

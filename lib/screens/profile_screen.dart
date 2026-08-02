@@ -5,6 +5,7 @@ import '../services/guest_dialog_service.dart';
 import '../repositories/settings_repository.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
+import '../widgets/auth_message_helper.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
@@ -50,9 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
     try {
       final response = await _settingsRepository.updateProfile(
@@ -64,20 +63,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
+      //  Use helper for success message
+      AuthMessageHelper.showSuccess(
         context,
-      ).showSnackBar(SnackBar(content: Text(response["message"])));
+        response["message"] ?? "Profile updated successfully.",
+      );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      // Use helper for error/offline message
+      AuthMessageHelper.showOffline(context);
     } finally {
       if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
+        setState(() => isLoading = false);
       }
     }
   }
@@ -87,14 +85,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final profile = await _settingsRepository.getProfile();
 
       nameController.text = profile['name'] ?? '';
-
       emailController.text = profile['email'] ?? '';
 
       if (mounted) {
         setState(() {});
       }
     } catch (e) {
-      debugPrint('Profile load error: $e');
+      if (!mounted) return;
+
+      // ✅ Use helper for offline/error message
+      AuthMessageHelper.showOffline(context);
     }
   }
 

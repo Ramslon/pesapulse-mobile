@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../repositories/settings_repository.dart';
 import '../services/guest_dialog_service.dart';
+import '../widgets/auth_message_helper.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -31,17 +32,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final user = await _settingsRepository.getProfile();
 
+      if (!mounted) return;
+
       setState(() {
         nameController.text = user['name'] ?? '';
         emailController.text = user['email'] ?? '';
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() => isLoading = false);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      // Use helper for error/offline message
+      AuthMessageHelper.showOffline(context);
     }
   }
 
@@ -63,17 +67,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully")),
-      );
+      AuthMessageHelper.showSuccess(context, "Profile updated successfully");
 
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      // Use helper for error/offline message
+      AuthMessageHelper.showOffline(context);
     } finally {
       if (mounted) {
         setState(() => isSaving = false);

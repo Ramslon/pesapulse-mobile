@@ -4,6 +4,7 @@ import '../services/api_services.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/success_dialog.dart';
+import '../widgets/auth_message_helper.dart';
 import 'login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -77,9 +78,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
       setState(() => isLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
-      );
+      //  Use helper for consistency
+      AuthMessageHelper.showOffline(context);
     }
   }
 

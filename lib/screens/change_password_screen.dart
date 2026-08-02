@@ -4,6 +4,7 @@ import '../services/api_services.dart';
 import 'dart:convert';
 
 import 'login_screen.dart';
+import '../widgets/auth_message_helper.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -60,7 +61,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
     setState(() {
       isSaving = true;
-
       currentError = null;
       newError = null;
       confirmError = null;
@@ -75,10 +75,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Password changed successfully.\nPlease login again."),
-        ),
+      AuthMessageHelper.showSuccess(
+        context,
+        "Password changed successfully. Please login again.",
       );
 
       await ApiService.logoutUser();
@@ -93,7 +92,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     } on Exception catch (e) {
       try {
         final raw = e.toString().replaceFirst("Exception: ", "");
-
         final errors = raw.contains("{")
             ? Map<String, dynamic>.from(jsonDecode(raw))
             : null;
@@ -103,26 +101,24 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             if (errors['current_password'] != null) {
               currentError = errors['current_password'][0];
             }
-
             if (errors['new_password'] != null) {
               newError = errors['new_password'][0];
             }
-
             if (errors['new_password_confirmation'] != null) {
               confirmError = errors['new_password_confirmation'][0];
             }
           }
         });
       } catch (_) {
-        ScaffoldMessenger.of(
+        if (!mounted) return;
+        AuthMessageHelper.showError(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+          e.toString().replaceFirst("Exception: ", "Password change failed: "),
+        );
       }
     } finally {
       if (mounted) {
-        setState(() {
-          isSaving = false;
-        });
+        setState(() => isSaving = false);
       }
     }
   }

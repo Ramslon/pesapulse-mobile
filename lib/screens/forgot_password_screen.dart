@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
+import '../widgets/auth_message_helper.dart';
 import 'verify_otp_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -37,15 +38,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         emailController.text.trim(),
       );
 
-      debugPrint("Forgot Password Response: $response");
-
       if (!mounted) return;
 
       setState(() => isLoading = false);
 
-      ScaffoldMessenger.of(
+      //  Use helper for success message
+      AuthMessageHelper.showSuccess(
         context,
-      ).showSnackBar(SnackBar(content: Text(response["message"])));
+        response["message"] ?? "OTP sent successfully.",
+      );
 
       Navigator.push(
         context,
@@ -58,9 +59,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       setState(() => isLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst("Exception: ", ""))),
-      );
+      //  Use helper for offline/error
+      AuthMessageHelper.showOffline(context);
     }
   }
 
