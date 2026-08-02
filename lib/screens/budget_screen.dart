@@ -10,6 +10,7 @@ import '../widgets/empty_state.dart';
 import '../widgets/empty_state_helper.dart';
 import '../widgets/budget_loading_skeleton.dart';
 import '../widgets/sync_status_icon.dart';
+import '../widgets/offline_banner.dart';
 import '../repositories/budget_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 import '../providers/connectivity_provider.dart';
@@ -589,6 +590,19 @@ class BudgetScreenState extends State<BudgetScreen>
     // replace with your chart widget
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(""),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: SyncStatusIcon(), //  quick glance sync state
+          ),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(30),
+          child: OfflineBanner(), //  pinned under AppBar
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: "budgetFab",
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -596,7 +610,6 @@ class BudgetScreenState extends State<BudgetScreen>
         icon: Icon(budget > 0 ? Icons.edit_rounded : Icons.add_rounded),
         label: Text(budget > 0 ? "Edit Budget" : "Create Budget"),
       ),
-
       body: RefreshIndicator(
         onRefresh: refreshBudgetData,
 
@@ -612,47 +625,6 @@ class BudgetScreenState extends State<BudgetScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Consumer<ConnectivityProvider>(
-                builder: (context, network, child) {
-                  if (network.isOnline) {
-                    return const SizedBox.shrink();
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade500,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.orange.shade300),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            network.pendingChanges > 0
-                                ? Icons.sync_problem
-                                : Icons.cloud_off,
-                            color: Colors.blue.shade100,
-                          ),
-
-                          SizedBox(width: 12),
-
-                          Expanded(
-                            child: Text(
-                              network.pendingChanges > 0
-                                  ? "${network.pendingChanges} change(s) are waiting to sync."
-                                  : "You're offline. Budget changes will be saved locally.",
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-
               SizedBox(height: sectionSpacing),
 
               Column(
@@ -669,8 +641,6 @@ class BudgetScreenState extends State<BudgetScreen>
                           ),
                         ),
                       ),
-
-                      const SyncStatusIcon(),
                     ],
                   ),
 

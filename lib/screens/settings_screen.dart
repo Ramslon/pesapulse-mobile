@@ -17,6 +17,8 @@ import '../providers/connectivity_provider.dart';
 import '../services/sync_service.dart';
 import '../services/sync_events.dart';
 import '../widgets/auth_message_helper.dart';
+import '../widgets/offline_banner.dart';
+import '../widgets/sync_status_icon.dart';
 
 import '../repositories/settings_repository.dart';
 
@@ -374,6 +376,7 @@ https://github.com/ramslon/PesaPulse
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     Widget _buildSectionTitle(String title, IconData icon) {
       return Padding(
@@ -391,16 +394,27 @@ https://github.com/ramslon/PesaPulse
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        await loadDashboardStats();
-      },
-
-      child: SingleChildScrollView(
-        key: const PageStorageKey("settings"),
-        child: Padding(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(""),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: SyncStatusIcon(), // quick glance sync state
+          ),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(30),
+          child: OfflineBanner(), //  pinned under AppBar
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await loadDashboardStats();
+        },
+        child: SingleChildScrollView(
+          key: const PageStorageKey("settings"),
           padding: const EdgeInsets.all(20),
-
           child: Column(
             children: [
               _buildSectionTitle('Account', Icons.person),

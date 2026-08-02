@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:pesapulse_mobile/screens/forgot_password_screen.dart';
 import 'register_screen.dart';
 import '../services/api_services.dart';

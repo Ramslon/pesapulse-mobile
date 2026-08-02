@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pesapulse_mobile/screens/home_screen.dart';
 
 import 'expense_list_content.dart';
 import 'add_expense_screen.dart';
@@ -28,20 +27,6 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: true,
-        title: const Text("Expenses List"),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-          },
-        ),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: "expenseFab",
         elevation: 4,

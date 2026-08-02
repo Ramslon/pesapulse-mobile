@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'empty_state.dart';
 import '../screens/add_expense_screen.dart';
 import '../screens/add_goals_screen.dart';
-import '../screens/analytics_screen.dart';
+
 import '../screens/login_screen.dart';
 import '../screens/budget_page.dart';
 import '../screens/register_screen.dart';

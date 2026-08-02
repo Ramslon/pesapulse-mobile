@@ -7,6 +7,7 @@ import '../widgets/analytics_loading_skeleton.dart';
 import '../widgets/analytics_section_header.dart';
 import '../widgets/fade_slide_animation.dart';
 import '../widgets/empty_state_helper.dart';
+import '../widgets/offline_banner.dart';
 
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
@@ -760,6 +761,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     final hasPartialData =
         !hasNoData && (expenses.isEmpty || totalGoals == 0 || reports.isEmpty);
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(""),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: SyncStatusIcon(), //  quick glance sync state
+          ),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(30),
+          child: OfflineBanner(), //  pinned under AppBar
+        ),
+      ),
       body: isGuest
           ? buildEmptyState(context, EmptyStateType.analyticsGuest)
           : hasNoData
@@ -809,8 +823,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-
-                              const SyncStatusIcon(),
 
                               const SizedBox(height: 6),
 
