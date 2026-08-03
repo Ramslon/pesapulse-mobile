@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:pesapulse_mobile/screens/expense_details_screen.dart';
 
 class RecentExpenseTile extends StatelessWidget {
   final Map<String, dynamic> expense;
 
-  const RecentExpenseTile({super.key, required this.expense});
+  RecentExpenseTile({super.key, required this.expense});
+  final NumberFormat currencyFormatter = NumberFormat("#,##0.00");
 
   Color categoryColor(String category) {
     switch (category.toLowerCase()) {
@@ -67,40 +70,101 @@ class RecentExpenseTile extends StatelessWidget {
 
     final color = categoryColor(category);
 
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
+    final amount = double.tryParse(expense["amount"].toString()) ?? 0;
 
-      leading: CircleAvatar(
-        radius: 22,
-        backgroundColor: color.withOpacity(.12),
-        child: Icon(categoryIcon(category), color: color),
-      ),
-
-      title: Text(
-        expense['title'] ?? '',
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(category),
-
-          const SizedBox(height: 2),
-
-          Text(
-            formatDate(expense['expense_date']),
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ExpenseDetailsScreen(expense: expense),
           ),
-        ],
-      ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        child: Row(
+          children: [
+            Hero(
+              tag: "expense_${expense["id"]}",
+              child: CircleAvatar(
+                radius: 24,
+                backgroundColor: color.withOpacity(.12),
+                child: Icon(categoryIcon(category), color: color, size: 24),
+              ),
+            ),
 
-      trailing: Text(
-        "KES ${expense['amount']}",
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Colors.green,
-          fontSize: 15,
+            const SizedBox(width: 14),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    expense["title"] ?? "",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Row(
+                    children: [
+                      Text(
+                        category,
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: Colors.grey,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      Flexible(
+                        child: Text(
+                          formatDate(expense["expense_date"]),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            Text(
+              "KES ${currencyFormatter.format(amount)}",
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          ],
         ),
       ),
     );

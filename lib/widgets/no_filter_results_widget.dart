@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class NoFilterResultsWidget extends StatelessWidget {
-  const NoFilterResultsWidget({super.key});
+  final VoidCallback? onClearFilters;
+
+  const NoFilterResultsWidget({super.key, this.onClearFilters});
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,16 @@ class NoFilterResultsWidget extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
             ),
+
+            if (onClearFilters != null) ...[
+              const SizedBox(height: 24),
+
+              OutlinedButton.icon(
+                onPressed: onClearFilters,
+                icon: const Icon(Icons.refresh),
+                label: const Text("Clear Filters"),
+              ),
+            ],
           ],
         ),
       ),

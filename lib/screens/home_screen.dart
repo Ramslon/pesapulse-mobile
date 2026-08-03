@@ -13,7 +13,7 @@ import 'settings_screen.dart';
 import 'analytics_screen.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
-import '../widgets/auth_message_helper.dart';
+
 import 'package:flutter/services.dart';
 import '../services/session_service.dart';
 
