@@ -103,7 +103,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      AuthMessageHelper.showOffline(context);
+
+      AuthMessageHelper.showError(
+        context,
+        e.toString().replaceFirst("Exception: ", ""),
+      );
     }
   }
 

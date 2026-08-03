@@ -20,16 +20,20 @@ class ApiService {
   ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/login'),
-
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-
       body: jsonEncode({'email': email, 'password': password}),
     );
 
-    return jsonDecode(response.body);
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    throw Exception(body["message"] ?? "Login failed");
   }
 
   static Future<void> logoutUser() async {
