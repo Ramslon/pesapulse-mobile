@@ -46,6 +46,32 @@ class ApiService {
     await prefs.remove('token');
   }
 
+  static Future<void> deleteAccount(String password) async {
+    final token = await getToken();
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/delete-account'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({"password": password}),
+    );
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    try {
+      final body = jsonDecode(response.body);
+
+      throw Exception(body["message"] ?? "Failed to delete account");
+    } catch (_) {
+      throw Exception("Failed to delete account (${response.statusCode})");
+    }
+  }
+
   static Future<Map<String, dynamic>> registerUser(
     String name,
     String email,

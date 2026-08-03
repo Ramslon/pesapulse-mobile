@@ -13,6 +13,7 @@ import '../providers/theme_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/edit_profile_screen.dart';
 import '../screens/change_password_screen.dart';
+import '../screens/delete_account_screen.dart';
 import '../providers/connectivity_provider.dart';
 import '../services/sync_service.dart';
 import '../services/sync_events.dart';
@@ -1361,6 +1362,44 @@ https://github.com/ramslon/PesaPulse
                           },
                         ),
                       ),
+
+                      const SizedBox(height: 18),
+
+                      const Divider(),
+                      if (!isGuest) ...[
+                        ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.red.shade100,
+                            child: const Icon(
+                              Icons.delete_forever,
+                              color: Colors.red,
+                            ),
+                          ),
+                          title: const Text(
+                            "Delete Account",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            "Permanently delete your account and all data.",
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 18,
+                          ),
+
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const DeleteAccountScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 ),

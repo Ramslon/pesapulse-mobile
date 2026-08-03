@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import '../models/user_preferences.dart';
 import '../services/api_services.dart';
 import '../services/settings_service.dart';
+import '../database/database_helper.dart';
 
 class SettingsRepository extends BaseRepository {
   Map<String, dynamic>? _profileCache;
@@ -64,6 +65,23 @@ class SettingsRepository extends BaseRepository {
     }
 
     return response;
+  }
+
+  Future<void> deleteAccount(String password) async {
+    await ApiService.deleteAccount(password);
+
+    // clear local database
+    final ownerId = await SessionService.currentOwnerId();
+
+    await DatabaseHelper.instance.clearUserData(ownerId);
+
+    // clear local settings
+
+    await SettingsService.clearUserSettings();
+
+    // logout
+
+    await SessionService.logout();
   }
   // USER PREFERENCES
 

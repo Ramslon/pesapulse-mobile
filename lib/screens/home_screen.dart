@@ -27,6 +27,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
 
+  final isGuest = false;
+
   final FinancialInsightsRepository _financialInsightsRepository =
       FinancialInsightsRepository();
 
@@ -47,10 +49,13 @@ class _HomeScreenState extends State<HomeScreen> {
       const GoalsScreen(),
       const SettingsScreen(),
     ];
-
+    /*
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      AuthMessageHelper.showSuccess(context, "You’re now in Guest Mode");
-    });
+      //  Only show message if user is guest
+      if (SessionService.isGuest) {
+        AuthMessageHelper.showSuccess(context, "You’re now in Guest Mode");
+      }
+    });   */
 
     _syncPreferences();
     loadBudgetStatus();

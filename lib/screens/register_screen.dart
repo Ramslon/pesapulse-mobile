@@ -271,7 +271,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   MaterialPageRoute(
                                     builder: (_) => const HomeScreen(),
                                   ),
-                                  (route) => true,
+                                  (route) => false,
                                 );
                               },
                             ),

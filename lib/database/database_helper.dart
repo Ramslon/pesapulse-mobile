@@ -235,6 +235,73 @@ updated_at TEXT
 ''');
   }
 
+  Future<void> clearUserData(String ownerId) async {
+    final db = await database;
+
+    await db.transaction((txn) async {
+      await txn.delete('expenses', where: 'owner_id=?', whereArgs: [ownerId]);
+      await txn.delete('goals', where: 'owner_id=?', whereArgs: [ownerId]);
+      await txn.delete('savings', where: 'owner_id=?', whereArgs: [ownerId]);
+      await txn.delete('budgets', where: 'owner_id=?', whereArgs: [ownerId]);
+      await txn.delete('sync_queue', where: 'owner_id=?', whereArgs: [ownerId]);
+      await txn.delete('settings', where: 'owner_id=?', whereArgs: [ownerId]);
+
+      await txn.delete(
+        'dashboard_cache',
+        where: 'owner_id=?',
+        whereArgs: [ownerId],
+      );
+
+      await txn.delete(
+        'financial_insights_cache',
+        where: 'owner_id=?',
+        whereArgs: [ownerId],
+      );
+
+      await txn.delete(
+        'budget_summary_cache',
+        where: 'owner_id=?',
+        whereArgs: [ownerId],
+      );
+
+      await txn.delete(
+        'analytics_cache',
+        where: 'owner_id=?',
+        whereArgs: [ownerId],
+      );
+
+      await txn.delete(
+        'goals_cache',
+        where: 'owner_id=?',
+        whereArgs: [ownerId],
+      );
+
+      await txn.delete(
+        'goal_forecasts_cache',
+        where: 'owner_id=?',
+        whereArgs: [ownerId],
+      );
+
+      await txn.delete(
+        'goal_insights_cache',
+        where: 'owner_id=?',
+        whereArgs: [ownerId],
+      );
+
+      await txn.delete(
+        'goal_analytics_cache',
+        where: 'owner_id=?',
+        whereArgs: [ownerId],
+      );
+
+      await txn.delete(
+        'goal_deadlines_cache',
+        where: 'owner_id=?',
+        whereArgs: [ownerId],
+      );
+    });
+  }
+
   Future<void> _upgradeDatabase(
     Database db,
     int oldVersion,
