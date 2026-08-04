@@ -23,9 +23,23 @@ class FinancialInsightsRepository extends BaseRepository {
     return jsonDecode(row["payload"]);
   }
 
-  Future<Map<String, dynamic>> getInsights() async {
+  Future<Map<String, dynamic>> getInsights({bool useCache = false}) async {
     final database = await db.database;
     final ownerId = await this.ownerId;
+
+    if (useCache) {
+      final cached = await database.query(
+        "financial_insights_cache",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
+      );
+
+      if (cached.isNotEmpty) {
+        return _fromLocal(cached.first);
+      }
+
+      return _emptyInsights();
+    }
 
     // Guest users: never call the backend
     if (await SessionService.isGuest()) {

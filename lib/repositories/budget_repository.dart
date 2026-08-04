@@ -27,9 +27,23 @@ class BudgetRepository extends BaseRepository {
     return jsonDecode(row["payload"]);
   }
 
-  Future<Map<String, dynamic>> getBudgetSummary() async {
+  Future<Map<String, dynamic>> getBudgetSummary({bool useCache = false}) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
+
+    if (useCache) {
+      final cached = await database.query(
+        "budget_summary_cache",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
+      );
+
+      if (cached.isEmpty) {
+        throw Exception("No cached budget available");
+      }
+
+      return _fromLocal(cached.first);
+    }
 
     try {
       final summary = await ApiService.getBudgetSummary();

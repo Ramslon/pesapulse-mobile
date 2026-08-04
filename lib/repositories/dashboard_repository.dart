@@ -35,13 +35,30 @@ class DashboardRepository extends BaseRepository {
     };
   }
 
-  Future<Map<String, dynamic>> getDashboard() async {
+  Future<Map<String, dynamic>> getDashboard({bool useCache = false}) async {
     final database = await db.database;
     final ownerId = await this.ownerId;
 
+    // ✅ If caller requests cache only, skip API call
+    if (useCache) {
+      final cached = await database.query(
+        "dashboard_cache",
+        where: "owner_id=?",
+        whereArgs: [ownerId],
+      );
+
+      if (cached.isEmpty) {
+        throw Exception("No cached dashboard");
+      }
+
+      return _localToDashboard(cached.first);
+    }
+
     try {
+      // Normal flow: fetch from API
       final dashboard = await ApiService.getDashboard();
 
+      // Save to cache
       await database.insert(
         "dashboard_cache",
         _dashboardToLocal(dashboard, ownerId),
@@ -50,6 +67,7 @@ class DashboardRepository extends BaseRepository {
 
       return dashboard;
     } catch (_) {
+      // Fallback to cache if API fails
       final cached = await database.query(
         "dashboard_cache",
         where: "owner_id=?",

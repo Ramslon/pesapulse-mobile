@@ -3,6 +3,7 @@ import 'package:pesapulse_mobile/repositories/budget_repository.dart';
 
 import 'package:pesapulse_mobile/screens/expense_screen.dart';
 import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
+import '../services/session_service.dart';
 
 import '../widgets/dashboard_card.dart';
 import '../widgets/dashboard_loading_skeleton.dart';
@@ -16,6 +17,11 @@ import '../widgets/offline_banner.dart';
 import '../widgets/empty_state_helper.dart';
 import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
+import 'package:flutter/foundation.dart';
+
+List<Map<String, dynamic>> _decodeExpenses(dynamic raw) {
+  return List<Map<String, dynamic>>.from(raw);
+}
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -64,17 +70,22 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
-
     greeting = getGreeting();
     formattedDate = getFormattedDate();
 
-    loadDashboardData();
+    SessionService.isGuest().then((guest) {
+      setState(() => isGuest = guest);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      // Load cached dashboard immediately
+      loadDashboardData(useCacheOnly: true);
 
-      setState(() {
-        opacity = 1;
+      // Defer heavy API calls only if not guest
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (!isGuest) {
+          loadDashboardData(); // full refresh with API
+        }
+        setState(() => opacity = 1);
       });
     });
   }
@@ -89,86 +100,94 @@ class _DashboardScreenState extends State<DashboardScreen>
     return "${percent.toStringAsFixed(0)}% Used";
   }
 
-  Future<void> loadDashboardData() async {
+  Future<List<Map<String, dynamic>>> _parseExpenses(dynamic raw) async {
+    return compute(_decodeExpenses, raw);
+  }
+
+  Future<void> loadDashboardData({bool useCacheOnly = false}) async {
     try {
-      final results = await Future.wait([
-        dashboardRepository.getDashboard(),
-        budgetRepository.getBudgetSummary(),
-        insightsRepository.getInsights(),
-      ]);
+      // Skip heavy calls for guest users
+      if (isGuest) {
+        final data = await dashboardRepository.getDashboard(
+          useCache: useCacheOnly,
+        );
+        final summary = data['summary'];
+        final recent = await _parseExpenses(data['recent_expenses']);
 
-      final data = results[0];
+        if (!mounted) return;
 
-      final budget = results[1];
-      final insights = results[2];
+        setState(() {
+          totalExpenses =
+              double.tryParse(summary['total_expenses'].toString())?.toInt() ??
+              0;
+          totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
+          totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
+          recentExpenses = recent;
 
-      final summary = data['summary'];
+          // Default guest values
+          currentBudget = 0;
+          spentThisMonth = 0;
+          remainingBudget = 0;
+          budgetCount = 0;
+          financialHealthScore = 100;
+          financialHealthLabel = "Guest Mode";
+          recommendation = "Sign up to unlock financial insights.";
+          categoryAdvice = "";
+          isLoading = false;
+        });
+        return;
+      }
+      if (useCacheOnly) {
+        final results = await Future.wait([
+          dashboardRepository.getDashboard(useCache: true),
+          budgetRepository.getBudgetSummary(useCache: true),
+          insightsRepository.getInsights(useCache: true),
+        ]);
 
-      final healthScore =
-          double.tryParse(insights["financial_health_score"].toString()) ?? 0;
+        final data = results[0];
+        final budget = results[1];
+        final insights = results[2];
+        final summary = data['summary'];
 
-      final healthLabel = insights["financial_health_label"] ?? "";
+        final recent = await _parseExpenses(data['recent_expenses']);
 
-      final recommendationText = insights["recommendation"] ?? "";
+        if (!mounted) return;
 
-      final categoryAdviceText = insights["category_advice"] ?? "";
+        setState(() {
+          // Budget
+          currentBudget = double.tryParse(budget["budget"].toString()) ?? 0;
+          spentThisMonth = double.tryParse(budget["spent"].toString()) ?? 0;
+          remainingBudget =
+              double.tryParse(budget["remaining"].toString()) ?? 0;
+          budgetCount = int.tryParse(budget["budget_count"].toString()) ?? 0;
 
-      final currentBudgetValue =
-          double.tryParse(budget["budget"].toString()) ?? 0;
+          // Summary
+          totalExpenses =
+              double.tryParse(summary['total_expenses'].toString())?.toInt() ??
+              0;
+          totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
+          totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
 
-      final spentValue = double.tryParse(budget["spent"].toString()) ?? 0;
+          // Insights
+          recentExpenses = recent;
+          budgetStatus = insights["budget_status"] ?? "healthy";
+          financialHealthScore =
+              double.tryParse(insights["financial_health_score"].toString()) ??
+              0;
+          financialHealthLabel = insights["financial_health_label"] ?? "";
+          recommendation = insights["recommendation"] ?? "";
+          categoryAdvice = insights["category_advice"] ?? "";
 
-      final remainingValue =
-          double.tryParse(budget["remaining"].toString()) ?? 0;
-
-      final budgetCountValue =
-          int.tryParse(budget["budget_count"].toString()) ?? 0;
-
-      final totalExpensesValue =
-          double.tryParse(summary['total_expenses'].toString())?.toInt() ?? 0;
-
-      final totalCountValue =
-          int.tryParse(summary['total_count'].toString()) ?? 0;
-
-      final totalCategoriesValue =
-          int.tryParse(summary['categories'].toString()) ?? 0;
-
-      final recent = List<Map<String, dynamic>>.from(data['recent_expenses']);
-
-      final status = insights["budget_status"] ?? "healthy";
-
-      if (!mounted) return;
-
-      setState(() {
-        financialHealthScore = healthScore;
-        financialHealthLabel = healthLabel;
-        recommendation = recommendationText;
-        categoryAdvice = categoryAdviceText;
-
-        currentBudget = currentBudgetValue;
-        spentThisMonth = spentValue;
-        remainingBudget = remainingValue;
-        budgetCount = budgetCountValue;
-
-        totalExpenses = totalExpensesValue;
-        totalCount = totalCountValue;
-        totalCategories = totalCategoriesValue;
-
-        recentExpenses = recent;
-        budgetStatus = status;
-
-        isLoading = false;
-      });
+          isLoading = false;
+        });
+        return;
+      }
     } catch (e) {
       if (!mounted) return;
+      setState(() => isLoading = false);
 
-      setState(() {
-        isLoading = false;
-      });
-
-      // First launch with no cache
       if (e.toString().contains("No cached dashboard")) {
-        return;
+        return; // First launch with no cache
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -714,68 +733,58 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: SingleChildScrollView(
           key: const PageStorageKey("dashboard"),
           padding: const EdgeInsets.all(20),
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 500),
-            opacity: opacity,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
 
-                _buildOverviewHeader(),
-                const SizedBox(height: 30),
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 500),
+                opacity: opacity,
+                child: _buildOverviewHeader(),
+              ),
 
-                _buildStatisticsCards(cardHeight),
+              const SizedBox(height: 30),
 
-                const SizedBox(height: 20),
+              _buildStatisticsCards(cardHeight),
+              const SizedBox(height: 20),
 
-                _buildBudgetOverviewCard(),
+              _buildBudgetOverviewCard(),
+              const SizedBox(height: 20),
 
-                const SizedBox(height: 20),
+              _buildFinancialHealthCard(),
+              const SizedBox(height: 20),
 
-                _buildFinancialHealthCard(),
+              _buildSmartInsightsCard(),
+              const SizedBox(height: 30),
 
-                const SizedBox(height: 20),
+              _buildQuickActions(),
+              const SizedBox(height: 30),
 
-                _buildSmartInsightsCard(),
-
-                const SizedBox(height: 30),
-
-                _buildQuickActions(),
-
-                const SizedBox(height: 30),
-
-                Row(
-                  children: [
-                    const Text(
-                      "Recent Expenses",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const Spacer(),
-
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ExpenseScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text("View All"),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                _buildRecentExpensesCard(),
-              ],
-            ),
+              // Recent expenses section
+              Row(
+                children: [
+                  const Text(
+                    "Recent Expenses",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ExpenseScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text("View All"),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _buildRecentExpensesCard(),
+            ],
           ),
         ),
       ),
