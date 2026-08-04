@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/budget_stat_card.dart';
-import '../widgets/spending_pie_chart.dart';
-import '../widgets/spending_trend_chart.dart';
-import '../widgets/analytics_card.dart';
-import '../widgets/financial_health_card.dart';
+import '../widgets/budget/budget_overview_card.dart';
+import '../widgets/budget/budget_breakdown_card.dart';
+import '../widgets/budget/spending_analytics_section.dart';
+import '../widgets/budget/financial_health_section.dart';
+import '../widgets/budget/budget_header.dart';
+import '../widgets/budget/budget_status_bar.dart';
 import '../widgets/status_chip.dart';
-import '../widgets/empty_state.dart';
 import '../widgets/empty_state_helper.dart';
 import '../widgets/budget_loading_skeleton.dart';
 import '../widgets/sync_status_icon.dart';
@@ -15,7 +16,6 @@ import '../repositories/budget_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 import '../providers/connectivity_provider.dart';
 import 'package:provider/provider.dart';
-import 'add_expense_screen.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -562,13 +562,9 @@ class BudgetScreenState extends State<BudgetScreen>
     final screenWidth = MediaQuery.of(context).size.width;
 
     final sectionSpacing = screenHeight * 0.035;
-    final smallSpacing = screenHeight * 0.015;
-    final cardPadding = screenWidth * 0.05;
-    final gaugeSize = (screenWidth * .34).clamp(120.0, 170.0);
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
 
     final network = context.watch<ConnectivityProvider>();
     if (isLoading) {
@@ -627,73 +623,7 @@ class BudgetScreenState extends State<BudgetScreen>
             children: [
               SizedBox(height: sectionSpacing),
 
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Budget Overview",
-                          style: textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: .3,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: smallSpacing),
-
-                  Text(
-                    "Track your spending and stay within budget",
-                    style: TextStyle(
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(
-                        0.7,
-                      ),
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: sectionSpacing),
-              Consumer<ConnectivityProvider>(
-                builder: (context, network, child) {
-                  if (network.pendingChanges == 0) {
-                    return const SizedBox.shrink();
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Card(
-                      color: Colors.orange.shade50,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.orange.shade200),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.sync_problem,
-                          color: Colors.orange,
-                        ),
-
-                        title: Text(
-                          network.pendingChanges == 1
-                              ? "1 pending change"
-                              : "${network.pendingChanges} pending changes",
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-
-                        subtitle: const Text(
-                          "Your budget changes will sync automatically when you're online.",
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+              const BudgetHeader(),
 
               SizedBox(height: sectionSpacing),
 
@@ -740,563 +670,44 @@ class BudgetScreenState extends State<BudgetScreen>
               ),
               SizedBox(height: sectionSpacing),
 
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                runSpacing: 10,
-                spacing: 12,
-                children: [
-                  Text(
-                    "Monthly Budget",
-                    style: TextStyle(
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(
-                        0.7,
-                      ),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+              BudgetStatusBar(statusText: statusText, statusColor: statusColor),
 
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(.12),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-
-                child: Padding(
-                  padding: EdgeInsets.all(cardPadding + 4),
-                  child: Column(
-                    children: [
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: budget),
-                        duration: const Duration(milliseconds: 1000),
-                        builder: (context, value, child) {
-                          return Text(
-                            "KES ${value.toStringAsFixed(0)}",
-                            style: TextStyle(
-                              fontSize: screenWidth * .09,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        },
-                      ),
-
-                      SizedBox(height: smallSpacing),
-
-                      SizedBox(
-                        width: gaugeSize,
-                        height: gaugeSize,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            TweenAnimationBuilder<double>(
-                              tween: Tween(
-                                begin: 0,
-                                end: budget > 0 ? spent / budget : 0,
-                              ),
-                              duration: const Duration(milliseconds: 1200),
-                              curve: Curves.easeOutCubic,
-                              builder: (context, value, child) {
-                                return CircularProgressIndicator(
-                                  value: value,
-                                  strokeWidth: 14,
-                                  strokeCap: StrokeCap.round,
-                                  backgroundColor: Colors.grey.shade200,
-                                  color: statusColor,
-                                );
-                              },
-                            ),
-
-                            TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0, end: percentageUsed),
-                              duration: const Duration(milliseconds: 1200),
-                              curve: Curves.easeOut,
-                              builder: (context, value, child) {
-                                return Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      "${value.toStringAsFixed(0)}%",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: screenWidth * .09,
-                                      ),
-                                    ),
-
-                                    Text(
-                                      "used",
-                                      style: TextStyle(
-                                        color: theme.textTheme.bodyMedium?.color
-                                            ?.withOpacity(0.7),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(height: sectionSpacing),
-
-                      Divider(),
-
-                      SizedBox(height: sectionSpacing),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: Colors.red.shade200,
-                                  child: const Icon(
-                                    Icons.arrow_upward,
-                                    color: Colors.red,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 10),
-                                TweenAnimationBuilder<double>(
-                                  tween: Tween(begin: 0, end: spent),
-                                  duration: const Duration(milliseconds: 1000),
-                                  builder: (context, value, child) {
-                                    return Text(
-                                      "KES ${value.toStringAsFixed(0)}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    );
-                                  },
-                                ),
-
-                                SizedBox(height: smallSpacing),
-
-                                const Text("Spent"),
-                              ],
-                            ),
-                          ),
-
-                          Expanded(
-                            child: Column(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: Colors.green.shade200,
-                                  child: const Icon(
-                                    Icons.savings,
-                                    color: Colors.green,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 10),
-                                TweenAnimationBuilder<double>(
-                                  tween: Tween(begin: 0, end: remaining),
-                                  duration: const Duration(milliseconds: 1000),
-                                  builder: (context, value, child) {
-                                    return Text(
-                                      "KES ${value.toStringAsFixed(0)}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    );
-                                  },
-                                ),
-
-                                SizedBox(height: smallSpacing),
-
-                                const Text("Remaining"),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+              BudgetOverviewCard(
+                budget: budget,
+                spent: spent,
+                remaining: remaining,
+                percentageUsed: percentageUsed,
+                statusColor: statusColor,
               ),
 
               SizedBox(height: sectionSpacing),
 
-              Text(
-                "Budget Breakdown",
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              SizedBox(height: smallSpacing),
-
-              Text(
-                "See where your money goes",
-                style: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(cardPadding),
-                  child: Column(
-                    children: [
-                      categoryTotals.isEmpty
-                          ? EmptyState(
-                              icon: Icons.pie_chart_outline,
-                              title: "No Spending Data",
-                              message:
-                                  "Add some expenses to view category analysis.",
-                              action: ElevatedButton.icon(
-                                icon: const Icon(Icons.receipt_long),
-                                label: const Text("Add Expense"),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const AddExpenseScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            )
-                          // replace with your chart widget
-                          : SizedBox(
-                              height: 280,
-                              child: SpendingPieChart(
-                                categoryTotals: categoryTotals,
-                              ),
-                            ),
-                      if (categoryTotals.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-
-                        Divider(color: Colors.grey.shade300),
-
-                        const SizedBox(height: 18),
-
-                        ...categoryTotals.entries.map((entry) {
-                          final color =
-                              SpendingPieChart.colors[categoryTotals.keys
-                                      .toList()
-                                      .indexOf(entry.key) %
-                                  SpendingPieChart.colors.length];
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: color.withOpacity(.08),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 7,
-                                    backgroundColor: color,
-                                  ),
-
-                                  const SizedBox(width: 14),
-
-                                  Expanded(
-                                    child: Text(
-                                      entry.key,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-
-                                  Text(
-                                    "${((entry.value / spent) * 100).toStringAsFixed(0)}%",
-                                    style: TextStyle(
-                                      color: colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-
-                                  const SizedBox(width: 12),
-
-                                  Text(
-                                    "KES ${entry.value.toStringAsFixed(0)}",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
-                    ],
-                  ),
-                ),
+              BudgetBreakdownCard(
+                categoryTotals: categoryTotals,
+                totalSpent: spent,
               ),
 
               SizedBox(height: sectionSpacing),
 
-              Text(
-                "Spending Analytics",
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              SizedBox(height: smallSpacing),
-
-              Text(
-                "Insights from your spending habits",
-                style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
-              ),
-
-              SizedBox(height: sectionSpacing),
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 30, end: 0),
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.easeOut,
-                builder: (context, offset, child) {
-                  return Transform.translate(
-                    offset: Offset(0, offset),
-                    child: child,
-                  );
-                },
-                child: Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(cardPadding),
-                    child: dailySpending.isEmpty
-                        ? EmptyState(
-                            icon: Icons.show_chart,
-                            title: "No Spending History",
-                            message:
-                                "Your daily spending trend will appear after recording expenses.",
-                            action: ElevatedButton.icon(
-                              icon: const Icon(Icons.receipt_long),
-                              label: const Text("Add Expense"),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const AddExpenseScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                        // replace with your chart widget
-                        : SpendingTrendChart(dailySpending: dailySpending),
-                  ),
-                ),
+              SpendingAnalyticsSection(
+                dailySpending: dailySpending,
+                highestDay: highestDay,
+                highestDayAmount: highestDayAmount,
+                averageDaily: averageDaily,
+                estimatedMonthEnd: estimatedMonthEnd,
               ),
 
               SizedBox(height: sectionSpacing),
 
-              Center(
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  runSpacing: 8,
-                  spacing: 10,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    Flexible(
-                      child: Text(
-                        "Daily Spending",
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
+              FinancialHealthSection(
+                financialScore: financialScore,
+                financialLabel: financialLabel,
+                percentageUsed: percentageUsed,
+                budget: budget,
+                spent: spent,
+                budgetAlert: buildBudgetAlert(),
+                categoryAdvice: categoryAdvice,
               ),
-              SizedBox(height: smallSpacing),
-
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 20, end: 0),
-                duration: const Duration(milliseconds: 1100),
-                curve: Curves.easeOut,
-                builder: (context, offset, child) {
-                  return Transform.translate(
-                    offset: Offset(0, offset),
-                    child: child,
-                  );
-                },
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: screenHeight * .21,
-                            child: AnalyticsCard(
-                              icon: Icons.calendar_today_rounded,
-                              title: "Highest Day",
-                              value:
-                                  "$highestDay\nKES ${highestDayAmount.toStringAsFixed(0)}",
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(width: 12),
-
-                        Expanded(
-                          child: SizedBox(
-                            height: screenHeight * .21,
-                            child: AnalyticsCard(
-                              icon: Icons.analytics_rounded,
-                              title: "Avg Daily Spending",
-                              value: "KES ${averageDaily.toStringAsFixed(0)}",
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: sectionSpacing),
-
-                    SizedBox(
-                      height: screenHeight * .21,
-                      child: AnalyticsCard(
-                        icon: Icons.trending_up_rounded,
-                        title: "Projected Month-End Spending",
-                        value: "KES ${estimatedMonthEnd.toStringAsFixed(0)}",
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: sectionSpacing),
-
-              Text(
-                "Financial Health",
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              SizedBox(height: smallSpacing),
-
-              Text(
-                "Your overall money management score",
-                style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
-              ),
-
-              SizedBox(height: sectionSpacing),
-
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.9, end: 1),
-                duration: const Duration(milliseconds: 700),
-                curve: Curves.easeOutBack,
-                builder: (context, scale, child) {
-                  return Transform.scale(scale: scale, child: child);
-                },
-                child: FinancialHealthCard(
-                  score: financialScore,
-                  label: financialLabel,
-                ),
-              ),
-
-              SizedBox(height: smallSpacing),
-
-              Text(
-                "This score is calculated using your budget usage, spending consistency, and savings potential.",
-                style: TextStyle(
-                  color: colorScheme.onSurface.withOpacity(0.7),
-                  fontSize: 14,
-                ),
-              ),
-
-              SizedBox(height: sectionSpacing),
-
-              Text(
-                "${percentageUsed.toStringAsFixed(1)}% Used",
-                textAlign: TextAlign.center,
-              ),
-
-              SizedBox(height: smallSpacing),
-
-              LinearProgressIndicator(
-                value: budget > 0 ? (spent / budget).clamp(0.0, 1.0) : 0,
-
-                color: percentageUsed >= 100
-                    ? colorScheme.primary
-                    : percentageUsed >= 80
-                    ? colorScheme.primary
-                    : colorScheme.primary,
-                minHeight: 10,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              const SizedBox(height: 12),
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: 1),
-                duration: const Duration(milliseconds: 1200),
-                builder: (context, opacity, child) {
-                  return Opacity(opacity: opacity, child: child);
-                },
-                child: buildBudgetAlert(),
-              ),
-
-              if (categoryAdvice.isNotEmpty)
-                Card(
-                  margin: const EdgeInsets.only(top: 20),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.lightbulb),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(categoryAdvice)),
-                      ],
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
