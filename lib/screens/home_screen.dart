@@ -329,9 +329,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     currentIndex = index;
                   });
 
-                  if (index == 1) {
-                    expenseKey.currentState?.refreshExpenses();
-                  }
+                  // if (index == 1) {
+                  // expenseKey.currentState?.refreshExpenses();
+                  //}
                   if (index == 2) {
                     budgetKey.currentState?.refreshBudget();
                   }
