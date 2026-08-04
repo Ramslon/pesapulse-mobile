@@ -163,6 +163,12 @@ class ExpenseListContentState extends State<ExpenseListContent>
   int get categoryCount =>
       filteredExpenses.map((e) => e["category"].toString()).toSet().length;
 
+  bool get hasActiveFilters {
+    return searchController.text.trim().isNotEmpty ||
+        selectedCategory != "All" ||
+        selectedDateFilter != "All";
+  }
+
   @override
   void initState() {
     super.initState();
@@ -283,7 +289,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
   }
 
   void filterExpenses() {
-    List temp = expenses;
+    List temp = List.from(expenses);
 
     // Search
     if (searchController.text.isNotEmpty) {
@@ -313,8 +319,14 @@ class ExpenseListContentState extends State<ExpenseListContent>
     // Category
     if (selectedCategory != 'All') {
       temp = temp.where((expense) {
-        return expense['category'].toString().toLowerCase() ==
-            selectedCategory.toLowerCase();
+        final expenseCategory = (expense['category'] ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
+
+        final selected = selectedCategory.trim().toLowerCase();
+
+        return expenseCategory == selected;
       }).toList();
     }
 
@@ -407,13 +419,13 @@ class ExpenseListContentState extends State<ExpenseListContent>
   void clearFilters() {
     searchController.clear();
 
-    setState(() {
-      selectedCategory = "All";
-      selectedDateFilter = "All";
-      selectedSort = "Newest";
-    });
+    selectedCategory = "All";
+    selectedDateFilter = "All";
+    selectedSort = "Newest";
 
     filterExpenses();
+
+    setState(() {});
   }
 
   void showSortSheet() {
@@ -558,8 +570,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
       ),
       body: isLoading
           ? const ExpenseLoadingSkeleton()
-          : filteredExpenses.isEmpty
-          ? buildEmptyState(context, EmptyStateType.expenses, isGuest: isGuest)
           : RefreshIndicator(
               onRefresh: refreshExpenses,
               color: Theme.of(context).colorScheme.primary,
@@ -571,12 +581,11 @@ class ExpenseListContentState extends State<ExpenseListContent>
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
                   SliverToBoxAdapter(child: _buildHeader()),
-
                   SliverToBoxAdapter(child: _buildSummaryCard()),
-
                   SliverToBoxAdapter(child: _buildSearchBar()),
 
-                  SliverToBoxAdapter(child: buildSearchSuggestions()),
+                  if (searchController.text.isEmpty)
+                    SliverToBoxAdapter(child: buildSearchSuggestions()),
 
                   SliverToBoxAdapter(
                     child: Column(
@@ -1092,7 +1101,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
     if (filteredExpenses.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
-        child: isSearching
+        child: hasActiveFilters
             ? NoFilterResultsWidget(onClearFilters: clearFilters)
             : buildEmptyState(
                 context,
