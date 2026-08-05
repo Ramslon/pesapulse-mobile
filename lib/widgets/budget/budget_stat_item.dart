@@ -8,6 +8,7 @@ class BudgetStatItem extends StatelessWidget {
   final Color backgroundColor;
   final String title;
   final double amount;
+  //final bool isLandscape;
 
   const BudgetStatItem({
     super.key,
@@ -16,6 +17,7 @@ class BudgetStatItem extends StatelessWidget {
     required this.backgroundColor,
     required this.title,
     required this.amount,
+    //required this.isLandscape,
   });
 
   @override

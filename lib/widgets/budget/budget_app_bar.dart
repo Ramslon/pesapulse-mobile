@@ -8,18 +8,33 @@ class BudgetAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return AppBar(
-      title: const Text(""),
+      toolbarHeight: isLandscape ? 40 : kToolbarHeight,
+
+      title: isLandscape ? null : const Text(""),
+
       actions: const [
         Padding(padding: EdgeInsets.only(right: 12), child: SyncStatusIcon()),
       ],
-      bottom: const PreferredSize(
-        preferredSize: Size.fromHeight(40),
-        child: OfflineBanner(),
+
+      bottom: PreferredSize(
+        preferredSize: Size.fromHeight(isLandscape ? 18 : 40),
+        child: const OfflineBanner(),
       ),
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 40);
+  Size get preferredSize {
+    final view = WidgetsBinding.instance.platformDispatcher.views.first;
+
+    final isLandscape = view.physicalSize.width > view.physicalSize.height;
+
+    return Size.fromHeight(
+      (isLandscape ? 46 : kToolbarHeight) + (isLandscape ? 18 : 40),
+    );
+  }
 }

@@ -5,6 +5,7 @@ class BudgetProgressGauge extends StatelessWidget {
   final double spent;
   final double percentageUsed;
   final Color statusColor;
+  final bool isLandscape;
 
   const BudgetProgressGauge({
     super.key,
@@ -12,13 +13,16 @@ class BudgetProgressGauge extends StatelessWidget {
     required this.spent,
     required this.percentageUsed,
     required this.statusColor,
+    required this.isLandscape,
   });
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final gaugeSize = (screenWidth * .30).clamp(105.0, 145.0);
+    final gaugeSize = isLandscape
+        ? 130.0
+        : (screenWidth * .34).clamp(120.0, 170.0);
 
     final theme = Theme.of(context);
 
@@ -35,7 +39,7 @@ class BudgetProgressGauge extends StatelessWidget {
             builder: (context, value, child) {
               return CircularProgressIndicator(
                 value: value,
-                strokeWidth: 10,
+                strokeWidth: 16,
                 strokeCap: StrokeCap.round,
                 backgroundColor: Colors.grey.shade200,
                 color: statusColor,
@@ -55,7 +59,9 @@ class BudgetProgressGauge extends StatelessWidget {
                     "${value.toStringAsFixed(0)}%",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: screenWidth * .07,
+                      fontSize: isLandscape
+                          ? screenWidth * .035
+                          : screenWidth * .07,
                     ),
                   ),
 

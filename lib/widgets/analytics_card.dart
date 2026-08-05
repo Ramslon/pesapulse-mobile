@@ -19,24 +19,26 @@ class AnalyticsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     return Card(
       elevation: 2,
       shadowColor: color.withOpacity(.12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(isLandscape ? 12 : 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: isLandscape ? 34 : 42,
+              height: isLandscape ? 34 : 42,
               decoration: BoxDecoration(
                 color: color.withOpacity(.12),
                 borderRadius: BorderRadius.circular(21),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: color, size: isLandscape ? 20 : 24),
             ),
 
             Column(
@@ -47,14 +49,14 @@ class AnalyticsCard extends StatelessWidget {
                   style: TextStyle(
                     color: Colors.grey.shade600,
                     fontWeight: FontWeight.w500,
-                    fontSize: 13,
+                    fontSize: isLandscape ? 11 : 13,
                     letterSpacing: .3,
                   ),
                 ),
 
                 Divider(color: Colors.grey.shade200, thickness: 1),
 
-                const SizedBox(height: 6),
+                SizedBox(height: isLandscape ? 3 : 6),
 
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0, end: 1),
@@ -72,9 +74,9 @@ class AnalyticsCard extends StatelessWidget {
                     value,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: isLandscape ? 15 : 18,
                       height: 1.25,
                     ),
                   ),

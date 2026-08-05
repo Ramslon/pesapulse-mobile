@@ -47,9 +47,10 @@ class BudgetBreakdownCard extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, ColorScheme colorScheme) {
-    const double cardPadding = 20;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     return Padding(
-      padding: EdgeInsets.all(cardPadding),
+      padding: EdgeInsets.all(isLandscape ? 14 : 20),
       child: Column(
         children: [
           categoryTotals.isEmpty
@@ -72,7 +73,7 @@ class BudgetBreakdownCard extends StatelessWidget {
                 )
               // replace with your chart widget
               : SizedBox(
-                  height: 280,
+                  height: isLandscape ? 220 : 280,
                   child: SpendingPieChart(categoryTotals: categoryTotals),
                 ),
           if (categoryTotals.isNotEmpty) ...[

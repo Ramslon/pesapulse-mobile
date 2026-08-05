@@ -30,6 +30,10 @@ class SpendingAnalyticsSection extends StatelessWidget {
 
     final screenHeight = MediaQuery.of(context).size.height;
     final cardPadding = MediaQuery.of(context).size.width * .05;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    final analyticsHeight = isLandscape ? 120.0 : screenHeight * .21;
 
     const smallSpacing = 8.0;
     const sectionSpacing = 20.0;
@@ -128,7 +132,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: screenHeight * .21,
+                      height: analyticsHeight,
                       child: AnalyticsCard(
                         icon: Icons.calendar_today_rounded,
                         title: "Highest Day",
@@ -142,7 +146,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
 
                   Expanded(
                     child: SizedBox(
-                      height: screenHeight * .21,
+                      height: analyticsHeight,
                       child: AnalyticsCard(
                         icon: Icons.analytics_rounded,
                         title: "Avg Daily Spending",
@@ -157,7 +161,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
               SizedBox(height: sectionSpacing),
 
               SizedBox(
-                height: screenHeight * .21,
+                height: analyticsHeight,
                 child: AnalyticsCard(
                   icon: Icons.trending_up_rounded,
                   title: "Projected Month-End Spending",

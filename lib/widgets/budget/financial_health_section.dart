@@ -31,6 +31,8 @@ class FinancialHealthSection extends StatelessWidget {
 
     const smallSpacing = 8.0;
     const sectionSpacing = 20.0;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,7 +42,7 @@ class FinancialHealthSection extends StatelessWidget {
           subtitle: "Your overall money management score",
         ),
 
-        const SizedBox(height: sectionSpacing),
+        SizedBox(height: isLandscape ? 12 : sectionSpacing),
 
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.9, end: 1),
@@ -64,7 +66,7 @@ class FinancialHealthSection extends StatelessWidget {
             fontSize: 14,
           ),
         ),
-        SizedBox(height: sectionSpacing),
+        SizedBox(height: isLandscape ? 12 : sectionSpacing),
 
         Text(
           "${percentageUsed.toStringAsFixed(1)}% Used",

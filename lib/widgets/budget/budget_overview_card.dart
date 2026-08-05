@@ -10,6 +10,7 @@ class BudgetOverviewCard extends StatelessWidget {
   final double remaining;
   final double percentageUsed;
   final Color statusColor;
+  final bool isLandscape;
 
   const BudgetOverviewCard({
     super.key,
@@ -18,13 +19,14 @@ class BudgetOverviewCard extends StatelessWidget {
     required this.remaining,
     required this.percentageUsed,
     required this.statusColor,
+    required this.isLandscape,
   });
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final cardPadding = screenWidth * 0.05;
+    final cardPadding = isLandscape ? screenWidth * 0.025 : screenWidth * 0.05;
 
     final currencyFormatter = NumberFormat("#,##0.00");
 
@@ -43,7 +45,9 @@ class BudgetOverviewCard extends StatelessWidget {
                 return Text(
                   "KES ${currencyFormatter.format(value)}",
                   style: TextStyle(
-                    fontSize: screenWidth * .075,
+                    fontSize: isLandscape
+                        ? screenWidth * .032
+                        : screenWidth * .075,
                     fontWeight: FontWeight.bold,
                   ),
                 );
@@ -57,12 +61,16 @@ class BudgetOverviewCard extends StatelessWidget {
               spent: spent,
               percentageUsed: percentageUsed,
               statusColor: statusColor,
+              isLandscape: isLandscape,
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: isLandscape ? 10 : 14),
 
-            Divider(),
+            Divider(
+              thickness: 0.8,
+              color: Theme.of(context).dividerColor.withOpacity(.3),
+            ),
 
-            const SizedBox(height: 14),
+            SizedBox(height: isLandscape ? 10 : 14),
 
             Row(
               children: [
@@ -75,6 +83,8 @@ class BudgetOverviewCard extends StatelessWidget {
                     amount: spent,
                   ),
                 ),
+
+                const SizedBox(width: 12),
                 Expanded(
                   child: BudgetStatItem(
                     icon: Icons.savings,

@@ -10,6 +10,8 @@ class BudgetStatsGrid extends StatelessWidget {
   final int daysRemaining;
   final Color statusColor;
 
+  final bool isLandscape;
+
   const BudgetStatsGrid({
     super.key,
     required this.spent,
@@ -17,6 +19,7 @@ class BudgetStatsGrid extends StatelessWidget {
     required this.percentageUsed,
     required this.daysRemaining,
     required this.statusColor,
+    required this.isLandscape,
   });
 
   @override
@@ -26,12 +29,14 @@ class BudgetStatsGrid extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: isLandscape ? 2 : 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: screenWidth < 360
+      childAspectRatio: isLandscape
+          ? 1.30
+          : screenWidth < 360
           ? 0.72
           : screenWidth < 430
           ? 0.82
@@ -42,24 +47,28 @@ class BudgetStatsGrid extends StatelessWidget {
           title: "Spent",
           value: BudgetCalculator.formatCurrency(spent),
           color: colorScheme.primary,
+          isLandscape: isLandscape,
         ),
         BudgetStatCard(
           icon: Icons.savings,
           title: "Remaining",
           value: BudgetCalculator.formatCurrency(remaining),
           color: colorScheme.primary,
+          isLandscape: isLandscape,
         ),
         BudgetStatCard(
           icon: Icons.pie_chart,
           title: "Usage",
           value: "${percentageUsed.toStringAsFixed(0)}%",
           color: statusColor,
+          isLandscape: isLandscape,
         ),
         BudgetStatCard(
           icon: Icons.calendar_today,
           title: "Days Left",
           value: "$daysRemaining",
           color: colorScheme.primary,
+          isLandscape: isLandscape,
         ),
       ],
     );

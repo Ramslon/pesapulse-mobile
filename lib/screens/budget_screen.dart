@@ -217,7 +217,12 @@ class BudgetScreenState extends State<BudgetScreen>
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final sectionSpacing = screenHeight * 0.035;
+    final orientation = MediaQuery.of(context).orientation;
+    final isLandscape = orientation == Orientation.landscape;
+
+    final sectionSpacing = isLandscape ? 18.0 : screenHeight * 0.035;
+
+    final horizontalSpacing = isLandscape ? 20.0 : 16.0;
 
     final network = context.watch<ConnectivityProvider>();
     if (state.isLoading) {
@@ -253,8 +258,8 @@ class BudgetScreenState extends State<BudgetScreen>
             parent: BouncingScrollPhysics(),
           ),
           padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * .05,
-            vertical: screenHeight * .025,
+            horizontal: isLandscape ? 32 : screenWidth * .05,
+            vertical: isLandscape ? 16 : screenHeight * .025,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,59 +276,136 @@ class BudgetScreenState extends State<BudgetScreen>
                 percentageUsed: percentageUsed,
                 daysRemaining: daysRemaining,
                 statusColor: statusColor,
+                isLandscape: isLandscape,
               ),
               SizedBox(height: sectionSpacing),
 
               BudgetStatusBar(statusText: statusText, statusColor: statusColor),
 
               const BudgetSectionHeader(
-                title: "Budget Overview",
-                subtitle: "Track your spending and stay within budget",
+                title: "Monthly Budget Overview",
+                subtitle: "Track your monthly spending and stay within budget",
               ),
 
               AppSpacing.hSm,
 
-              BudgetOverviewCard(
-                budget: state.budget,
-                spent: state.spent,
-                remaining: remainingAmount,
-                percentageUsed: percentageUsed,
-                statusColor: statusColor,
-              ),
+              if (isLandscape)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: BudgetOverviewCard(
+                        budget: state.budget,
+                        spent: state.spent,
+                        remaining: remainingAmount,
+                        percentageUsed: percentageUsed,
+                        statusColor: statusColor,
+                        isLandscape: isLandscape,
+                      ),
+                    ),
 
-              SizedBox(height: sectionSpacing),
+                    const SizedBox(width: 20),
 
-              BudgetBreakdownCard(
-                categoryTotals: state.categoryTotals,
-                totalSpent: state.spent,
-              ),
+                    Expanded(
+                      flex: 6,
+                      child: BudgetBreakdownCard(
+                        categoryTotals: state.categoryTotals,
+                        totalSpent: state.spent,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Column(
+                  children: [
+                    BudgetOverviewCard(
+                      budget: state.budget,
+                      spent: state.spent,
+                      remaining: remainingAmount,
+                      percentageUsed: percentageUsed,
+                      statusColor: statusColor,
+                      isLandscape: isLandscape,
+                    ),
 
-              SizedBox(height: sectionSpacing),
+                    SizedBox(height: sectionSpacing),
 
-              SpendingAnalyticsSection(
-                dailySpending: state.dailySpending,
-                highestDay: state.highestDay,
-                highestDayAmount: state.highestDayAmount,
-                averageDaily: state.averageDaily,
-                estimatedMonthEnd: state.estimatedMonthEnd,
-              ),
-
-              SizedBox(height: sectionSpacing),
-
-              FinancialHealthSection(
-                financialScore: state.financialScore,
-                financialLabel: state.financialLabel,
-                percentageUsed: percentageUsed,
-                budget: state.budget,
-                spent: state.spent,
-                budgetAlert: BudgetAlertCard(
-                  budgetStatus: state.budgetStatus,
-                  budget: state.budget,
-                  percentageUsed: percentageUsed,
-                  recommendation: state.recommendation,
+                    BudgetBreakdownCard(
+                      categoryTotals: state.categoryTotals,
+                      totalSpent: state.spent,
+                    ),
+                  ],
                 ),
-                categoryAdvice: state.categoryAdvice,
-              ),
+
+              SizedBox(height: sectionSpacing),
+
+              SizedBox(height: sectionSpacing),
+
+              if (isLandscape)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 6,
+                      child: SpendingAnalyticsSection(
+                        dailySpending: state.dailySpending,
+                        highestDay: state.highestDay,
+                        highestDayAmount: state.highestDayAmount,
+                        averageDaily: state.averageDaily,
+                        estimatedMonthEnd: state.estimatedMonthEnd,
+                      ),
+                    ),
+
+                    const SizedBox(width: 20),
+
+                    Expanded(
+                      flex: 5,
+                      child: FinancialHealthSection(
+                        financialScore: state.financialScore,
+                        financialLabel: state.financialLabel,
+                        percentageUsed: percentageUsed,
+                        budget: state.budget,
+                        spent: state.spent,
+                        budgetAlert: BudgetAlertCard(
+                          budgetStatus: state.budgetStatus,
+                          budget: state.budget,
+                          percentageUsed: percentageUsed,
+                          recommendation: state.recommendation,
+                        ),
+                        categoryAdvice: state.categoryAdvice,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Column(
+                  children: [
+                    SpendingAnalyticsSection(
+                      dailySpending: state.dailySpending,
+                      highestDay: state.highestDay,
+                      highestDayAmount: state.highestDayAmount,
+                      averageDaily: state.averageDaily,
+                      estimatedMonthEnd: state.estimatedMonthEnd,
+                    ),
+
+                    SizedBox(height: sectionSpacing),
+
+                    FinancialHealthSection(
+                      financialScore: state.financialScore,
+                      financialLabel: state.financialLabel,
+                      percentageUsed: percentageUsed,
+                      budget: state.budget,
+                      spent: state.spent,
+                      budgetAlert: BudgetAlertCard(
+                        budgetStatus: state.budgetStatus,
+                        budget: state.budget,
+                        percentageUsed: percentageUsed,
+                        recommendation: state.recommendation,
+                      ),
+                      categoryAdvice: state.categoryAdvice,
+                    ),
+                  ],
+                ),
             ],
           ),
         ),

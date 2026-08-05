@@ -46,6 +46,9 @@ class _OfflineBannerState extends State<OfflineBanner>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Consumer<ConnectivityProvider>(
       builder: (context, network, child) {
         final isVisible = network.isSyncing || !network.isOnline;
@@ -83,17 +86,23 @@ class _OfflineBannerState extends State<OfflineBanner>
         return SlideTransition(
           position: _offsetAnimation,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: isLandscape ? 3 : 8,
+            ),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: isLandscape ? 4 : 12,
+              ),
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black26,
                     blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
@@ -101,13 +110,21 @@ class _OfflineBannerState extends State<OfflineBanner>
                 children: [
                   Icon(
                     icon,
+                    size: isLandscape ? 16 : 24,
                     color: colorScheme.onPrimary,
-                  ), // ✅ theme‑aware icon color
-                  const SizedBox(width: 12),
+                  ),
+
+                  SizedBox(width: isLandscape ? 8 : 12),
+
                   Expanded(
                     child: Text(
                       message,
-                      style: TextStyle(color: colorScheme.onPrimary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colorScheme.onPrimary,
+                        fontSize: isLandscape ? 11 : 14,
+                      ),
                     ),
                   ),
                 ],
