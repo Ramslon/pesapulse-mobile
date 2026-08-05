@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/spending_pie_chart.dart';
+
 import 'budget_category_tile.dart';
 import '../../screens/add_expense_screen.dart';
+import '../../core/constants/app_spacing.dart';
+import 'budget_section_header.dart';
 
 class BudgetBreakdownCard extends StatelessWidget {
   final Map<String, double> categoryTotals;
@@ -22,20 +25,9 @@ class BudgetBreakdownCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Budget Breakdown",
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        Text(
-          "See where your money goes",
-          style: TextStyle(
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(.7),
-          ),
+        const BudgetSectionHeader(
+          title: "Budget Breakdown",
+          subtitle: "See where your money goes",
         ),
 
         const SizedBox(height: 20),
@@ -46,7 +38,7 @@ class BudgetBreakdownCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: AppSpacing.cardPadding,
             child: _buildContent(context, colorScheme),
           ),
         ),

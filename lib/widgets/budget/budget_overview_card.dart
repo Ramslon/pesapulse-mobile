@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'budget_stat_item.dart';
 import 'budget_progress_gauge.dart';
+import '../../core/constants/app_spacing.dart';
 
 class BudgetOverviewCard extends StatelessWidget {
   final double budget;
@@ -24,9 +25,6 @@ class BudgetOverviewCard extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
 
     final cardPadding = screenWidth * 0.05;
-
-    const smallSpacing = 8.0;
-    const sectionSpacing = 18.0;
 
     final currencyFormatter = NumberFormat("#,##0.00");
 
@@ -52,7 +50,7 @@ class BudgetOverviewCard extends StatelessWidget {
               },
             ),
 
-            SizedBox(height: smallSpacing),
+            AppSpacing.sm,
 
             BudgetProgressGauge(
               budget: budget,
@@ -60,11 +58,11 @@ class BudgetOverviewCard extends StatelessWidget {
               percentageUsed: percentageUsed,
               statusColor: statusColor,
             ),
-            SizedBox(height: sectionSpacing),
+            const SizedBox(height: 14),
 
             Divider(),
 
-            SizedBox(height: sectionSpacing),
+            const SizedBox(height: 14),
 
             Row(
               children: [

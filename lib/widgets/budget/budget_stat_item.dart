@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/constants/app_spacing.dart';
 
 class BudgetStatItem extends StatelessWidget {
   final IconData icon;
@@ -24,6 +25,7 @@ class BudgetStatItem extends StatelessWidget {
     return Column(
       children: [
         CircleAvatar(
+          radius: 18,
           backgroundColor: backgroundColor,
           child: Icon(icon, color: iconColor),
         ),
@@ -41,7 +43,7 @@ class BudgetStatItem extends StatelessWidget {
           },
         ),
 
-        const SizedBox(height: 8),
+        AppSpacing.sm,
 
         Text(title),
       ],

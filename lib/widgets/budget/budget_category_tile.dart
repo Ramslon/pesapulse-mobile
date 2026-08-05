@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/constants/app_spacing.dart';
 
 class BudgetCategoryTile extends StatelessWidget {
   final String category;
@@ -50,7 +51,7 @@ class BudgetCategoryTile extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(width: 12),
+            AppSpacing.hSm,
 
             Text(
               "KES ${formatter.format(amount)}",

@@ -3,6 +3,9 @@ import '../empty_state.dart';
 import '../spending_trend_chart.dart';
 import '../analytics_card.dart';
 import 'package:pesapulse_mobile/screens/add_expense_screen.dart';
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
+import '../../core/constants/app_spacing.dart';
+import 'budget_section_header.dart';
 
 class SpendingAnalyticsSection extends StatelessWidget {
   final Map<String, double> dailySpending;
@@ -34,20 +37,10 @@ class SpendingAnalyticsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Spending Analytics",
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+        const BudgetSectionHeader(
+          title: "Spending Analytics",
+          subtitle: "Insights from your spending habits",
         ),
-
-        const SizedBox(height: smallSpacing),
-
-        Text(
-          "Insights from your spending habits",
-          style: TextStyle(color: colorScheme.onSurface.withOpacity(.7)),
-        ),
-
         const SizedBox(height: sectionSpacing),
 
         TweenAnimationBuilder<double>(
@@ -139,14 +132,13 @@ class SpendingAnalyticsSection extends StatelessWidget {
                       child: AnalyticsCard(
                         icon: Icons.calendar_today_rounded,
                         title: "Highest Day",
-                        value:
-                            "$highestDay\nKES ${highestDayAmount.toStringAsFixed(0)}",
+                        value: CurrencyFormatter.format(highestDayAmount),
                         color: colorScheme.primary,
                       ),
                     ),
                   ),
 
-                  SizedBox(width: 12),
+                  AppSpacing.hSm,
 
                   Expanded(
                     child: SizedBox(
@@ -154,7 +146,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
                       child: AnalyticsCard(
                         icon: Icons.analytics_rounded,
                         title: "Avg Daily Spending",
-                        value: "KES ${averageDaily.toStringAsFixed(0)}",
+                        value: CurrencyFormatter.format(averageDaily),
                         color: colorScheme.primary,
                       ),
                     ),
@@ -169,7 +161,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
                 child: AnalyticsCard(
                   icon: Icons.trending_up_rounded,
                   title: "Projected Month-End Spending",
-                  value: "KES ${estimatedMonthEnd.toStringAsFixed(0)}",
+                  value: CurrencyFormatter.format(estimatedMonthEnd),
                   color: colorScheme.primary,
                 ),
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_spacing.dart';
 
 class BudgetHeader extends StatelessWidget {
   const BudgetHeader({super.key});
@@ -18,7 +19,7 @@ class BudgetHeader extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 8),
+        AppSpacing.sm,
 
         Text(
           "Track your spending and stay within budget",

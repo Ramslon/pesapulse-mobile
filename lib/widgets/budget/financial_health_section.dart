@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../financial_health_card.dart';
+import 'budget_section_header.dart';
 
 class FinancialHealthSection extends StatelessWidget {
   final int financialScore;
@@ -34,18 +35,9 @@ class FinancialHealthSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Financial Health",
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        const SizedBox(height: smallSpacing),
-
-        Text(
-          "Your overall money management score",
-          style: TextStyle(color: colorScheme.onSurface.withOpacity(.7)),
+        const BudgetSectionHeader(
+          title: "Financial Health",
+          subtitle: "Your overall money management score",
         ),
 
         const SizedBox(height: sectionSpacing),

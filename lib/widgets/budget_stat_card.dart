@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_spacing.dart';
 
 class BudgetStatCard extends StatelessWidget {
   final IconData icon;
@@ -39,7 +40,7 @@ class BudgetStatCard extends StatelessWidget {
                 child: Icon(icon, color: color),
               ),
 
-              const SizedBox(height: 16),
+              AppSpacing.md,
 
               Text(title, style: TextStyle(color: Colors.grey.shade600)),
 

@@ -18,7 +18,7 @@ class BudgetProgressGauge extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final gaugeSize = (screenWidth * .34).clamp(120.0, 170.0);
+    final gaugeSize = (screenWidth * .30).clamp(105.0, 145.0);
 
     final theme = Theme.of(context);
 
@@ -35,7 +35,7 @@ class BudgetProgressGauge extends StatelessWidget {
             builder: (context, value, child) {
               return CircularProgressIndicator(
                 value: value,
-                strokeWidth: 14,
+                strokeWidth: 10,
                 strokeCap: StrokeCap.round,
                 backgroundColor: Colors.grey.shade200,
                 color: statusColor,
@@ -55,7 +55,7 @@ class BudgetProgressGauge extends StatelessWidget {
                     "${value.toStringAsFixed(0)}%",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: screenWidth * .09,
+                      fontSize: screenWidth * .07,
                     ),
                   ),
 
