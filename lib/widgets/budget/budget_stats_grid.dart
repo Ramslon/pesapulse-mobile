@@ -37,12 +37,12 @@ class BudgetStatsGrid extends StatelessWidget {
       crossAxisSpacing: spacing,
       mainAxisSpacing: spacing,
       childAspectRatio: isLandscape
-          ? 1.55
+          ? 2.0
           : screenWidth < 360
-          ? 0.72
+          ? 1.15
           : screenWidth < 430
-          ? 0.82
-          : 0.92,
+          ? 1.25
+          : 1.35,
       children: [
         BudgetStatCard(
           icon: Icons.trending_up,

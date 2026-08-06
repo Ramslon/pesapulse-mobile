@@ -15,13 +15,16 @@ import '../widgets/delete_budget_dialog.dart';
 import '../repositories/budget_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 import '../features/budget/controllers/budget_controller.dart';
-import '../widgets/budget/budget_app_bar.dart';
+
 import '../widgets/budget/budget_stats_grid.dart';
+
 import '../providers/connectivity_provider.dart';
+import '../../widgets/app/adaptive_app_bar.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_spacing.dart';
 import '../features/budget/utils/budget_calculator.dart';
 import '../features/budget/models/budget_state.dart';
+import '../widgets/app/app_scaffold.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -222,8 +225,6 @@ class BudgetScreenState extends State<BudgetScreen>
 
     final sectionSpacing = isLandscape ? 18.0 : screenHeight * 0.035;
 
-    final horizontalSpacing = isLandscape ? 20.0 : 16.0;
-
     final network = context.watch<ConnectivityProvider>();
     if (state.isLoading) {
       return const BudgetLoadingSkeleton();
@@ -243,8 +244,8 @@ class BudgetScreenState extends State<BudgetScreen>
 
     // replace with your chart widget
 
-    return Scaffold(
-      appBar: const BudgetAppBar(),
+    return AppScaffold(
+      appBar: const AdaptiveAppBar(title: null),
       floatingActionButton: BudgetFAB(
         hasBudget: state.budget > 0,
         onPressed: showCreateBudgetDialog,
@@ -259,16 +260,14 @@ class BudgetScreenState extends State<BudgetScreen>
           ),
           padding: EdgeInsets.symmetric(
             horizontal: isLandscape ? 32 : screenWidth * .05,
-            vertical: isLandscape ? 16 : screenHeight * .025,
+            vertical: isLandscape ? 10 : 10,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: sectionSpacing),
-
               const BudgetHeader(),
 
-              SizedBox(height: sectionSpacing),
+              SizedBox(height: 12),
 
               BudgetStatsGrid(
                 spent: state.spent,

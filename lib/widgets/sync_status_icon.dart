@@ -7,7 +7,10 @@ class SyncStatusIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final appBarTheme = Theme.of(context).appBarTheme;
+
+    final Color iconColor =
+        appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onPrimary;
 
     return Consumer<ConnectivityProvider>(
       builder: (context, network, child) {
@@ -19,9 +22,7 @@ class SyncStatusIcon extends StatelessWidget {
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                colorScheme.primary, // ✅ adapts to theme
-              ),
+              valueColor: AlwaysStoppedAnimation(iconColor),
             ),
           );
         } else if (network.pendingChanges > 0) {
@@ -30,18 +31,12 @@ class SyncStatusIcon extends StatelessWidget {
               "${network.pendingChanges}",
               style: const TextStyle(fontSize: 10),
             ),
-            child: Icon(
-              Icons.sync_problem,
-              color: colorScheme.error, // ✅ theme error color
-            ),
+            child: Icon(Icons.sync_problem, color: Colors.orange.shade300),
           );
         } else {
           icon = Icon(
             network.isOnline ? Icons.cloud_done : Icons.cloud_off,
-            color: network.isOnline
-                ? colorScheme
-                      .primary // ✅ theme primary for online
-                : colorScheme.tertiary, // ✅ theme tertiary for offline
+            color: network.isOnline ? iconColor : Colors.orange.shade300,
           );
         }
 

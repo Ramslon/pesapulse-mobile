@@ -11,21 +11,25 @@ class OfflineBanner extends StatefulWidget {
 
 class _OfflineBannerState extends State<OfflineBanner>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _offsetAnimation;
+  late final AnimationController _controller;
+  late final Animation<Offset> _offsetAnimation;
+
+  bool _dismissed = false;
+  bool? _lastVisibleState;
 
   @override
   void initState() {
     super.initState();
+
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
       vsync: this,
+      duration: const Duration(milliseconds: 350),
     );
 
     _offsetAnimation = Tween<Offset>(
-      begin: const Offset(0, -1), // start above screen
-      end: Offset.zero, // slide into place
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
   }
 
   @override
@@ -34,7 +38,7 @@ class _OfflineBannerState extends State<OfflineBanner>
     super.dispose();
   }
 
-  void _triggerAnimation(bool show) {
+  void _animate(bool show) {
     if (show) {
       _controller.forward();
     } else {
@@ -44,87 +48,105 @@ class _OfflineBannerState extends State<OfflineBanner>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Consumer<ConnectivityProvider>(
       builder: (context, network, child) {
-        final isVisible = network.isSyncing || !network.isOnline;
-        _triggerAnimation(isVisible);
+        final visible = network.isSyncing || !network.isOnline;
 
-        if (!isVisible) return const SizedBox.shrink();
+        _animate(visible);
 
-        final bool isSyncing = network.isSyncing;
-        final bool isOnline = network.isOnline;
-        final bool hasPending = network.pendingChanges > 0;
+        // Reset dismissal whenever visibility changes
+        if (_lastVisibleState != visible) {
+          _dismissed = false;
+          _lastVisibleState = visible;
+        }
 
-        // Theme‑aware background colors
-        final Color bgColor = isSyncing
-            ? colorScheme.primary
-            : isOnline
-            ? colorScheme.secondary
-            : colorScheme.error;
+        if (_dismissed || !visible) {
+          return const SizedBox.shrink();
+        }
 
-        final IconData icon = isSyncing
-            ? Icons.sync
-            : hasPending
-            ? Icons.sync_problem
-            : isOnline
-            ? Icons.cloud_done
-            : Icons.cloud_off;
+        if (!visible) return const SizedBox.shrink();
 
-        final String message = isSyncing
+        final bool syncing = network.isSyncing;
+
+        final Color background = syncing
+            ? Colors.blue.shade700
+            : Colors.red.shade700;
+
+        final IconData icon = syncing ? Icons.sync : Icons.cloud_off;
+
+        final String text = syncing
             ? "Syncing your latest changes..."
-            : hasPending
-            ? "${network.pendingChanges} change(s) are waiting to sync."
-            : isOnline
-            ? "You’re online. All changes are synced."
-            : "You’re offline. Changes will be saved locally.";
+            : "You're offline. Changes will be saved locally.";
 
         return SlideTransition(
           position: _offsetAnimation,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: isLandscape ? 3 : 8,
-            ),
+          child: Material(
+            color: Colors.transparent,
             child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: isLandscape ? 4 : 12,
-              ),
               decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(12),
+                color: background,
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: const [
                   BoxShadow(
                     color: Colors.black26,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
                   ),
                 ],
               ),
+              padding: EdgeInsets.symmetric(
+                horizontal: isLandscape ? 10 : 12,
+                vertical: isLandscape ? 5 : 8,
+              ),
               child: Row(
                 children: [
-                  Icon(
-                    icon,
-                    size: isLandscape ? 16 : 24,
-                    color: colorScheme.onPrimary,
-                  ),
+                  if (syncing)
+                    SizedBox(
+                      width: isLandscape ? 16 : 20,
+                      height: isLandscape ? 16 : 20,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  else
+                    Icon(
+                      icon,
+                      color: Colors.white,
+                      size: isLandscape ? 16 : 20,
+                    ),
 
-                  SizedBox(width: isLandscape ? 8 : 12),
+                  SizedBox(width: isLandscape ? 6 : 8),
 
                   Expanded(
                     child: Text(
-                      message,
+                      text,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: colorScheme.onPrimary,
+                        color: Colors.white,
                         fontSize: isLandscape ? 11 : 14,
+                        fontWeight: FontWeight.w500,
                       ),
+                    ),
+                  ),
+
+                  GestureDetector(
+                    onTap: () {
+                      _controller.reverse().then((_) {
+                        if (mounted) {
+                          setState(() {
+                            _dismissed = true;
+                          });
+                        }
+                      });
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: Icon(Icons.close, color: Colors.white, size: 18),
                     ),
                   ),
                 ],

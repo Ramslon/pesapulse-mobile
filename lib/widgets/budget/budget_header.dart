@@ -14,7 +14,7 @@ class BudgetHeader extends StatelessWidget {
       children: [
         Text(
           "Budget Overview",
-          style: theme.textTheme.headlineSmall?.copyWith(
+          style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             letterSpacing: .3,
             fontSize: compact ? 22 : 30,
