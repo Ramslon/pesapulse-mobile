@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../widgets/custom_button.dart';
 import '../widgets/input_icon_badge.dart';
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
 import '../services/notification_service.dart';
 import '../repositories/expense_repository.dart';
 import '../services/sync_service.dart';
@@ -183,14 +185,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: false,
-        title: const Row(
+    return AppScaffold(
+      showOfflineBanner: true,
+      showSyncIcon: true,
+
+      appBar: const AdaptiveAppBar(
+        titleWidget: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.receipt_long_rounded),
-            SizedBox(width: 10),
+            SizedBox(width: 8),
             Text("Add Expense", style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),

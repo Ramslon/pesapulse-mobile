@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 class AdaptiveAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
+  final Widget? titleWidget;
   final List<Widget>? actions;
   final bool centerTitle;
 
   const AdaptiveAppBar({
     super.key,
     this.title,
+    this.titleWidget,
     this.actions,
     this.centerTitle = false,
   });
@@ -18,25 +20,27 @@ class AdaptiveAppBar extends StatelessWidget implements PreferredSizeWidget {
         MediaQuery.of(context).orientation == Orientation.landscape;
 
     return AppBar(
-      toolbarHeight: isLandscape ? 24 : 36,
+      toolbarHeight: isLandscape ? 24 : 34,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: centerTitle,
 
-      title: title == null
-          ? null
-          : Text(
-              title!,
-              style: TextStyle(
-                fontSize: isLandscape ? 14 : 17,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+      title:
+          titleWidget ??
+          (title == null
+              ? null
+              : Text(
+                  title!,
+                  style: TextStyle(
+                    fontSize: isLandscape ? 14 : 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )),
 
       actions: actions,
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(36);
+  Size get preferredSize => const Size.fromHeight(34);
 }

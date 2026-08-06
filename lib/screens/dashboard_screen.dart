@@ -2,18 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:pesapulse_mobile/repositories/budget_repository.dart';
 
 import 'package:pesapulse_mobile/screens/expense_screen.dart';
-import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 import '../services/session_service.dart';
-
 import '../widgets/dashboard_card.dart';
 import '../widgets/dashboard_loading_skeleton.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/recent_expense_tile.dart';
-
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
 import '../screens/add_expense_screen.dart';
 import '../screens/add_goals_screen.dart';
 import '../screens/budget_page.dart';
-import '../widgets/offline_banner.dart';
 import '../widgets/empty_state_helper.dart';
 import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
@@ -714,20 +712,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       return const DashboardLoadingSkeleton();
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(""),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: SyncStatusIcon(), // quick glance sync state
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(40),
-          child: const OfflineBanner(), //  pinned under AppBar
-        ),
-      ),
+    return AppScaffold(
+      appBar: const AdaptiveAppBar(title: null),
       body: RefreshIndicator(
         onRefresh: refreshDashboard,
         child: SingleChildScrollView(

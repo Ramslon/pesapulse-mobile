@@ -10,6 +10,7 @@ class AppScaffold extends StatelessWidget {
   final Widget? bottomNavigationBar;
   final Color? backgroundColor;
   final bool showSyncIcon;
+  final bool showOfflineBanner;
   final FloatingActionButtonLocation? floatingActionButtonLocation;
 
   const AppScaffold({
@@ -20,6 +21,7 @@ class AppScaffold extends StatelessWidget {
     this.bottomNavigationBar,
     this.backgroundColor,
     this.showSyncIcon = true,
+    this.showOfflineBanner = true,
     this.floatingActionButtonLocation,
   });
 
@@ -47,14 +49,15 @@ class AppScaffold extends StatelessWidget {
           ),
 
         // Floating Offline Banner
-        Positioned(
-          top: topPadding + 10,
-          left: 12,
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.75,
-            child: const OfflineBanner(),
+        if (showOfflineBanner)
+          Positioned(
+            top: topPadding + 10,
+            left: 12,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.75,
+              child: const OfflineBanner(),
+            ),
           ),
-        ),
       ],
     );
   }

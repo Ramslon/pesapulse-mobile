@@ -1,13 +1,13 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 import 'package:provider/provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../widgets/analytics_loading_skeleton.dart';
 import '../widgets/analytics_section_header.dart';
 import '../widgets/fade_slide_animation.dart';
 import '../widgets/empty_state_helper.dart';
-
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
 import '../services/export_service.dart';
 import '../services/report_history_service.dart';
 import '../services/guest_dialog_service.dart';
@@ -759,16 +759,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     // at least one dataset exists
     final hasPartialData =
         !hasNoData && (expenses.isEmpty || totalGoals == 0 || reports.isEmpty);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(""),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: SyncStatusIcon(), //  quick glance sync state
-          ),
-        ],
-      ),
+    return AppScaffold(
+      showOfflineBanner: false,
+      appBar: const AdaptiveAppBar(title: null),
       body: isGuest
           ? buildEmptyState(context, EmptyStateType.analyticsGuest)
           : hasNoData

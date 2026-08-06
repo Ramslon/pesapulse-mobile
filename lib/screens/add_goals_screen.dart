@@ -5,6 +5,8 @@ import '../services/sync_events.dart';
 import 'package:provider/provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../repositories/goals_repository.dart';
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
 
 class AddGoalScreen extends StatefulWidget {
   const AddGoalScreen({super.key});
@@ -217,9 +219,20 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text(""), elevation: 0),
+    return AppScaffold(
+      showOfflineBanner: true,
+      showSyncIcon: true,
 
+      appBar: const AdaptiveAppBar(
+        titleWidget: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.flag_rounded),
+            SizedBox(width: 8),
+            Text("Add Goal", style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
         children: [

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
 import 'package:pesapulse_mobile/screens/expense_details_screen.dart';
 
 import 'edit_expense_screen.dart';
@@ -9,7 +8,9 @@ import 'edit_expense_screen.dart';
 import '../widgets/empty_state_helper.dart';
 import '../widgets/no_filter_results_widget.dart';
 import '../widgets/expense_loading_skeleton.dart';
-import '../widgets/offline_banner.dart';
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
+
 import '../repositories/expense_repository.dart';
 import '../services/sync_service.dart';
 import '../screens/add_expense_screen.dart';
@@ -538,21 +539,8 @@ class ExpenseListContentState extends State<ExpenseListContent>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(""),
-
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: SyncStatusIcon(), //  quick glance sync state
-          ),
-        ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(40),
-          child: OfflineBanner(), // pinned under AppBar
-        ),
-      ),
+    return AppScaffold(
+      appBar: const AdaptiveAppBar(title: null),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: "expenseFabInner",
         backgroundColor: Theme.of(context).colorScheme.primary,

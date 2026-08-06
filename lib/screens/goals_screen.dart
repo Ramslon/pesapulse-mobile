@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:pesapulse_mobile/widgets/sync_status_icon.dart';
-import '../widgets/offline_banner.dart';
 
 import '../services/notification_service.dart';
 import '../services/sync_events.dart';
 
 import '../widgets/goal_loading_skeleton.dart';
 import '../widgets/goal_stat_card.dart';
-
 import '../widgets/empty_state_helper.dart';
 import '../widgets/fade_slide_animation.dart';
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
 
 import 'add_goals_screen.dart';
 import 'archived_goals_screen.dart';
@@ -572,20 +571,8 @@ class _GoalsScreenState extends State<GoalsScreen>
       return const GoalLoadingSkeleton();
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(""),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: SyncStatusIcon(), // quick glance sync state
-          ),
-        ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(40),
-          child: OfflineBanner(), // pinned under AppBar
-        ),
-      ),
+    return AppScaffold(
+      appBar: const AdaptiveAppBar(title: null),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: "goalFab",
         elevation: 4,

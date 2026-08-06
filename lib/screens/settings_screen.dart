@@ -17,8 +17,10 @@ import '../screens/delete_account_screen.dart';
 import '../providers/connectivity_provider.dart';
 import '../services/sync_service.dart';
 import '../services/sync_events.dart';
+
 import '../widgets/auth_message_helper.dart';
-import '../widgets/sync_status_icon.dart';
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
 
 import '../repositories/settings_repository.dart';
 
@@ -394,16 +396,9 @@ https://github.com/ramslon/PesaPulse
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(""),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: SyncStatusIcon(), // quick glance sync state
-          ),
-        ],
-      ),
+    return AppScaffold(
+      showOfflineBanner: false,
+      appBar: const AdaptiveAppBar(title: null),
       body: RefreshIndicator(
         onRefresh: () async {
           await loadDashboardStats();

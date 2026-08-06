@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:intl/intl.dart';
 import '../widgets/input_icon_badge.dart';
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
 import '../repositories/expense_repository.dart';
 import '../services/sync_service.dart';
 
@@ -429,13 +431,16 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: const [
-            Icon(Icons.receipt_long),
-            SizedBox(width: 10),
-            Text("Edit Expense"),
+    return AppScaffold(
+      showOfflineBanner: true,
+      showSyncIcon: true,
+      appBar: const AdaptiveAppBar(
+        titleWidget: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.edit_note_rounded),
+            SizedBox(width: 8),
+            Text("Edit Expense", style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
       ),
