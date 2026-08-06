@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'budget_stat_item.dart';
 import 'budget_progress_gauge.dart';
-import '../../core/constants/app_spacing.dart';
 
 class BudgetOverviewCard extends StatelessWidget {
   final double budget;
@@ -26,9 +25,15 @@ class BudgetOverviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final cardPadding = isLandscape ? screenWidth * 0.025 : screenWidth * 0.05;
+    final currencyFormatter = NumberFormat("#,##0");
 
-    final currencyFormatter = NumberFormat("#,##0.00");
+    final compact = isLandscape;
+
+    final cardPadding = compact ? 14.0 : screenWidth * 0.05;
+
+    final gaugeSize = compact ? 110.0 : (screenWidth * .34).clamp(120.0, 170.0);
+
+    final amountFont = compact ? screenWidth * .03 : screenWidth * .075;
 
     return Card(
       elevation: 4,
@@ -45,32 +50,34 @@ class BudgetOverviewCard extends StatelessWidget {
                 return Text(
                   "KES ${currencyFormatter.format(value)}",
                   style: TextStyle(
-                    fontSize: isLandscape
-                        ? screenWidth * .032
-                        : screenWidth * .075,
+                    fontSize: amountFont,
                     fontWeight: FontWeight.bold,
                   ),
                 );
               },
             ),
 
-            AppSpacing.sm,
+            SizedBox(height: compact ? 6 : 12),
 
-            BudgetProgressGauge(
-              budget: budget,
-              spent: spent,
-              percentageUsed: percentageUsed,
-              statusColor: statusColor,
-              isLandscape: isLandscape,
+            SizedBox(
+              width: gaugeSize,
+              height: gaugeSize,
+              child: BudgetProgressGauge(
+                budget: budget,
+                spent: spent,
+                percentageUsed: percentageUsed,
+                statusColor: statusColor,
+                isLandscape: isLandscape,
+              ),
             ),
-            SizedBox(height: isLandscape ? 10 : 14),
+            SizedBox(height: compact ? 8 : 14),
 
             Divider(
               thickness: 0.8,
               color: Theme.of(context).dividerColor.withOpacity(.3),
             ),
 
-            SizedBox(height: isLandscape ? 10 : 14),
+            SizedBox(height: compact ? 8 : 14),
 
             Row(
               children: [
@@ -81,6 +88,7 @@ class BudgetOverviewCard extends StatelessWidget {
                     backgroundColor: Colors.red.shade200,
                     title: "Spent",
                     amount: spent,
+                    compact: compact,
                   ),
                 ),
 
@@ -92,6 +100,7 @@ class BudgetOverviewCard extends StatelessWidget {
                     backgroundColor: Colors.green.shade200,
                     title: "Remaining",
                     amount: remaining,
+                    compact: compact,
                   ),
                 ),
               ],

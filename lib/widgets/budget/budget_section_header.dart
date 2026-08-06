@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class BudgetSectionHeader extends StatelessWidget {
   final String title;
   final String subtitle;
+  final bool compact;
 
   const BudgetSectionHeader({
     super.key,
     required this.title,
     required this.subtitle,
+    this.compact = false,
   });
 
   @override
@@ -21,15 +23,16 @@ class BudgetSectionHeader extends StatelessWidget {
           title,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            letterSpacing: .3,
+            fontSize: compact ? 18 : 22,
           ),
         ),
 
-        const SizedBox(height: 6),
+        SizedBox(height: compact ? 2 : 6),
 
         Text(
           subtitle,
           style: theme.textTheme.bodyMedium?.copyWith(
+            fontSize: compact ? 11 : 14,
             color: theme.colorScheme.onSurface.withOpacity(.7),
           ),
         ),

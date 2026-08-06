@@ -58,12 +58,16 @@ class BudgetCalculator {
     }
   }
 
-  static String formatCurrency(double value) {
+  static String formatAmount(double value) {
     return value
         .toStringAsFixed(0)
         .replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (m) => '${m[1]},',
         );
+  }
+
+  static String formatCurrency(double value) {
+    return "KES ${formatAmount(value)}";
   }
 }

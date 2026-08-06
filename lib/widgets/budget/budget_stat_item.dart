@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../core/constants/app_spacing.dart';
 
 class BudgetStatItem extends StatelessWidget {
   final IconData icon;
@@ -8,6 +7,8 @@ class BudgetStatItem extends StatelessWidget {
   final Color backgroundColor;
   final String title;
   final double amount;
+  final bool compact;
+
   //final bool isLandscape;
 
   const BudgetStatItem({
@@ -17,22 +18,24 @@ class BudgetStatItem extends StatelessWidget {
     required this.backgroundColor,
     required this.title,
     required this.amount,
+    required this.compact,
+
     //required this.isLandscape,
   });
 
   @override
   Widget build(BuildContext context) {
-    final formatter = NumberFormat("#,##0.00");
+    final formatter = NumberFormat("#,##0");
 
     return Column(
       children: [
         CircleAvatar(
-          radius: 18,
+          radius: compact ? 16 : 20,
           backgroundColor: backgroundColor,
-          child: Icon(icon, color: iconColor),
+          child: Icon(icon, size: compact ? 18 : 24, color: iconColor),
         ),
 
-        const SizedBox(height: 6),
+        SizedBox(height: compact ? 6 : 10),
 
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 0, end: amount),
@@ -40,14 +43,17 @@ class BudgetStatItem extends StatelessWidget {
           builder: (context, value, child) {
             return Text(
               "KES ${formatter.format(value)}",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: compact ? 15 : 17,
+              ),
             );
           },
         ),
 
-        AppSpacing.sm,
+        SizedBox(height: compact ? 4 : 8),
 
-        Text(title),
+        Text(title, style: TextStyle(fontSize: compact ? 12 : 14)),
       ],
     );
   }

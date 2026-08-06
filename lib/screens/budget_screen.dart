@@ -282,6 +282,8 @@ class BudgetScreenState extends State<BudgetScreen>
 
               BudgetStatusBar(statusText: statusText, statusColor: statusColor),
 
+              SizedBox(height: sectionSpacing),
+
               const BudgetSectionHeader(
                 title: "Monthly Budget Overview",
                 subtitle: "Track your monthly spending and stay within budget",
@@ -312,6 +314,7 @@ class BudgetScreenState extends State<BudgetScreen>
                       child: BudgetBreakdownCard(
                         categoryTotals: state.categoryTotals,
                         totalSpent: state.spent,
+                        isLandscape: isLandscape,
                       ),
                     ),
                   ],
@@ -333,11 +336,10 @@ class BudgetScreenState extends State<BudgetScreen>
                     BudgetBreakdownCard(
                       categoryTotals: state.categoryTotals,
                       totalSpent: state.spent,
+                      isLandscape: isLandscape,
                     ),
                   ],
                 ),
-
-              SizedBox(height: sectionSpacing),
 
               SizedBox(height: sectionSpacing),
 

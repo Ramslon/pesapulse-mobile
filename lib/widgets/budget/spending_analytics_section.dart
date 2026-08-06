@@ -33,10 +33,8 @@ class SpendingAnalyticsSection extends StatelessWidget {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    final analyticsHeight = isLandscape ? 120.0 : screenHeight * .21;
-
-    const smallSpacing = 8.0;
-    const sectionSpacing = 20.0;
+    final smallSpacing = isLandscape ? 4.0 : 8.0;
+    final sectionSpacing = isLandscape ? 12.0 : 20.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +43,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
           title: "Spending Analytics",
           subtitle: "Insights from your spending habits",
         ),
-        const SizedBox(height: sectionSpacing),
+        SizedBox(height: sectionSpacing),
 
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 30, end: 0),
@@ -60,7 +58,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Padding(
-              padding: EdgeInsets.all(cardPadding),
+              padding: EdgeInsets.all(isLandscape ? 14 : cardPadding),
               child: dailySpending.isEmpty
                   ? EmptyState(
                       icon: Icons.show_chart,
@@ -96,15 +94,15 @@ class SpendingAnalyticsSection extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
-                width: 14,
-                height: 14,
+                width: isLandscape ? 10 : 14,
+                height: isLandscape ? 10 : 14,
                 decoration: BoxDecoration(
                   color: colorScheme.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
 
-              const SizedBox(width: 10),
+              SizedBox(width: isLandscape ? 6 : 10),
 
               Flexible(
                 child: Text(
@@ -132,7 +130,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: analyticsHeight,
+                      height: isLandscape ? 120 : screenHeight * .21,
                       child: AnalyticsCard(
                         icon: Icons.calendar_today_rounded,
                         title: "Highest Day",
@@ -146,7 +144,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
 
                   Expanded(
                     child: SizedBox(
-                      height: analyticsHeight,
+                      height: isLandscape ? 120 : screenHeight * .21,
                       child: AnalyticsCard(
                         icon: Icons.analytics_rounded,
                         title: "Avg Daily Spending",
@@ -161,7 +159,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
               SizedBox(height: sectionSpacing),
 
               SizedBox(
-                height: analyticsHeight,
+                height: isLandscape ? 120 : screenHeight * .21,
                 child: AnalyticsCard(
                   icon: Icons.trending_up_rounded,
                   title: "Projected Month-End Spending",

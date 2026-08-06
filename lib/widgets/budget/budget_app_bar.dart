@@ -12,7 +12,7 @@ class BudgetAppBar extends StatelessWidget implements PreferredSizeWidget {
         MediaQuery.of(context).orientation == Orientation.landscape;
 
     return AppBar(
-      toolbarHeight: isLandscape ? 40 : kToolbarHeight,
+      toolbarHeight: isLandscape ? 36 : kToolbarHeight,
 
       title: isLandscape ? null : const Text(""),
 
@@ -21,7 +21,7 @@ class BudgetAppBar extends StatelessWidget implements PreferredSizeWidget {
       ],
 
       bottom: PreferredSize(
-        preferredSize: Size.fromHeight(isLandscape ? 18 : 40),
+        preferredSize: Size.fromHeight(isLandscape ? 18 : 36),
         child: const OfflineBanner(),
       ),
     );

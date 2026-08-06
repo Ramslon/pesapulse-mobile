@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_spacing.dart';
 
 class BudgetStatCard extends StatelessWidget {
   final IconData icon;
@@ -19,12 +18,12 @@ class BudgetStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final padding = isLandscape ? 12.0 : 18.0;
-    final iconRadius = isLandscape ? 16.0 : 20.0;
-    final iconSize = isLandscape ? 18.0 : 24.0;
-    final titleSize = isLandscape ? 11.0 : 13.0;
-    final valueSize = isLandscape ? 16.0 : 22.0;
-    final spacing = isLandscape ? 6.0 : 12.0;
+    final padding = isLandscape ? 10.0 : 16.0;
+    final iconRadius = isLandscape ? 14.0 : 18.0;
+    final iconSize = isLandscape ? 16.0 : 22.0;
+    final titleSize = isLandscape ? 10.5 : 12.5;
+    final valueSize = isLandscape ? 15.0 : 20.0;
+    final spacing = isLandscape ? 4.0 : 10.0;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.95, end: 1),
@@ -34,9 +33,11 @@ class BudgetStatCard extends StatelessWidget {
         return Transform.scale(scale: scale, child: child);
       },
       child: Card(
-        elevation: 2,
+        elevation: isLandscape ? 1 : 2,
         shadowColor: color.withOpacity(.12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(isLandscape ? 16 : 20),
+        ),
         child: Padding(
           padding: EdgeInsets.all(padding),
           child: Column(
@@ -61,16 +62,20 @@ class BudgetStatCard extends StatelessWidget {
                 ),
               ),
 
-              const Spacer(),
-
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: valueSize,
-                    fontWeight: FontWeight.bold,
+              Expanded(
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: valueSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ),

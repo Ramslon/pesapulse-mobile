@@ -31,7 +31,10 @@ class SpendingPieChart extends StatelessWidget {
       aspectRatio: 1.2,
       child: PieChart(
         PieChartData(
-          centerSpaceRadius: 45,
+          centerSpaceRadius:
+              MediaQuery.of(context).orientation == Orientation.landscape
+              ? 28
+              : 40,
           sectionsSpace: 3,
           sections: categoryTotals.entries.map((entry) {
             final percentage = (entry.value / total) * 100;
@@ -39,12 +42,18 @@ class SpendingPieChart extends StatelessWidget {
             final section = PieChartSectionData(
               color: colors[index % colors.length],
               value: entry.value,
-              radius: 55,
+              radius:
+                  MediaQuery.of(context).orientation == Orientation.landscape
+                  ? 42
+                  : 55,
               title: "${percentage.toStringAsFixed(0)}%",
-              titleStyle: const TextStyle(
+              titleStyle: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 13,
+                fontSize:
+                    MediaQuery.of(context).orientation == Orientation.landscape
+                    ? 10
+                    : 13,
               ),
             );
 

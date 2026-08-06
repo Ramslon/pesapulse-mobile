@@ -50,6 +50,8 @@ class BudgetAlertCard extends StatelessWidget {
         return const SizedBox.shrink();
     }
 
+    final compact = MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Container(
       decoration: BoxDecoration(
         color: color.withOpacity(.10),
@@ -57,17 +59,17 @@ class BudgetAlertCard extends StatelessWidget {
         border: Border.all(color: color.withOpacity(.15)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(compact ? 12 : 18),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              radius: 30,
+              radius: compact ? 22 : 30,
               backgroundColor: color.withOpacity(.15),
-              child: Icon(icon, size: 32, color: color),
+              child: Icon(icon, size: compact ? 22 : 32, color: color),
             ),
 
-            const SizedBox(width: 16),
+            SizedBox(width: compact ? 10 : 16),
 
             Expanded(
               child: Column(
@@ -75,7 +77,7 @@ class BudgetAlertCard extends StatelessWidget {
                 children: [
                   StatusChip(text: title, color: color, icon: icon),
 
-                  const SizedBox(height: 12),
+                  SizedBox(height: compact ? 8 : 12),
 
                   Text(
                     budget > 0
@@ -83,7 +85,7 @@ class BudgetAlertCard extends StatelessWidget {
                         : 'No monthly budget has been set.',
                     style: TextStyle(
                       color: Colors.grey.shade700,
-                      fontSize: 14,
+                      fontSize: compact ? 12 : 14,
                       height: 1.4,
                     ),
                   ),
@@ -94,7 +96,7 @@ class BudgetAlertCard extends StatelessWidget {
                     recommendation,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                      fontSize: compact ? 12 : 14,
                       color: Colors.grey.shade800,
                       height: 1.4,
                     ),

@@ -29,10 +29,10 @@ class FinancialHealthSection extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    const smallSpacing = 8.0;
-    const sectionSpacing = 20.0;
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
+    final compact = MediaQuery.of(context).orientation == Orientation.landscape;
+
+    final smallSpacing = compact ? 4.0 : 8.0;
+    final sectionSpacing = compact ? 12.0 : 20.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +42,7 @@ class FinancialHealthSection extends StatelessWidget {
           subtitle: "Your overall money management score",
         ),
 
-        SizedBox(height: isLandscape ? 12 : sectionSpacing),
+        SizedBox(height: sectionSpacing),
 
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.9, end: 1),
@@ -63,10 +63,10 @@ class FinancialHealthSection extends StatelessWidget {
           "This score is calculated using your budget usage, spending consistency, and savings potential.",
           style: TextStyle(
             color: colorScheme.onSurface.withOpacity(0.7),
-            fontSize: 14,
+            fontSize: compact ? 12 : 14,
           ),
         ),
-        SizedBox(height: isLandscape ? 12 : sectionSpacing),
+        SizedBox(height: sectionSpacing),
 
         Text(
           "${percentageUsed.toStringAsFixed(1)}% Used",
@@ -83,7 +83,7 @@ class FinancialHealthSection extends StatelessWidget {
               : percentageUsed >= 80
               ? colorScheme.primary
               : colorScheme.primary,
-          minHeight: 10,
+          minHeight: compact ? 6 : 10,
           borderRadius: BorderRadius.circular(10),
         ),
         const SizedBox(height: 12),
@@ -100,13 +100,21 @@ class FinancialHealthSection extends StatelessWidget {
           Card(
             margin: const EdgeInsets.only(top: 20),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(compact ? 12 : 16),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(Icons.lightbulb),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(categoryAdvice)),
+                  SizedBox(width: compact ? 8 : 10),
+                  Expanded(
+                    child: Text(
+                      categoryAdvice,
+                      style: TextStyle(
+                        fontSize: compact ? 12 : 14,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

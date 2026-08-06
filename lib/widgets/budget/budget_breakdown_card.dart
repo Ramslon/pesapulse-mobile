@@ -10,11 +10,13 @@ import 'budget_section_header.dart';
 class BudgetBreakdownCard extends StatelessWidget {
   final Map<String, double> categoryTotals;
   final double totalSpent;
+  final bool isLandscape;
 
   const BudgetBreakdownCard({
     super.key,
     required this.categoryTotals,
     required this.totalSpent,
+    required this.isLandscape,
   });
 
   @override
@@ -25,9 +27,10 @@ class BudgetBreakdownCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const BudgetSectionHeader(
+        BudgetSectionHeader(
           title: "Budget Breakdown",
           subtitle: "See where your money goes",
+          compact: isLandscape,
         ),
 
         const SizedBox(height: 20),
@@ -73,7 +76,7 @@ class BudgetBreakdownCard extends StatelessWidget {
                 )
               // replace with your chart widget
               : SizedBox(
-                  height: isLandscape ? 220 : 280,
+                  height: isLandscape ? 170 : 240,
                   child: SpendingPieChart(categoryTotals: categoryTotals),
                 ),
           if (categoryTotals.isNotEmpty) ...[

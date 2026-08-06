@@ -14,6 +14,11 @@ class SpendingTrendChart extends StatelessWidget {
       return FlSpot(index.toDouble(), dailySpending[days[index]] ?? 0);
     });
 
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    final chartHeight = isLandscape ? 150.0 : 240.0;
+
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: const Duration(milliseconds: 1200),
@@ -25,7 +30,7 @@ class SpendingTrendChart extends StatelessWidget {
         );
       },
       child: SizedBox(
-        height: 240,
+        height: chartHeight,
 
         child: LineChart(
           LineChartData(

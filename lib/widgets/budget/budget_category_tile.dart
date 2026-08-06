@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../core/constants/app_spacing.dart';
 
 class BudgetCategoryTile extends StatelessWidget {
   final String category;
@@ -18,28 +17,35 @@ class BudgetCategoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = NumberFormat("#,##0.00");
+    final formatter = NumberFormat("#,##0");
 
     final percentage = totalSpent == 0 ? 0 : (amount / totalSpent) * 100;
+    final compact = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 10 : 14,
+          vertical: compact ? 8 : 12,
+        ),
         decoration: BoxDecoration(
           color: color.withOpacity(.08),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           children: [
-            CircleAvatar(radius: 7, backgroundColor: color),
+            CircleAvatar(radius: compact ? 5 : 7, backgroundColor: color),
 
-            const SizedBox(width: 14),
+            SizedBox(width: compact ? 8 : 14),
 
             Expanded(
               child: Text(
                 category,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: compact ? 13 : 15,
+                ),
               ),
             ),
 
@@ -48,14 +54,18 @@ class BudgetCategoryTile extends StatelessWidget {
               style: TextStyle(
                 color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.bold,
+                fontSize: compact ? 13 : 15,
               ),
             ),
 
-            AppSpacing.hSm,
+            SizedBox(width: compact ? 6 : 10),
 
             Text(
               "KES ${formatter.format(amount)}",
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: compact ? 13 : 15,
+              ),
             ),
           ],
         ),

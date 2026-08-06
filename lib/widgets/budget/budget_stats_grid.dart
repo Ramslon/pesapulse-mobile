@@ -28,14 +28,16 @@ class BudgetStatsGrid extends StatelessWidget {
 
     final colorScheme = Theme.of(context).colorScheme;
 
+    final spacing = isLandscape ? 10.0 : screenWidth * 0.04;
+
     return GridView.count(
-      crossAxisCount: isLandscape ? 2 : 2,
+      crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
+      crossAxisSpacing: spacing,
+      mainAxisSpacing: spacing,
       childAspectRatio: isLandscape
-          ? 1.30
+          ? 1.55
           : screenWidth < 360
           ? 0.72
           : screenWidth < 430
