@@ -200,186 +200,215 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 key: const PageStorageKey("analytics"),
 
                 padding: EdgeInsets.all(contentPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-
-                  children: [
-                    if (hasPartialData)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: buildEmptyState(
-                          context,
-                          EmptyStateType.analyticsInProgress,
-                        ),
-                      ),
-
-                    const SizedBox(height: 4),
-
-                    AnalyticsOverviewCard(
-                      totalSpending: analytics.totalSpending,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: AnalyticsLayoutHelper.maxContentWidth(context),
                     ),
-                    SizedBox(height: sectionSpacing),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
-                    AnalyticsStatsGrid(
-                      totalGoals: analytics.totalGoals,
-                      completedGoals: analytics.completedGoals,
-                      activeGoals: analytics.activeGoals,
-                      completionRate: analytics.completionRate,
-                    ),
-
-                    SizedBox(height: sectionSpacing),
-                    FinancialHealthCard(
-                      healthScore: analytics.healthScore,
-                      healthStatus: analytics.healthStatus,
-                      recommendation: analytics.recommendation,
-                      color: AnalyticsThemeHelper.financialHealthColor(
-                        context,
-                        analytics.healthStatus,
-                      ),
-                      icon: AnalyticsThemeHelper.financialHealthIcon(
-                        analytics.healthStatus,
-                      ),
-                    ),
-                    const SizedBox(height: AnalyticsLayoutHelper.cardSpacing),
-                    ExportReportsSection(
-                      isGuest: isGuest,
-
-                      onGuestTap: () async {
-                        await GuestDialogService.requireAccount(context);
-                      },
-
-                      onExportPdf: () {
-                        return AnalyticsExportService.exportPdf(
-                          context: context,
-                          expenses: analytics.expenses,
-                          onReportsUpdated: loadReports,
-                        );
-                      },
-
-                      onExportCsv: () {
-                        return AnalyticsExportService.exportCsv(
-                          context: context,
-                          expenses: analytics.expenses,
-                          onReportsUpdated: loadReports,
-                        );
-                      },
-                    ),
-                    SizedBox(height: smallSpacing),
-
-                    FadeSlideAnimation(
-                      delay: 100,
-                      child: RecommendationCard(
-                        budgetStatus: analytics.budgetStatus,
-                        recommendation: analytics.recommendation,
-                        categoryAdvice: analytics.categoryAdvice,
-                        topCategory: analytics.topCategory,
-                        budgetUsage: analytics.budgetUsage,
-                      ),
-                    ),
-                    SizedBox(height: sectionSpacing),
-
-                    const AnalyticsSectionHeader(
-                      icon: Icons.pie_chart,
-                      title: "Category Breakdown",
-                    ),
-
-                    SizedBox(height: smallSpacing),
-
-                    analytics.categoryTotals.isEmpty
-                        ? buildEmptyState(
-                            context,
-                            EmptyStateType.categories,
-                            isGuest: isGuest,
-                          )
-                        : CategoryBreakdownChart(
-                            categoryTotals: analytics.categoryTotals,
-                            chartHeight: chartHeight,
+                      children: [
+                        if (hasPartialData)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: buildEmptyState(
+                              context,
+                              EmptyStateType.analyticsInProgress,
+                            ),
                           ),
-                    SizedBox(height: sectionSpacing * 1.2),
 
-                    const AnalyticsSectionHeader(
-                      icon: Icons.flag,
-                      title: "Goal Status",
-                    ),
-                    SizedBox(height: smallSpacing),
+                        const SizedBox(height: 4),
 
-                    GoalStatusChart(
-                      completedGoals: analytics.completedGoals,
-                      activeGoals: analytics.activeGoals,
-                      totalGoals: analytics.totalGoals,
-                      chartHeight: chartHeight,
-                    ),
-
-                    SizedBox(height: sectionSpacing * 1.2),
-
-                    const AnalyticsSectionHeader(
-                      icon: Icons.show_chart,
-                      title: "Monthly Spending Trend",
-                    ),
-
-                    const SizedBox(height: AnalyticsLayoutHelper.cardSpacing),
-
-                    MonthlySpendingChart(
-                      monthlyTotals: analytics.monthlyTotals,
-                      chartHeight: chartHeight,
-                    ),
-                    SizedBox(height: smallSpacing),
-                    Center(
-                      child: Text(
-                        '${analytics.completedGoals} of ${analytics.totalGoals} goals completed',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        AnalyticsOverviewCard(
+                          totalSpending: analytics.totalSpending,
                         ),
-                      ),
+                        SizedBox(height: sectionSpacing),
+
+                        AnalyticsStatsGrid(
+                          totalGoals: analytics.totalGoals,
+                          completedGoals: analytics.completedGoals,
+                          activeGoals: analytics.activeGoals,
+                          completionRate: analytics.completionRate,
+                        ),
+
+                        SizedBox(height: sectionSpacing),
+                        FinancialHealthCard(
+                          healthScore: analytics.healthScore,
+                          healthStatus: analytics.healthStatus,
+                          recommendation: analytics.recommendation,
+                          color: AnalyticsThemeHelper.financialHealthColor(
+                            context,
+                            analytics.healthStatus,
+                          ),
+                          icon: AnalyticsThemeHelper.financialHealthIcon(
+                            analytics.healthStatus,
+                          ),
+                        ),
+                        const SizedBox(
+                          height: AnalyticsLayoutHelper.cardSpacing,
+                        ),
+                        ExportReportsSection(
+                          isGuest: isGuest,
+
+                          onGuestTap: () async {
+                            await GuestDialogService.requireAccount(context);
+                          },
+
+                          onExportPdf: () {
+                            return AnalyticsExportService.exportPdf(
+                              context: context,
+                              expenses: analytics.expenses,
+                              onReportsUpdated: loadReports,
+                            );
+                          },
+
+                          onExportCsv: () {
+                            return AnalyticsExportService.exportCsv(
+                              context: context,
+                              expenses: analytics.expenses,
+                              onReportsUpdated: loadReports,
+                            );
+                          },
+                        ),
+                        SizedBox(height: smallSpacing),
+
+                        FadeSlideAnimation(
+                          delay: 100,
+                          child: RecommendationCard(
+                            budgetStatus: analytics.budgetStatus,
+                            recommendation: analytics.recommendation,
+                            categoryAdvice: analytics.categoryAdvice,
+                            topCategory: analytics.topCategory,
+                            budgetUsage: analytics.budgetUsage,
+                          ),
+                        ),
+                        SizedBox(height: sectionSpacing),
+
+                        const AnalyticsSectionHeader(
+                          icon: Icons.pie_chart,
+                          title: "Category Breakdown",
+                        ),
+
+                        SizedBox(height: smallSpacing),
+
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: AnalyticsLayoutHelper.maxChartWidth(
+                                context,
+                              ),
+                            ),
+                            child: analytics.categoryTotals.isEmpty
+                                ? buildEmptyState(
+                                    context,
+                                    EmptyStateType.categories,
+                                    isGuest: isGuest,
+                                  )
+                                : CategoryBreakdownChart(
+                                    categoryTotals: analytics.categoryTotals,
+                                    chartHeight: chartHeight,
+                                  ),
+                          ),
+                        ),
+                        SizedBox(height: sectionSpacing * 1.2),
+
+                        const AnalyticsSectionHeader(
+                          icon: Icons.flag,
+                          title: "Goal Status",
+                        ),
+                        SizedBox(height: smallSpacing),
+
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: AnalyticsLayoutHelper.maxChartWidth(
+                                context,
+                              ),
+                            ),
+                            child: GoalStatusChart(
+                              completedGoals: analytics.completedGoals,
+                              activeGoals: analytics.activeGoals,
+                              totalGoals: analytics.totalGoals,
+                              chartHeight: chartHeight,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: sectionSpacing * 1.2),
+
+                        const AnalyticsSectionHeader(
+                          icon: Icons.show_chart,
+                          title: "Monthly Spending Trend",
+                        ),
+
+                        const SizedBox(
+                          height: AnalyticsLayoutHelper.cardSpacing,
+                        ),
+
+                        MonthlySpendingChart(
+                          monthlyTotals: analytics.monthlyTotals,
+                          chartHeight: chartHeight,
+                        ),
+                        SizedBox(height: smallSpacing),
+                        Center(
+                          child: Text(
+                            '${analytics.completedGoals} of ${analytics.totalGoals} goals completed',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: sectionSpacing * 1.2),
+
+                        const AnalyticsSectionHeader(
+                          icon: Icons.lightbulb,
+                          title: "Smart Insights",
+                        ),
+
+                        SizedBox(height: smallSpacing),
+
+                        SmartInsightsCard(insights: analytics.insights),
+                        SizedBox(height: sectionSpacing * 1.2),
+
+                        const AnalyticsSectionHeader(
+                          icon: Icons.description,
+                          title: "Reports Center",
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Text(
+                          '${reports.length} Reports Generated',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: AnalyticsLayoutHelper.internalSpacing),
+
+                        ReportsCenterCard(
+                          reports: reports,
+
+                          onShare: shareExistingReport,
+
+                          onPreview: previewReport,
+
+                          onDelete: deleteReport,
+
+                          onClearHistory: () async {
+                            final result =
+                                await ReportManagerService.clearHistory();
+
+                            if (!mounted) return;
+
+                            setState(() {
+                              reports = result;
+                            });
+                          },
+                        ),
+                      ],
                     ),
-
-                    SizedBox(height: sectionSpacing * 1.2),
-
-                    const AnalyticsSectionHeader(
-                      icon: Icons.lightbulb,
-                      title: "Smart Insights",
-                    ),
-
-                    SizedBox(height: smallSpacing),
-
-                    SmartInsightsCard(insights: analytics.insights),
-                    SizedBox(height: sectionSpacing * 1.2),
-
-                    const AnalyticsSectionHeader(
-                      icon: Icons.description,
-                      title: "Reports Center",
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    Text(
-                      '${reports.length} Reports Generated',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: AnalyticsLayoutHelper.internalSpacing),
-
-                    ReportsCenterCard(
-                      reports: reports,
-
-                      onShare: shareExistingReport,
-
-                      onPreview: previewReport,
-
-                      onDelete: deleteReport,
-
-                      onClearHistory: () async {
-                        final result =
-                            await ReportManagerService.clearHistory();
-
-                        if (!mounted) return;
-
-                        setState(() {
-                          reports = result;
-                        });
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
