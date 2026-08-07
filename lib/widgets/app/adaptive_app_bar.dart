@@ -20,7 +20,7 @@ class AdaptiveAppBar extends StatelessWidget implements PreferredSizeWidget {
         MediaQuery.of(context).orientation == Orientation.landscape;
 
     return AppBar(
-      toolbarHeight: isLandscape ? 24 : 34,
+      toolbarHeight: isLandscape ? 20 : 34,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: centerTitle,
