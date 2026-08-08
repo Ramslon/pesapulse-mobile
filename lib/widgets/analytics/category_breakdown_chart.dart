@@ -1,5 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../fade_slide_animation.dart';
+import '/utils/analytics_layout_helper.dart';
 
 class CategoryBreakdownChart extends StatefulWidget {
   final Map<String, double> categoryTotals;
@@ -101,92 +103,107 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
         ? 14.0
         : 12.0;
 
+    final chartWidth = AnalyticsLayoutHelper.maxChartWidth(context);
+
     final centerSpaceRadius = (widget.chartHeight * 0.12).clamp(30.0, 55.0);
 
-    return Column(
-      children: [
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(cardPadding),
-            child: SizedBox(
-              width: double.infinity,
-              child: PieChart(
-                PieChartData(
-                  sections: _getSections(context),
-                  centerSpaceRadius: centerSpaceRadius,
-                  sectionsSpace: 3,
-                  pieTouchData: PieTouchData(
-                    touchCallback:
-                        (FlTouchEvent event, PieTouchResponse? response) {
-                          if (!event.isInterestedForInteractions ||
-                              response?.touchedSection == null) {
-                            setState(() {
-                              touchedIndex = null;
-                            });
-                            return;
-                          }
+    return FadeSlideAnimation(
+      delay: 200,
+      child: Column(
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: chartWidth),
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(cardPadding),
+                  child: SizedBox(
+                    height: widget.chartHeight,
+                    width: double.infinity,
+                    child: PieChart(
+                      PieChartData(
+                        sections: _getSections(context),
+                        centerSpaceRadius: centerSpaceRadius,
+                        sectionsSpace: 3,
+                        pieTouchData: PieTouchData(
+                          touchCallback:
+                              (FlTouchEvent event, PieTouchResponse? response) {
+                                if (!event.isInterestedForInteractions ||
+                                    response?.touchedSection == null) {
+                                  setState(() {
+                                    touchedIndex = null;
+                                  });
+                                  return;
+                                }
 
-                          setState(() {
-                            touchedIndex =
-                                response!.touchedSection!.touchedSectionIndex;
-                          });
-                        },
+                                setState(() {
+                                  touchedIndex = response!
+                                      .touchedSection!
+                                      .touchedSectionIndex;
+                                });
+                              },
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
 
-        if (selectedCategory != null) ...[
-          const SizedBox(height: 12),
+          if (selectedCategory != null) ...[
+            const SizedBox(height: 12),
 
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          selectedCategory['name'],
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedCategory['name'],
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'KES ${selectedCategory['amount'].toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            'KES ${selectedCategory['amount'].toStringAsFixed(0)}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  Text(
-                    '${selectedCategory['percentage'].toStringAsFixed(1)}%',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      '${selectedCategory['percentage'].toStringAsFixed(1)}%',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
