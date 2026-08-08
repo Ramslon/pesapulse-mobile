@@ -1,4 +1,5 @@
 import '../models/analytics_summary.dart';
+import '../models/analytics_period.dart';
 
 import '../repositories/analytics_repository.dart';
 
@@ -14,8 +15,7 @@ class AnalyticsService {
     double totalSpending = 0;
 
     final Map<String, double> categoryTotals = {};
-
-    final Map<int, double> monthlyTotals = {};
+    final Map<String, double> monthlyTotals = {};
 
     for (final expense in expenses) {
       final amount = double.tryParse(expense["amount"].toString()) ?? 0;
@@ -28,7 +28,9 @@ class AnalyticsService {
 
       final date = DateTime.parse(expense["created_at"]);
 
-      monthlyTotals[date.month] = (monthlyTotals[date.month] ?? 0) + amount;
+      final monthKey = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+
+      monthlyTotals[monthKey] = (monthlyTotals[monthKey] ?? 0) + amount;
     }
 
     final totalGoals =
@@ -63,14 +65,8 @@ class AnalyticsService {
 
     final topCategory = financialInsights["top_category"] ?? "";
 
-    if (financialInsights["category_breakdown"] != null) {
-      categoryTotals.clear();
-
-      for (final item in financialInsights["category_breakdown"]) {
-        categoryTotals[item["category"]] = (item["total"] as num).toDouble();
-      }
-    }
-
+    // Category totals are calculated from the already-filtered expenses.
+    // This keeps analytics consistent with the selected time period.
     final health = calculateHealthScore(
       completionRate: completionRate,
       totalGoals: totalGoals,
@@ -178,11 +174,71 @@ class AnalyticsService {
     return insights;
   }
 
-  Future<AnalyticsSummary> loadAnalytics() async {
+  List<dynamic> _filterExpensesByPeriod(
+    List<dynamic> expenses,
+    AnalyticsPeriod period,
+  ) {
+    if (period == AnalyticsPeriod.allTime) {
+      return expenses;
+    }
+
+    final now = DateTime.now();
+
+    late DateTime startDate;
+    late DateTime endDate;
+
+    switch (period) {
+      case AnalyticsPeriod.thisMonth:
+        startDate = DateTime(now.year, now.month, 1);
+        endDate = DateTime(now.year, now.month + 1, 1);
+        break;
+
+      case AnalyticsPeriod.lastMonth:
+        startDate = DateTime(now.year, now.month - 1, 1);
+        endDate = DateTime(now.year, now.month, 1);
+        break;
+
+      case AnalyticsPeriod.last3Months:
+        startDate = DateTime(now.year, now.month - 2, 1);
+        endDate = DateTime(now.year, now.month + 1, 1);
+        break;
+
+      case AnalyticsPeriod.last6Months:
+        startDate = DateTime(now.year, now.month - 5, 1);
+        endDate = DateTime(now.year, now.month + 1, 1);
+        break;
+
+      case AnalyticsPeriod.thisYear:
+        startDate = DateTime(now.year, 1, 1);
+        endDate = DateTime(now.year + 1, 1, 1);
+        break;
+
+      case AnalyticsPeriod.allTime:
+        return expenses;
+    }
+
+    return expenses.where((expense) {
+      try {
+        final date = DateTime.parse(expense['created_at'].toString());
+
+        return !date.isBefore(startDate) && date.isBefore(endDate);
+      } catch (_) {
+        return false;
+      }
+    }).toList();
+  }
+
+  Future<AnalyticsSummary> loadAnalytics({
+    AnalyticsPeriod period = AnalyticsPeriod.thisMonth,
+  }) async {
     final analytics = await repository.getAnalytics();
 
+    final allExpenses = analytics["expenses"]["data"] ?? [];
+
+    final filteredExpenses = _filterExpensesByPeriod(allExpenses, period);
+
     return processAnalytics(
-      expenses: analytics["expenses"]["data"] ?? [],
+      expenses: filteredExpenses,
       goalAnalytics: analytics["goalAnalytics"],
       financialInsights: analytics["financialInsights"],
     );

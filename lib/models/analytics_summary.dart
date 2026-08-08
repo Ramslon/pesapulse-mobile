@@ -5,7 +5,7 @@ class AnalyticsSummary {
 
   final Map<String, double> categoryTotals;
 
-  final Map<int, double> monthlyTotals;
+  final Map<String, double> monthlyTotals;
 
   final int totalGoals;
 

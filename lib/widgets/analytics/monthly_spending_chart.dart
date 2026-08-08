@@ -4,12 +4,14 @@ import '../fade_slide_animation.dart';
 import '/utils/analytics_layout_helper.dart';
 
 class MonthlySpendingChart extends StatefulWidget {
-  final Map<int, double> monthlyTotals;
+  final Map<String, double> monthlyTotals;
+  final List expenses;
   final double chartHeight;
 
   const MonthlySpendingChart({
     super.key,
     required this.monthlyTotals,
+    required this.expenses,
     required this.chartHeight,
   });
 
@@ -18,7 +20,7 @@ class MonthlySpendingChart extends StatefulWidget {
 }
 
 class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
-  int? touchedMonth;
+  String? touchedMonth;
 
   static const List<String> months = [
     '',
@@ -37,24 +39,26 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
   ];
 
   /// Removes invalid values and sorts months chronologically.
-  List<MapEntry<int, double>> get _validEntries {
+  List<MapEntry<String, double>> get _validEntries {
     return widget.monthlyTotals.entries
-        .where((entry) => entry.key >= 1 && entry.key <= 12 && entry.value > 0)
+        .where((entry) => entry.value > 0)
         .toList()
       ..sort((a, b) => a.key.compareTo(b.key));
   }
 
   double get _maxSpending {
-    if (_validEntries.isEmpty) {
+    final entries = _validEntries;
+
+    if (entries.isEmpty) {
       return 0;
     }
 
-    return _validEntries
-        .map((entry) => entry.value)
-        .reduce((a, b) => a > b ? a : b);
+    return entries.map((entry) => entry.value).reduce((a, b) => a > b ? a : b);
   }
 
   List<BarChartGroupData> _getMonthlyBars() {
+    final entries = _validEntries;
+
     final screenWidth = MediaQuery.of(context).size.width;
 
     final barWidth = screenWidth >= 1200
@@ -65,11 +69,14 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
         ? 18.0
         : 16.0;
 
-    return _validEntries.map((entry) {
+    return entries.asMap().entries.map((item) {
+      final index = item.key;
+      final entry = item.value;
+
       final isSelected = touchedMonth == entry.key;
 
       return BarChartGroupData(
-        x: entry.key,
+        x: index,
         barsSpace: 4,
         barRods: [
           BarChartRodData(
@@ -82,25 +89,53 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     }).toList();
   }
 
-  String _monthName(int month) {
-    if (month >= 1 && month <= 12) {
-      return months[month];
+  String _monthLabel(String key) {
+    final parts = key.split('-');
+
+    if (parts.length != 2) {
+      return key;
     }
 
-    return 'Unknown';
+    final month = int.tryParse(parts[1]);
+
+    if (month == null || month < 1 || month > 12) {
+      return key;
+    }
+
+    return months[month];
   }
 
-  MapEntry<int, double>? _findMonthEntry(
-    List<MapEntry<int, double>> entries,
-    int month,
-  ) {
-    for (final entry in entries) {
-      if (entry.key == month) {
-        return entry;
-      }
+  String _monthFullLabel(String key) {
+    final parts = key.split('-');
+
+    if (parts.length != 2) {
+      return key;
     }
 
-    return null;
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+
+    if (year == null || month == null || month < 1 || month > 12) {
+      return key;
+    }
+
+    const fullMonths = [
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    return '${fullMonths[month]} $year';
   }
 
   @override
@@ -192,17 +227,18 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                             tooltipMargin: 8,
 
                             getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              final monthIndex = group.x.toInt();
+                              final entries = _validEntries;
 
-                              final entry = _findMonthEntry(
-                                validEntries,
-                                monthIndex,
-                              );
+                              if (groupIndex < 0 ||
+                                  groupIndex >= entries.length) {
+                                return null;
+                              }
 
-                              final actualValue = entry?.value ?? rod.toY;
+                              final monthKey = entries[groupIndex].key;
+                              final actualValue = entries[groupIndex].value;
 
                               return BarTooltipItem(
-                                '${_monthName(monthIndex)}\n',
+                                '${_monthFullLabel(monthKey)}\n',
                                 const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -236,11 +272,19 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                                   return;
                                 }
 
-                                final month = spot.touchedBarGroup.x;
+                                final entries = _validEntries;
+                                final groupIndex = spot.touchedBarGroupIndex;
 
-                                if (touchedMonth != month) {
+                                if (groupIndex < 0 ||
+                                    groupIndex >= entries.length) {
+                                  return;
+                                }
+
+                                final monthKey = entries[groupIndex].key;
+
+                                if (touchedMonth != monthKey) {
                                   setState(() {
-                                    touchedMonth = month;
+                                    touchedMonth = monthKey;
                                   });
                                 }
                               },
@@ -266,18 +310,20 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                             sideTitles: SideTitles(
                               showTitles: true,
                               interval: 1,
-
                               getTitlesWidget: (value, meta) {
                                 final index = value.toInt();
+                                final entries = _validEntries;
 
-                                if (index < 1 || index > 12) {
+                                if (index < 0 || index >= entries.length) {
                                   return const SizedBox.shrink();
                                 }
+
+                                final monthKey = entries[index].key;
 
                                 return SideTitleWidget(
                                   axisSide: AxisSide.bottom,
                                   child: Text(
-                                    months[index],
+                                    _monthLabel(monthKey),
                                     style: TextStyle(
                                       fontSize: screenWidth >= 900 ? 11 : 10,
                                       fontWeight: FontWeight.w500,
@@ -305,8 +351,9 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
 
             Builder(
               builder: (context) {
-                final selected = _findMonthEntry(validEntries, touchedMonth!);
-
+                final selected = validEntries
+                    .where((entry) => entry.key == touchedMonth)
+                    .firstOrNull;
                 if (selected == null) {
                   return const SizedBox.shrink();
                 }
@@ -325,7 +372,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                       children: [
                         Expanded(
                           child: Text(
-                            _monthName(selected.key),
+                            _monthFullLabel(selected.key),
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,

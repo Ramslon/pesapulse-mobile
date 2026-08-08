@@ -27,6 +27,8 @@ import '../services/report_manager_service.dart';
 import '../services/analytics_export_service.dart';
 
 import '../models/analytics_summary.dart';
+import '../models/analytics_period.dart';
+
 import '../utils/analytics_theme_helper.dart';
 import '../utils/analytics_layout_helper.dart';
 
@@ -47,6 +49,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   bool? isGuest;
   bool isLoading = true;
+  bool isRefreshingAnalytics = false;
+
+  AnalyticsPeriod selectedPeriod = AnalyticsPeriod.thisMonth;
+
   final AnalyticsRepository analyticsRepository = AnalyticsRepository();
 
   late final AnalyticsService analyticsService = AnalyticsService(
@@ -88,7 +94,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   void _onConnectivityChanged() {
-    if (_network.isOnline) {
+    if (_network.isOnline && isGuest == false) {
       _loadAnalytics();
     }
   }
@@ -100,21 +106,35 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     super.dispose();
   }
 
-  Future<void> _loadAnalytics() async {
+  Future<void> _loadAnalytics({bool showFullSkeleton = false}) async {
+    if (showFullSkeleton) {
+      setState(() {
+        isLoading = true;
+      });
+    } else {
+      setState(() {
+        isRefreshingAnalytics = true;
+      });
+    }
+
     try {
-      final result = await analyticsService.loadAnalytics();
+      final result = await analyticsService.loadAnalytics(
+        period: selectedPeriod,
+      );
 
       if (!mounted) return;
 
       setState(() {
         summary = result;
         isLoading = false;
+        isRefreshingAnalytics = false;
       });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
         isLoading = false;
+        isRefreshingAnalytics = false;
       });
     }
   }
@@ -156,6 +176,86 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     setState(() {
       reports = result;
     });
+  }
+
+  String _periodLabel(AnalyticsPeriod period) {
+    switch (period) {
+      case AnalyticsPeriod.thisMonth:
+        return 'This Month';
+      case AnalyticsPeriod.lastMonth:
+        return 'Last Month';
+      case AnalyticsPeriod.last3Months:
+        return 'Last 3 Months';
+      case AnalyticsPeriod.last6Months:
+        return 'Last 6 Months';
+      case AnalyticsPeriod.thisYear:
+        return 'This Year';
+      case AnalyticsPeriod.allTime:
+        return 'All Time';
+    }
+  }
+
+  Widget _buildPeriodSelector(BuildContext context) {
+    return Card(
+      elevation: 1,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_month_outlined, size: 20),
+
+            const SizedBox(width: 10),
+
+            const Text(
+              'Period',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+
+            const SizedBox(width: 8),
+
+            Expanded(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<AnalyticsPeriod>(
+                  value: selectedPeriod,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  borderRadius: BorderRadius.circular(14),
+
+                  items: AnalyticsPeriod.values.map((period) {
+                    return DropdownMenuItem<AnalyticsPeriod>(
+                      value: period,
+                      child: Text(
+                        _periodLabel(period),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+
+                  onChanged: isRefreshingAnalytics
+                      ? null
+                      : (AnalyticsPeriod? value) async {
+                          if (value == null || value == selectedPeriod) {
+                            return;
+                          }
+
+                          setState(() {
+                            selectedPeriod = value;
+                          });
+
+                          await _loadAnalytics();
+                        },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -226,6 +326,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
 
                       children: [
+                        if (isRefreshingAnalytics)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 8),
+                            child: LinearProgressIndicator(minHeight: 2),
+                          ),
+                        _buildPeriodSelector(context),
+
+                        SizedBox(height: smallSpacing),
+
                         if (hasPartialData)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 16),
@@ -364,6 +473,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
                         MonthlySpendingChart(
                           monthlyTotals: analytics.monthlyTotals,
+                          expenses: analytics.expenses,
                           chartHeight: chartHeight,
                         ),
                         SizedBox(height: smallSpacing),
