@@ -32,7 +32,7 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
 
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final baseRadius = screenWidth >= 1200
+    final radius = screenWidth >= 1200
         ? 90.0
         : screenWidth >= 900
         ? 82.0
@@ -46,17 +46,37 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
         ? 11.5
         : 11.0;
 
-    final entries = widget.categoryTotals.entries.toList();
+    // Remove zero and negative values.
+    final validEntries = widget.categoryTotals.entries
+        .where((entry) => entry.value > 0)
+        .toList();
 
-    return entries.asMap().entries.map((item) {
+    if (validEntries.isEmpty) {
+      return [];
+    }
+
+    // Special handling for a single category.
+    if (validEntries.length == 1) {
+      final entry = validEntries.first;
+
+      return [
+        PieChartSectionData(
+          color: colors.first,
+          value: entry.value,
+          title: '${entry.key}\nKES ${entry.value.toStringAsFixed(0)}',
+          radius: radius,
+          titleStyle: TextStyle(
+            fontSize: titleFontSize,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ];
+    }
+
+    return validEntries.asMap().entries.map((item) {
       final index = item.key;
       final entry = item.value;
-
-      final isSelected = touchedIndex == index;
-
-      final radius = isSelected ? baseRadius + 8 : baseRadius;
-
-      final fontSize = isSelected ? titleFontSize + 1 : titleFontSize;
 
       return PieChartSectionData(
         color: colors[index % colors.length],
@@ -64,8 +84,8 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
         title: '${entry.key}\nKES ${entry.value.toStringAsFixed(0)}',
         radius: radius,
         titleStyle: TextStyle(
-          fontSize: fontSize,
-          fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
+          fontSize: titleFontSize,
+          fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
       );
@@ -73,18 +93,23 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
   }
 
   Map<String, dynamic>? _getSelectedCategory() {
-    if (touchedIndex == null ||
-        touchedIndex! < 0 ||
-        touchedIndex! >= widget.categoryTotals.length) {
+    if (touchedIndex == null) {
       return null;
     }
 
-    final entries = widget.categoryTotals.entries.toList();
-    final entry = entries[touchedIndex!];
+    final validEntries = widget.categoryTotals.entries
+        .where((entry) => entry.value > 0)
+        .toList();
 
-    final total = widget.categoryTotals.values.fold<double>(
+    if (touchedIndex! < 0 || touchedIndex! >= validEntries.length) {
+      return null;
+    }
+
+    final entry = validEntries[touchedIndex!];
+
+    final total = validEntries.fold<double>(
       0,
-      (sum, value) => sum + value,
+      (sum, value) => sum + value.value,
     );
 
     final percentage = total == 0 ? 0.0 : (entry.value / total) * 100;
@@ -107,6 +132,8 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
 
     final centerSpaceRadius = (widget.chartHeight * 0.12).clamp(30.0, 55.0);
 
+    final sections = _getSections(context);
+
     return FadeSlideAnimation(
       delay: 200,
       child: Column(
@@ -124,31 +151,41 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
                   child: SizedBox(
                     height: widget.chartHeight,
                     width: double.infinity,
-                    child: PieChart(
-                      PieChartData(
-                        sections: _getSections(context),
-                        centerSpaceRadius: centerSpaceRadius,
-                        sectionsSpace: 3,
-                        pieTouchData: PieTouchData(
-                          touchCallback:
-                              (FlTouchEvent event, PieTouchResponse? response) {
-                                if (!event.isInterestedForInteractions ||
-                                    response?.touchedSection == null) {
-                                  setState(() {
-                                    touchedIndex = null;
-                                  });
-                                  return;
-                                }
+                    child: sections.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No category spending data',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          )
+                        : PieChart(
+                            PieChartData(
+                              sections: sections,
+                              centerSpaceRadius: centerSpaceRadius,
+                              sectionsSpace: 3,
+                              pieTouchData: PieTouchData(
+                                touchCallback:
+                                    (
+                                      FlTouchEvent event,
+                                      PieTouchResponse? response,
+                                    ) {
+                                      if (!event.isInterestedForInteractions ||
+                                          response?.touchedSection == null) {
+                                        setState(() {
+                                          touchedIndex = null;
+                                        });
+                                        return;
+                                      }
 
-                                setState(() {
-                                  touchedIndex = response!
-                                      .touchedSection!
-                                      .touchedSectionIndex;
-                                });
-                              },
-                        ),
-                      ),
-                    ),
+                                      setState(() {
+                                        touchedIndex = response!
+                                            .touchedSection!
+                                            .touchedSectionIndex;
+                                      });
+                                    },
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               ),

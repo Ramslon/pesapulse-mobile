@@ -41,37 +41,57 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
         ? 11.5
         : 11.0;
 
-    final sections = [
-      (
-        color: Colors.green,
-        value: widget.completedGoals.toDouble(),
-        title: 'Completed\n${widget.completedGoals}',
-      ),
-      (
-        color: Colors.orange,
-        value: widget.activeGoals.toDouble(),
-        title: 'Active\n${widget.activeGoals}',
-      ),
-    ];
+    final completed = widget.completedGoals;
+    final active = widget.activeGoals;
 
-    return sections.asMap().entries.map((item) {
-      final index = item.key;
-      final section = item.value;
+    // No goals exist.
+    if (completed <= 0 && active <= 0) {
+      return [];
+    }
 
-      final isSelected = touchedIndex == index;
+    final sections = <PieChartSectionData>[];
 
-      return PieChartSectionData(
-        color: section.color,
-        value: section.value,
-        title: section.title,
-        radius: isSelected ? baseRadius + 8 : baseRadius,
-        titleStyle: TextStyle(
-          fontSize: isSelected ? titleFontSize + 1 : titleFontSize,
-          fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
-          color: Colors.white,
+    // Completed goals.
+    if (completed > 0) {
+      final isSelected = touchedIndex == 0;
+
+      sections.add(
+        PieChartSectionData(
+          color: Colors.green,
+          value: completed.toDouble(),
+          title: 'Completed\n$completed',
+          radius: isSelected ? baseRadius + 8 : baseRadius,
+          titleStyle: TextStyle(
+            fontSize: isSelected ? titleFontSize + 1 : titleFontSize,
+            fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       );
-    }).toList();
+    }
+
+    // Active goals.
+    if (active > 0) {
+      // The index depends on whether completed exists.
+      final activeIndex = completed > 0 ? 1 : 0;
+      final isSelected = touchedIndex == activeIndex;
+
+      sections.add(
+        PieChartSectionData(
+          color: Colors.orange,
+          value: active.toDouble(),
+          title: 'Active\n$active',
+          radius: isSelected ? baseRadius + 8 : baseRadius,
+          titleStyle: TextStyle(
+            fontSize: isSelected ? titleFontSize + 1 : titleFontSize,
+            fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    return sections;
   }
 
   Map<String, dynamic>? _getSelectedStatus() {
@@ -79,17 +99,32 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
       return null;
     }
 
-    final value = touchedIndex == 0
-        ? widget.completedGoals
-        : widget.activeGoals;
+    final completed = widget.completedGoals;
+    final active = widget.activeGoals;
 
-    final name = touchedIndex == 0 ? 'Completed Goals' : 'Active Goals';
+    final statuses = <Map<String, dynamic>>[];
 
-    final percentage = widget.totalGoals == 0
+    if (completed > 0) {
+      statuses.add({'name': 'Completed Goals', 'value': completed});
+    }
+
+    if (active > 0) {
+      statuses.add({'name': 'Active Goals', 'value': active});
+    }
+
+    if (touchedIndex! < 0 || touchedIndex! >= statuses.length) {
+      return null;
+    }
+
+    final status = statuses[touchedIndex!];
+
+    final value = status['value'] as int;
+
+    final percentage = widget.totalGoals <= 0
         ? 0.0
         : (value / widget.totalGoals) * 100;
 
-    return {'name': name, 'value': value, 'percentage': percentage};
+    return {'name': status['name'], 'value': value, 'percentage': percentage};
   }
 
   @override
@@ -97,6 +132,8 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     final selectedStatus = _getSelectedStatus();
+
+    final sections = _getSections(context);
 
     final cardPadding = screenWidth >= 900
         ? 16.0
@@ -125,31 +162,61 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
                   child: SizedBox(
                     height: widget.chartHeight,
                     width: double.infinity,
-                    child: PieChart(
-                      PieChartData(
-                        sections: _getSections(context),
-                        centerSpaceRadius: centerSpaceRadius,
-                        sectionsSpace: 3,
-                        pieTouchData: PieTouchData(
-                          touchCallback:
-                              (FlTouchEvent event, PieTouchResponse? response) {
-                                if (!event.isInterestedForInteractions ||
-                                    response?.touchedSection == null) {
-                                  setState(() {
-                                    touchedIndex = null;
-                                  });
-                                  return;
-                                }
+                    child: sections.isEmpty
+                        ? const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.flag_outlined,
+                                  size: 42,
+                                  color: Colors.grey,
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'No goals yet',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Create a goal to see your progress.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : PieChart(
+                            PieChartData(
+                              sections: sections,
+                              centerSpaceRadius: centerSpaceRadius,
+                              sectionsSpace: 3,
+                              pieTouchData: PieTouchData(
+                                touchCallback:
+                                    (
+                                      FlTouchEvent event,
+                                      PieTouchResponse? response,
+                                    ) {
+                                      if (!event.isInterestedForInteractions ||
+                                          response?.touchedSection == null) {
+                                        setState(() {
+                                          touchedIndex = null;
+                                        });
+                                        return;
+                                      }
 
-                                setState(() {
-                                  touchedIndex = response!
-                                      .touchedSection!
-                                      .touchedSectionIndex;
-                                });
-                              },
-                        ),
-                      ),
-                    ),
+                                      setState(() {
+                                        touchedIndex = response!
+                                            .touchedSection!
+                                            .touchedSectionIndex;
+                                      });
+                                    },
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -207,7 +274,9 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
           const SizedBox(height: 12),
 
           Text(
-            '${widget.completedGoals} of ${widget.totalGoals} goals completed',
+            widget.totalGoals == 0
+                ? 'No goals created yet'
+                : '${widget.completedGoals} of ${widget.totalGoals} goals completed',
             style: TextStyle(
               fontSize: screenWidth >= 900 ? 17 : 16,
               fontWeight: FontWeight.bold,

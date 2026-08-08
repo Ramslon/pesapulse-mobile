@@ -45,9 +45,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   List<Map<String, dynamic>> reports = [];
 
+  bool? isGuest;
   bool isLoading = true;
-
-  bool isGuest = false;
   final AnalyticsRepository analyticsRepository = AnalyticsRepository();
 
   late final AnalyticsService analyticsService = AnalyticsService(
@@ -59,22 +58,33 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   @override
   void initState() {
     super.initState();
-    loadSessionState();
-    _network = context.read<ConnectivityProvider>();
 
+    _network = context.read<ConnectivityProvider>();
     _network.addListener(_onConnectivityChanged);
 
-    _loadAnalytics();
-
+    loadSessionState();
     loadReports();
   }
 
   Future<void> loadSessionState() async {
-    isGuest = await SessionService.isGuest();
+    final guest = await SessionService.isGuest();
 
-    if (mounted) {
-      setState(() {});
+    if (!mounted) return;
+
+    setState(() {
+      isGuest = guest;
+    });
+
+    // Guests do not need analytics data.
+    if (guest) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
     }
+
+    // Registered users continue loading analytics.
+    await _loadAnalytics();
   }
 
   void _onConnectivityChanged() {
@@ -90,11 +100,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     super.dispose();
   }
 
-  void _updateSummary(AnalyticsSummary result) {
-    summary = result;
-    isLoading = false;
-  }
-
   Future<void> _loadAnalytics() async {
     try {
       final result = await analyticsService.loadAnalytics();
@@ -102,7 +107,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       if (!mounted) return;
 
       setState(() {
-        _updateSummary(result);
+        summary = result;
+        isLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
@@ -166,17 +172,30 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     final contentPadding = AnalyticsLayoutHelper.contentPadding(context);
 
     final smallSpacing = AnalyticsLayoutHelper.smallSpacing(context);
-
-    if (isLoading) {
+    // Session state / analytics are still being determined.
+    if (isGuest == null || isLoading) {
       return const AnalyticsLoadingSkeleton();
+    }
+
+    // Guest users don't need an AnalyticsSummary.
+    if (isGuest!) {
+      return AppScaffold(
+        showOfflineBanner: false,
+        appBar: const AdaptiveAppBar(title: null),
+        body: buildEmptyState(context, EmptyStateType.analyticsGuest),
+      );
     }
 
     final analytics = summary;
 
+    // Registered user but no analytics data could be loaded.
     if (analytics == null) {
-      return const AnalyticsLoadingSkeleton();
+      return AppScaffold(
+        showOfflineBanner: false,
+        appBar: const AdaptiveAppBar(title: null),
+        body: buildEmptyState(context, EmptyStateType.analyticsNoData),
+      );
     }
-
     final hasNoData =
         analytics.expenses.isEmpty &&
         analytics.totalGoals == 0 &&
@@ -190,9 +209,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     return AppScaffold(
       showOfflineBanner: false,
       appBar: const AdaptiveAppBar(title: null),
-      body: isGuest
-          ? buildEmptyState(context, EmptyStateType.analyticsGuest)
-          : hasNoData
+      body: hasNoData
           ? buildEmptyState(context, EmptyStateType.analyticsNoData)
           : RefreshIndicator(
               onRefresh: _loadAnalytics,
@@ -249,8 +266,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           height: AnalyticsLayoutHelper.cardSpacing,
                         ),
                         ExportReportsSection(
-                          isGuest: isGuest,
-
+                          isGuest: isGuest!,
                           onGuestTap: () async {
                             await GuestDialogService.requireAccount(context);
                           },
@@ -303,7 +319,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                                 ? buildEmptyState(
                                     context,
                                     EmptyStateType.categories,
-                                    isGuest: isGuest,
+                                    isGuest: isGuest!,
                                   )
                                 : CategoryBreakdownChart(
                                     categoryTotals: analytics.categoryTotals,
