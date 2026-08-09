@@ -20,74 +20,74 @@ class CategoryBreakdownChart extends StatefulWidget {
 class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
   int? touchedIndex;
 
-  List<PieChartSectionData> _getSections(BuildContext context) {
-    final colors = [
-      Colors.green,
-      Colors.blue,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-    ];
+  static const List<Color> _colors = [
+    Colors.green,
+    Colors.blue,
+    Colors.orange,
+    Colors.purple,
+    Colors.red,
+    Colors.teal,
+  ];
 
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    final radius = screenWidth >= 1200
-        ? 90.0
-        : screenWidth >= 900
-        ? 82.0
-        : screenWidth >= 600
-        ? 75.0
-        : 65.0;
-
-    final titleFontSize = screenWidth >= 900
-        ? 12.0
-        : screenWidth >= 600
-        ? 11.5
-        : 11.0;
-
-    // Remove zero and negative values.
-    final validEntries = widget.categoryTotals.entries
+  List<MapEntry<String, double>> get _validEntries {
+    return widget.categoryTotals.entries
         .where((entry) => entry.value > 0)
         .toList();
+  }
 
-    if (validEntries.isEmpty) {
+  double get _totalSpending {
+    return _validEntries.fold<double>(0, (sum, entry) => sum + entry.value);
+  }
+
+  List<PieChartSectionData> _getSections(BuildContext context) {
+    final entries = _validEntries;
+
+    if (entries.isEmpty) {
       return [];
     }
 
-    // Special handling for a single category.
-    if (validEntries.length == 1) {
-      final entry = validEntries.first;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-      return [
-        PieChartSectionData(
-          color: colors.first,
-          value: entry.value,
-          title: '${entry.key}\nKES ${entry.value.toStringAsFixed(0)}',
-          radius: radius,
-          titleStyle: TextStyle(
-            fontSize: titleFontSize,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ];
-    }
+    final baseRadius = screenWidth >= 1200
+        ? 92.0
+        : screenWidth >= 900
+        ? 84.0
+        : screenWidth >= 600
+        ? 76.0
+        : 66.0;
 
-    return validEntries.asMap().entries.map((item) {
+    final titleFontSize = screenWidth >= 900
+        ? 11.5
+        : screenWidth >= 600
+        ? 11.0
+        : 10.0;
+
+    return entries.asMap().entries.map((item) {
       final index = item.key;
       final entry = item.value;
 
+      final isTouched = touchedIndex == index;
+
       return PieChartSectionData(
-        color: colors[index % colors.length],
+        color: _colors[index % _colors.length],
         value: entry.value,
-        title: '${entry.key}\nKES ${entry.value.toStringAsFixed(0)}',
-        radius: radius,
+
+        // Keep the chart clean. Details appear in the center/selected card.
+        title: '',
+
+        radius: isTouched ? baseRadius + 8 : baseRadius,
+
         titleStyle: TextStyle(
           fontSize: titleFontSize,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
+
+        badgeWidget: isTouched
+            ? _CategoryBadge(name: entry.key, amount: entry.value)
+            : null,
+
+        badgePositionPercentageOffset: 1.25,
       );
     }).toList();
   }
@@ -97,40 +97,41 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
       return null;
     }
 
-    final validEntries = widget.categoryTotals.entries
-        .where((entry) => entry.value > 0)
-        .toList();
+    final entries = _validEntries;
 
-    if (touchedIndex! < 0 || touchedIndex! >= validEntries.length) {
+    if (touchedIndex! < 0 || touchedIndex! >= entries.length) {
       return null;
     }
 
-    final entry = validEntries[touchedIndex!];
+    final entry = entries[touchedIndex!];
 
-    final total = validEntries.fold<double>(
-      0,
-      (sum, value) => sum + value.value,
-    );
+    final percentage = _totalSpending == 0
+        ? 0.0
+        : (entry.value / _totalSpending) * 100;
 
-    final percentage = total == 0 ? 0.0 : (entry.value / total) * 100;
-
-    return {'name': entry.key, 'amount': entry.value, 'percentage': percentage};
+    return {
+      'name': entry.key,
+      'amount': entry.value,
+      'percentage': percentage,
+      'color': _colors[touchedIndex! % _colors.length],
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+
     final selectedCategory = _getSelectedCategory();
 
     final cardPadding = screenWidth >= 900
-        ? 16.0
+        ? 18.0
         : screenWidth >= 600
-        ? 14.0
-        : 12.0;
+        ? 16.0
+        : 14.0;
 
     final chartWidth = AnalyticsLayoutHelper.maxChartWidth(context);
 
-    final centerSpaceRadius = (widget.chartHeight * 0.12).clamp(30.0, 55.0);
+    final centerSpaceRadius = (widget.chartHeight * 0.15).clamp(34.0, 58.0);
 
     final sections = _getSections(context);
 
@@ -143,8 +144,9 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
               constraints: BoxConstraints(maxWidth: chartWidth),
               child: Card(
                 elevation: 2,
+                shadowColor: Colors.black.withOpacity(.08),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(cardPadding),
@@ -158,33 +160,90 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
                               style: TextStyle(fontWeight: FontWeight.w500),
                             ),
                           )
-                        : PieChart(
-                            PieChartData(
-                              sections: sections,
-                              centerSpaceRadius: centerSpaceRadius,
-                              sectionsSpace: 3,
-                              pieTouchData: PieTouchData(
-                                touchCallback:
-                                    (
-                                      FlTouchEvent event,
-                                      PieTouchResponse? response,
-                                    ) {
-                                      if (!event.isInterestedForInteractions ||
-                                          response?.touchedSection == null) {
-                                        setState(() {
-                                          touchedIndex = null;
-                                        });
-                                        return;
-                                      }
+                        : Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              PieChart(
+                                PieChartData(
+                                  sections: sections,
+                                  centerSpaceRadius: centerSpaceRadius,
+                                  sectionsSpace: 4,
+                                  startDegreeOffset: -90,
 
-                                      setState(() {
-                                        touchedIndex = response!
-                                            .touchedSection!
-                                            .touchedSectionIndex;
-                                      });
-                                    },
+                                  pieTouchData: PieTouchData(
+                                    touchCallback:
+                                        (
+                                          FlTouchEvent event,
+                                          PieTouchResponse? response,
+                                        ) {
+                                          if (!event
+                                                  .isInterestedForInteractions ||
+                                              response?.touchedSection ==
+                                                  null) {
+                                            if (touchedIndex != null) {
+                                              setState(() {
+                                                touchedIndex = null;
+                                              });
+                                            }
+
+                                            return;
+                                          }
+
+                                          final newIndex = response!
+                                              .touchedSection!
+                                              .touchedSectionIndex;
+
+                                          if (newIndex != touchedIndex) {
+                                            setState(() {
+                                              touchedIndex = newIndex;
+                                            });
+                                          }
+                                        },
+                                  ),
+                                ),
+                                swapAnimationDuration: const Duration(
+                                  milliseconds: 350,
+                                ),
+                                swapAnimationCurve: Curves.easeOutCubic,
                               ),
-                            ),
+
+                              IgnorePointer(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.pie_chart_rounded,
+                                      size: 24,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+
+                                    const SizedBox(height: 6),
+
+                                    Text(
+                                      'Total Spending',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade300,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 3),
+
+                                    Text(
+                                      'KES ${_totalSpending.toStringAsFixed(0)}',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                   ),
                 ),
@@ -195,51 +254,133 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
           if (selectedCategory != null) ...[
             const SizedBox(height: 12),
 
-            Card(
-              elevation: 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            selectedCategory['name'],
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'KES ${selectedCategory['amount'].toStringAsFixed(0)}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
+            _SelectedCategoryCard(
+              name: selectedCategory['name'] as String,
+              amount: selectedCategory['amount'] as double,
+              percentage: selectedCategory['percentage'] as double,
+              color: selectedCategory['color'] as Color,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
-                    Text(
-                      '${selectedCategory['percentage'].toStringAsFixed(1)}%',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+class _CategoryBadge extends StatelessWidget {
+  final String name;
+  final double amount;
+
+  const _CategoryBadge({required this.name, required this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 3,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 130),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'KES ${amount.toStringAsFixed(0)}',
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedCategoryCard extends StatelessWidget {
+  final String name;
+  final double amount;
+  final double percentage;
+  final Color color;
+
+  const _SelectedCategoryCard({
+    required this.name,
+    required this.amount,
+    required this.percentage,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 1,
+      shadowColor: Colors.black.withOpacity(.06),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 12,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    'KES ${amount.toStringAsFixed(0)} spent',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: color.withOpacity(.10),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${percentage.toStringAsFixed(1)}%',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

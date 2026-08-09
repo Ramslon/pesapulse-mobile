@@ -19,6 +19,9 @@ import '../widgets/analytics/smart_insights_card.dart';
 import '../widgets/analytics/reports_center_card.dart';
 import '../widgets/analytics/export_reports_section.dart';
 import '../widgets/analytics/report_details_dialog.dart';
+import '../widgets/analytics/analytics_period_selector.dart';
+import '../widgets/analytics/analytics_error_state.dart';
+import '../widgets/analytics/analytics_refresh_error_banner.dart';
 
 import '../services/guest_dialog_service.dart';
 import '../services/session_service.dart';
@@ -50,6 +53,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   bool? isGuest;
   bool isLoading = true;
   bool isRefreshingAnalytics = false;
+  bool? _wasOnline;
+  bool _analyticsRequestInProgress = false;
+  bool _isOffline = false;
+  String? _analyticsError;
 
   AnalyticsPeriod selectedPeriod = AnalyticsPeriod.thisMonth;
 
@@ -66,6 +73,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     super.initState();
 
     _network = context.read<ConnectivityProvider>();
+    _wasOnline = _network.isOnline;
     _network.addListener(_onConnectivityChanged);
 
     loadSessionState();
@@ -94,8 +102,42 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   void _onConnectivityChanged() {
-    if (_network.isOnline && isGuest == false) {
-      _loadAnalytics();
+    final isOnline = _network.isOnline;
+    final wasOnline = _wasOnline;
+
+    _wasOnline = isOnline;
+
+    if (!mounted) return;
+
+    // Device has gone offline.
+    if (!isOnline) {
+      if (!_isOffline) {
+        setState(() {
+          _isOffline = true;
+        });
+      }
+
+      return;
+    }
+
+    // Device is online again.
+    if (_isOffline) {
+      setState(() {
+        _isOffline = false;
+      });
+    }
+
+    // Only refresh on a genuine offline -> online transition.
+    if (wasOnline == false && isOnline) {
+      if (isGuest == true) {
+        return;
+      }
+
+      if (_analyticsRequestInProgress) {
+        return;
+      }
+
+      _loadAnalytics(showFullSkeleton: summary == null);
     }
   }
 
@@ -107,19 +149,35 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   Future<void> _loadAnalytics({bool showFullSkeleton = false}) async {
-    if (showFullSkeleton) {
+    if (_analyticsRequestInProgress) {
+      return;
+    }
+
+    if (isGuest == true) {
+      return;
+    }
+
+    _analyticsRequestInProgress = true;
+
+    final requestPeriod = selectedPeriod;
+
+    final shouldShowSkeleton = showFullSkeleton && summary == null;
+
+    if (mounted) {
       setState(() {
-        isLoading = true;
-      });
-    } else {
-      setState(() {
-        isRefreshingAnalytics = true;
+        _analyticsError = null;
+
+        if (shouldShowSkeleton) {
+          isLoading = true;
+        } else {
+          isRefreshingAnalytics = true;
+        }
       });
     }
 
     try {
       final result = await analyticsService.loadAnalytics(
-        period: selectedPeriod,
+        period: requestPeriod,
       );
 
       if (!mounted) return;
@@ -128,6 +186,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         summary = result;
         isLoading = false;
         isRefreshingAnalytics = false;
+        _analyticsError = null;
       });
     } catch (_) {
       if (!mounted) return;
@@ -135,8 +194,53 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       setState(() {
         isLoading = false;
         isRefreshingAnalytics = false;
+
+        if (!_network.isOnline) {
+          _isOffline = true;
+          _analyticsError =
+              'You are offline. Your existing analytics are still available.';
+        } else {
+          _analyticsError =
+              'We couldn\'t load your analytics. Please try again.';
+        }
       });
+    } finally {
+      _analyticsRequestInProgress = false;
     }
+  }
+
+  Future<void> _refreshAnalytics() async {
+    if (_isOffline) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'You are offline. Your existing analytics are still available.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    await _loadAnalytics();
+  }
+
+  Future<void> _retryAnalytics() async {
+    if (_isOffline) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You are offline. Please reconnect and try again.'),
+        ),
+      );
+
+      return;
+    }
+
+    await _loadAnalytics();
   }
 
   Future<void> shareExistingReport(String path) async {
@@ -178,86 +282,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     });
   }
 
-  String _periodLabel(AnalyticsPeriod period) {
-    switch (period) {
-      case AnalyticsPeriod.thisMonth:
-        return 'This Month';
-      case AnalyticsPeriod.lastMonth:
-        return 'Last Month';
-      case AnalyticsPeriod.last3Months:
-        return 'Last 3 Months';
-      case AnalyticsPeriod.last6Months:
-        return 'Last 6 Months';
-      case AnalyticsPeriod.thisYear:
-        return 'This Year';
-      case AnalyticsPeriod.allTime:
-        return 'All Time';
-    }
-  }
-
-  Widget _buildPeriodSelector(BuildContext context) {
-    return Card(
-      elevation: 1,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-        child: Row(
-          children: [
-            const Icon(Icons.calendar_month_outlined, size: 20),
-
-            const SizedBox(width: 10),
-
-            const Text(
-              'Period',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-
-            const SizedBox(width: 8),
-
-            Expanded(
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<AnalyticsPeriod>(
-                  value: selectedPeriod,
-                  isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down),
-                  borderRadius: BorderRadius.circular(14),
-
-                  items: AnalyticsPeriod.values.map((period) {
-                    return DropdownMenuItem<AnalyticsPeriod>(
-                      value: period,
-                      child: Text(
-                        _periodLabel(period),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-
-                  onChanged: isRefreshingAnalytics
-                      ? null
-                      : (AnalyticsPeriod? value) async {
-                          if (value == null || value == selectedPeriod) {
-                            return;
-                          }
-
-                          setState(() {
-                            selectedPeriod = value;
-                          });
-
-                          await _loadAnalytics();
-                        },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   bool get wantKeepAlive => true;
 
@@ -273,14 +297,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     final smallSpacing = AnalyticsLayoutHelper.smallSpacing(context);
     // Session state / analytics are still being determined.
-    if (isGuest == null || isLoading) {
+    if (isGuest == null || (isLoading && summary == null)) {
       return const AnalyticsLoadingSkeleton();
     }
 
     // Guest users don't need an AnalyticsSummary.
     if (isGuest!) {
       return AppScaffold(
-        showOfflineBanner: false,
+        showOfflineBanner: _isOffline,
         appBar: const AdaptiveAppBar(title: null),
         body: buildEmptyState(context, EmptyStateType.analyticsGuest),
       );
@@ -291,9 +315,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     // Registered user but no analytics data could be loaded.
     if (analytics == null) {
       return AppScaffold(
-        showOfflineBanner: false,
+        showOfflineBanner: _isOffline,
         appBar: const AdaptiveAppBar(title: null),
-        body: buildEmptyState(context, EmptyStateType.analyticsNoData),
+        body: _analyticsError != null
+            ? AnalyticsErrorState(
+                isOffline: _isOffline,
+                message: _analyticsError!,
+                isRetrying: _analyticsRequestInProgress,
+                onRetry: _retryAnalytics,
+              )
+            : buildEmptyState(context, EmptyStateType.analyticsNoData),
       );
     }
     final hasNoData =
@@ -307,12 +338,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             analytics.totalGoals == 0 ||
             reports.isEmpty);
     return AppScaffold(
-      showOfflineBanner: false,
+      showOfflineBanner: _isOffline,
       appBar: const AdaptiveAppBar(title: null),
       body: hasNoData
           ? buildEmptyState(context, EmptyStateType.analyticsNoData)
           : RefreshIndicator(
-              onRefresh: _loadAnalytics,
+              onRefresh: _refreshAnalytics,
               child: SingleChildScrollView(
                 key: const PageStorageKey("analytics"),
 
@@ -331,7 +362,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             padding: EdgeInsets.only(bottom: 8),
                             child: LinearProgressIndicator(minHeight: 2),
                           ),
-                        _buildPeriodSelector(context),
+
+                        AnalyticsRefreshErrorBanner(
+                          error: _analyticsError,
+                          isOffline: _isOffline,
+                          isRetrying: _analyticsRequestInProgress,
+                          onRetry: _retryAnalytics,
+                        ),
 
                         SizedBox(height: smallSpacing),
 
@@ -344,7 +381,27 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             ),
                           ),
 
-                        const SizedBox(height: 4),
+                        SizedBox(height: smallSpacing),
+
+                        AnalyticsPeriodSelector(
+                          selectedPeriod: selectedPeriod,
+                          isDisabled:
+                              isRefreshingAnalytics ||
+                              _analyticsRequestInProgress,
+                          onChanged: (AnalyticsPeriod? value) async {
+                            if (value == null || value == selectedPeriod) {
+                              return;
+                            }
+
+                            setState(() {
+                              selectedPeriod = value;
+                            });
+
+                            await _loadAnalytics();
+                          },
+                        ),
+
+                        SizedBox(height: smallSpacing),
 
                         AnalyticsOverviewCard(
                           totalSpending: analytics.totalSpending,
@@ -374,29 +431,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         const SizedBox(
                           height: AnalyticsLayoutHelper.cardSpacing,
                         ),
-                        ExportReportsSection(
-                          isGuest: isGuest!,
-                          onGuestTap: () async {
-                            await GuestDialogService.requireAccount(context);
-                          },
-
-                          onExportPdf: () {
-                            return AnalyticsExportService.exportPdf(
-                              context: context,
-                              expenses: analytics.expenses,
-                              onReportsUpdated: loadReports,
-                            );
-                          },
-
-                          onExportCsv: () {
-                            return AnalyticsExportService.exportCsv(
-                              context: context,
-                              expenses: analytics.expenses,
-                              onReportsUpdated: loadReports,
-                            );
-                          },
-                        ),
-                        SizedBox(height: smallSpacing),
 
                         FadeSlideAnimation(
                           delay: 100,
@@ -411,7 +445,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         SizedBox(height: sectionSpacing),
 
                         const AnalyticsSectionHeader(
-                          icon: Icons.pie_chart,
+                          icon: Icons.pie_chart_outline_rounded,
                           title: "Category Breakdown",
                         ),
 
@@ -439,7 +473,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         SizedBox(height: sectionSpacing * 1.2),
 
                         const AnalyticsSectionHeader(
-                          icon: Icons.flag,
+                          icon: Icons.flag_outlined,
                           title: "Goal Status",
                         ),
                         SizedBox(height: smallSpacing),
@@ -463,7 +497,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         SizedBox(height: sectionSpacing * 1.2),
 
                         const AnalyticsSectionHeader(
-                          icon: Icons.show_chart,
+                          icon: Icons.show_chart_rounded,
                           title: "Monthly Spending Trend",
                         ),
 
@@ -476,21 +510,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           expenses: analytics.expenses,
                           chartHeight: chartHeight,
                         ),
-                        SizedBox(height: smallSpacing),
-                        Center(
-                          child: Text(
-                            '${analytics.completedGoals} of ${analytics.totalGoals} goals completed',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
 
                         SizedBox(height: sectionSpacing * 1.2),
 
                         const AnalyticsSectionHeader(
-                          icon: Icons.lightbulb,
+                          icon: Icons.lightbulb_outline_rounded,
                           title: "Smart Insights",
                         ),
 
@@ -500,15 +524,54 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         SizedBox(height: sectionSpacing * 1.2),
 
                         const AnalyticsSectionHeader(
-                          icon: Icons.description,
+                          icon: Icons.description_outlined,
                           title: "Reports Center",
                         ),
 
+                        SizedBox(height: smallSpacing),
+
+                        ExportReportsSection(
+                          isGuest: isGuest!,
+                          onGuestTap: () async {
+                            await GuestDialogService.requireAccount(context);
+                          },
+
+                          onExportPdf: () {
+                            return AnalyticsExportService.exportPdf(
+                              context: context,
+                              expenses: analytics.expenses,
+                              onReportsUpdated: loadReports,
+                            );
+                          },
+
+                          onExportCsv: () {
+                            return AnalyticsExportService.exportCsv(
+                              context: context,
+                              expenses: analytics.expenses,
+                              onReportsUpdated: loadReports,
+                            );
+                          },
+                        ),
+                        SizedBox(height: smallSpacing),
+
                         const SizedBox(height: 10),
 
-                        Text(
-                          '${reports.length} Reports Generated',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.folder_outlined,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              reports.length == 1
+                                  ? '1 report generated'
+                                  : '${reports.length} reports generated',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ],
                         ),
                         SizedBox(height: AnalyticsLayoutHelper.internalSpacing),
 
