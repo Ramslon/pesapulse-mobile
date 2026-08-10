@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../models/goal.dart';
+
 import '../services/api_services.dart';
 
 class GoalsRepository extends BaseRepository {
-  Future<List<dynamic>> getGoals() async {
+  Future<List<Goal>> getGoals() async {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
@@ -65,19 +67,23 @@ class GoalsRepository extends BaseRepository {
           );
         }
       }
-      return await database.query(
-        "goals",
-        where: "owner_id=? AND is_archived = ? AND is_deleted = ?",
-        whereArgs: [ownerId, 0, 0],
-        orderBy: "updated_at DESC",
-      );
-    } catch (_) {
-      return await database.query(
+      final rows = await database.query(
         "goals",
         where: "owner_id=? AND is_archived=? AND is_deleted=?",
         whereArgs: [ownerId, 0, 0],
         orderBy: "updated_at DESC",
       );
+
+      return rows.map(Goal.fromMap).toList();
+    } catch (_) {
+      final rows = await database.query(
+        "goals",
+        where: "owner_id=? AND is_archived=? AND is_deleted=?",
+        whereArgs: [ownerId, 0, 0],
+        orderBy: "updated_at DESC",
+      );
+
+      return rows.map(Goal.fromMap).toList();
     }
   }
 
