@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class GoalMilestone extends StatelessWidget {
   final double percentage;
-  final Future<void> Function() onArchive;
+  final Future Function() onArchive;
 
   const GoalMilestone({
     super.key,
@@ -10,94 +10,171 @@ class GoalMilestone extends StatelessWidget {
     required this.onArchive,
   });
 
+  double get progress => percentage.clamp(0.0, 1.0);
+
   @override
   Widget build(BuildContext context) {
-    if (percentage >= 1.0) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          buildMilestoneBadge(
-            title: 'Goal Completed',
-            icon: Icons.emoji_events,
-            color: Colors.amber,
-          ),
-
-          const SizedBox(height: 12),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              icon: const Icon(Icons.archive_outlined),
-              label: const Text('Archive Goal'),
-              onPressed: onArchive,
-            ),
-          ),
-        ],
-      );
+    if (progress >= 1.0) {
+      return _CompletedMilestone(onArchive: onArchive);
     }
 
-    if (percentage >= 0.75) {
-      return buildMilestoneBadge(
-        title: '75% Almost There',
-        icon: Icons.bolt,
+    if (progress >= 0.75) {
+      return const _MilestoneBadge(
+        title: '75% — Almost There',
+        icon: Icons.bolt_rounded,
         color: Colors.orange,
       );
     }
 
-    if (percentage >= 0.50) {
-      return buildMilestoneBadge(
-        title: '50% Progress',
-        icon: Icons.trending_up,
+    if (progress >= 0.50) {
+      return const _MilestoneBadge(
+        title: '50% — Halfway There',
+        icon: Icons.trending_up_rounded,
         color: Colors.indigo,
       );
     }
 
-    if (percentage >= 0.25) {
-      return buildMilestoneBadge(
-        title: '25% Saved',
-        icon: Icons.savings,
+    if (progress >= 0.25) {
+      return const _MilestoneBadge(
+        title: '25% — Good Start',
+        icon: Icons.savings_outlined,
         color: Colors.green,
       );
     }
 
-    return const SizedBox(height: 14);
+    return const SizedBox.shrink();
   }
+}
 
-  Widget buildMilestoneBadge({
-    required String title,
-    required IconData icon,
-    required Color color,
-  }) {
+class _MilestoneBadge extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+
+  const _MilestoneBadge({
+    required this.title,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: color.withOpacity(.12),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(.35)),
+        color: color.withOpacity(.07),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(.14)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: color.withOpacity(.18),
-            child: Icon(icon, color: color, size: 18),
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: color.withOpacity(.10),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: color, size: 17),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 9),
 
           Text(
             title,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompletedMilestone extends StatelessWidget {
+  final Future Function() onArchive;
+
+  const _CompletedMilestone({required this.onArchive});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(.07),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.withOpacity(.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: const Icon(
+                  Icons.emoji_events_rounded,
+                  color: Colors.amber,
+                  size: 21,
+                ),
+              ),
+
+              const SizedBox(width: 11),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Goal Completed',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 2),
+
+                    Text(
+                      'Congratulations! You reached your target.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 13),
+
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onArchive,
+              icon: const Icon(Icons.archive_outlined, size: 18),
+              label: const Text('Archive Goal'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ),
         ],
       ),

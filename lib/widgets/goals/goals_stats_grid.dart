@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../goal_stat_card.dart';
 
 class GoalsStatsGrid extends StatelessWidget {
@@ -17,54 +18,90 @@ class GoalsStatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: GoalStatCard(
-                title: 'Goals',
-                value: '$totalGoals',
-                icon: Icons.flag_outlined,
-                color: Colors.blue,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: GoalStatCard(
-                title: 'Completed',
-                value: '$completedGoals',
-                icon: Icons.emoji_events_outlined,
-                color: Colors.amber,
-              ),
-            ),
-          ],
-        ),
+    final stats = [
+      _GoalStatData(
+        title: 'Goals',
+        value: '$totalGoals',
+        icon: Icons.flag_outlined,
+      ),
+      _GoalStatData(
+        title: 'Completed',
+        value: '$completedGoals',
+        icon: Icons.emoji_events_outlined,
+      ),
+      _GoalStatData(
+        title: 'Active',
+        value: '$activeGoals',
+        icon: Icons.track_changes,
+      ),
+      _GoalStatData(
+        title: 'Success Rate',
+        value: '${completionRate.toStringAsFixed(1)}%',
+        icon: Icons.trending_up,
+      ),
+    ];
 
-        const SizedBox(height: 14),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 600;
 
-        Row(
-          children: [
-            Expanded(
-              child: GoalStatCard(
-                title: 'Active',
-                value: '$activeGoals',
-                icon: Icons.track_changes,
-                color: Colors.orange,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: GoalStatCard(
-                title: 'Success Rate',
-                value: '${completionRate.toStringAsFixed(1)}%',
-                icon: Icons.trending_up,
-                color: Colors.purple,
-              ),
-            ),
-          ],
-        ),
-      ],
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: stats.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: isWide ? 4 : 2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+
+            // Give the cards enough vertical space.
+            childAspectRatio: isWide ? 1.55 : 1.05,
+          ),
+          itemBuilder: (context, index) {
+            final stat = stats[index];
+
+            return GoalStatCard(
+              title: stat.title,
+              value: stat.value,
+              icon: stat.icon,
+              color: _statColor(context, index),
+            );
+          },
+        );
+      },
     );
   }
+
+  Color _statColor(BuildContext context, int index) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    switch (index) {
+      case 0:
+        return colorScheme.primary;
+
+      case 1:
+        return Colors.amber;
+
+      case 2:
+        return Colors.orange;
+
+      case 3:
+        return Colors.purple;
+
+      default:
+        return colorScheme.primary;
+    }
+  }
+}
+
+class _GoalStatData {
+  final String title;
+  final String value;
+  final IconData icon;
+
+  const _GoalStatData({
+    required this.title,
+    required this.value,
+    required this.icon,
+  });
 }

@@ -16,29 +16,70 @@ class GoalStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: colorScheme.outline.withOpacity(.10)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: color.withOpacity(.15),
-              child: Icon(icon, color: color, size: 28),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: color, size: 23),
+                ),
+
+                Container(
+                  width: 5,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(.75),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
             Text(
               value,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -.5,
+              ),
             ),
 
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
 
-            Text(title, style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withOpacity(.60),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),

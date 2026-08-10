@@ -5,12 +5,16 @@ class GoalProgress extends StatelessWidget {
 
   const GoalProgress({super.key, required this.percentage});
 
+  double get progressValue {
+    return percentage.clamp(0.0, 1.0);
+  }
+
   Color get progressColor {
-    if (percentage >= 1.0) {
+    if (progressValue >= 1.0) {
       return Colors.green;
     }
 
-    if (percentage >= 0.75) {
+    if (progressValue >= 0.75) {
       return Colors.orange;
     }
 
@@ -19,51 +23,32 @@ class GoalProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 900),
-          tween: Tween(begin: 0, end: percentage),
-          builder: (_, value, __) {
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: LinearProgressIndicator(
-                value: value,
-                minHeight: 10,
-                backgroundColor: Colors.grey.shade300,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+      tween: Tween<double>(begin: 0, end: progressValue),
+      builder: (_, value, __) {
+        return Container(
+          height: 10,
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: value,
+            child: Container(
+              decoration: BoxDecoration(
                 color: progressColor,
+                borderRadius: BorderRadius.circular(20),
               ),
-            );
-          },
-        ),
-
-        const SizedBox(height: 14),
-
-        Align(
-          alignment: Alignment.centerRight,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: progressColor.withOpacity(.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 800),
-              tween: Tween(begin: 0, end: percentage * 100),
-              builder: (_, value, __) {
-                return Text(
-                  '${value.toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: progressColor,
-                  ),
-                );
-              },
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

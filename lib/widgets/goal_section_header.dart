@@ -8,23 +8,34 @@ class GoalSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Row(
       children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: Theme.of(
-            context,
-          ).colorScheme.primary.withOpacity(.12),
-          child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: colorScheme.primary.withOpacity(.10),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(icon, color: colorScheme.primary, size: 21),
         ),
 
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
 
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -.2,
+              color: colorScheme.onSurface,
+            ),
+          ),
         ),
       ],
     );

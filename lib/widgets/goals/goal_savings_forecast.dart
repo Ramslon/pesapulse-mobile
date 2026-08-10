@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../fade_slide_animation.dart';
 import 'package:intl/intl.dart';
+
+import '../fade_slide_animation.dart';
+import 'forecast_metric.dart';
 
 class GoalSavingsForecast extends StatelessWidget {
   final Map<String, dynamic>? forecast;
@@ -16,156 +18,229 @@ class GoalSavingsForecast extends StatelessWidget {
     required this.onAddSavings,
   });
 
+  Color _forecastColor(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    switch (forecast?['forecast']) {
+      case 'ahead':
+        return Colors.green;
+
+      case 'behind':
+        return Colors.red;
+
+      case 'completed':
+        return Colors.teal;
+
+      case 'on_track':
+        return primary;
+
+      default:
+        return primary;
+    }
+  }
+
+  IconData _forecastIcon() {
+    switch (forecast?['forecast']) {
+      case 'ahead':
+        return Icons.trending_up_rounded;
+
+      case 'behind':
+        return Icons.trending_down_rounded;
+
+      case 'completed':
+        return Icons.emoji_events_rounded;
+
+      case 'on_track':
+        return Icons.track_changes_rounded;
+
+      default:
+        return Icons.insights_outlined;
+    }
+  }
+
+  String _forecastLabel() {
+    final value = forecast?['forecast'];
+
+    if (value == null) {
+      return 'Forecast unavailable';
+    }
+
+    return value
+        .toString()
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map(
+          (word) => word.isEmpty
+              ? word
+              : '${word[0].toUpperCase()}${word.substring(1)}',
+        )
+        .join(' ');
+  }
+
+  String _completionDate() {
+    final value = forecast?['estimated_completion_date'];
+
+    if (value == null || value.toString().isEmpty) {
+      return 'Unknown';
+    }
+
+    return value.toString();
+  }
+
+  double _amount(String key) {
+    return (forecast?[key] as num?)?.toDouble() ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
-    Color forecastColor = Colors.blue;
-    IconData forecastIcon = Icons.trending_flat;
-
-    if (forecast != null) {
-      switch (forecast!['forecast']) {
-        case 'ahead':
-          forecastColor = Colors.green;
-          forecastIcon = Icons.trending_up;
-          break;
-
-        case 'behind':
-          forecastColor = Colors.red;
-          forecastIcon = Icons.trending_down;
-          break;
-
-        case 'completed':
-          forecastColor = Colors.teal;
-          forecastIcon = Icons.emoji_events;
-          break;
-
-        case 'on_track':
-          forecastColor = Colors.blue;
-          forecastIcon = Icons.track_changes;
-          break;
-      }
-    }
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final forecastColor = _forecastColor(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ─────────────────────────────────────────────
+        // Section heading
+        // ─────────────────────────────────────────────
         Row(
           children: [
-            const Icon(Icons.auto_graph, color: Colors.indigo, size: 20),
+            Icon(
+              Icons.auto_graph_rounded,
+              color: colorScheme.primary,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Text(
               'Savings Forecast',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
 
+        // ─────────────────────────────────────────────
+        // Forecast card
+        // ─────────────────────────────────────────────
         if (forecast != null)
           FadeSlideAnimation(
             delay: 450,
             child: Container(
-              margin: const EdgeInsets.only(top: 20),
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: forecastColor.withOpacity(.08),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: forecastColor.withOpacity(.25)),
+                color: forecastColor.withOpacity(.07),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: forecastColor.withOpacity(.18)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Forecast status
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: forecastColor.withOpacity(.15),
-                        child: Icon(forecastIcon, color: forecastColor),
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: forecastColor.withOpacity(.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _forecastIcon(),
+                          color: forecastColor,
+                          size: 21,
+                        ),
                       ),
+
                       const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Savings Forecast',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _forecastLabel(),
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: forecastColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          Text(
-                            forecast!['forecast']
-                                .toString()
-                                .replaceAll('_', ' ')
-                                .toUpperCase(),
-                            style: TextStyle(
-                              color: forecastColor,
-                              fontWeight: FontWeight.bold,
+
+                            const SizedBox(height: 3),
+
+                            Text(
+                              'Based on your current savings pace',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
 
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(.05),
-                      borderRadius: BorderRadius.circular(14),
+                  // Forecast message
+                  if ((forecast?['message']?.toString() ?? '').isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(13),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface.withOpacity(.55),
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Text(
+                        forecast!['message'].toString(),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          height: 1.4,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
                     ),
-                    child: Text(
-                      forecast!['message'] ?? '',
-                      style: const TextStyle(fontStyle: FontStyle.italic),
-                    ),
-                  ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
 
+                  // Completion + daily saving
                   Row(
                     children: [
                       Expanded(
-                        child: _ForecastMetric(
-                          title: 'Completion',
-                          value:
-                              (forecast!['estimated_completion_date']
-                                  as String?) ??
-                              'Unknown',
-                          icon: Icons.calendar_today,
+                        child: ForecastMetric(
+                          title: 'Expected completion',
+                          value: _completionDate(),
+                          icon: Icons.calendar_today_outlined,
                           color: forecastColor,
                         ),
                       ),
-                      const SizedBox(width: 12),
+
+                      const SizedBox(width: 10),
+
                       Expanded(
-                        child: _ForecastMetric(
-                          title: 'Daily',
+                        child: ForecastMetric(
+                          title: 'Daily saving',
                           value: currency.format(
-                            (forecast!['recommended_daily_saving'] as num?)
-                                    ?.toDouble() ??
-                                0,
+                            _amount('recommended_daily_saving'),
                           ),
-                          icon: Icons.savings,
+                          icon: Icons.savings_outlined,
                           color: forecastColor,
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
-                  _ForecastMetric(
-                    title: 'Monthly Saving',
+                  // Monthly saving
+                  ForecastMetric(
+                    title: 'Recommended monthly saving',
                     value: currency.format(
-                      (forecast!['recommended_monthly_saving'] as num?)
-                              ?.toDouble() ??
-                          0,
+                      _amount('recommended_monthly_saving'),
                     ),
-                    icon: Icons.account_balance_wallet,
+                    icon: Icons.account_balance_wallet_outlined,
                     color: forecastColor,
                   ),
                 ],
@@ -173,71 +248,31 @@ class GoalSavingsForecast extends StatelessWidget {
             ),
           ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
 
+        // ─────────────────────────────────────────────
+        // Add savings action
+        // ─────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
+          child: FilledButton.icon(
             onPressed: isCompleted ? null : onAddSavings,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              disabledBackgroundColor: Colors.green.withOpacity(.15),
-              disabledForegroundColor: Colors.green,
+            icon: Icon(
+              isCompleted
+                  ? Icons.check_circle_outline
+                  : Icons.add_circle_outline,
             ),
-            icon: const Icon(Icons.savings),
-            label: const Text('Add Savings'),
+            label: Text(isCompleted ? 'Goal Completed' : 'Add Savings'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              elevation: 0,
+            ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ForecastMetric extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _ForecastMetric({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withOpacity(.08),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: color.withOpacity(.15),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-          ),
-        ],
-      ),
     );
   }
 }

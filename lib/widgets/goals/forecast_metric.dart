@@ -16,33 +16,62 @@ class ForecastMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
+        color: color.withOpacity(.06),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(.12)),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: color.withOpacity(.15),
-            child: Icon(icon, color: color, size: 18),
+          // Metric icon
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withOpacity(.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 19),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(width: 11),
 
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+          // Metric information
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                    height: 1.2,
+                  ),
+                ),
 
-          const SizedBox(height: 4),
+                const SizedBox(height: 5),
 
-          Text(
-            title,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

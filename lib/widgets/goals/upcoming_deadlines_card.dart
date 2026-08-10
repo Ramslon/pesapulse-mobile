@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../fade_slide_animation.dart';
 
 class UpcomingDeadlinesCard extends StatelessWidget {
-  final List<dynamic> upcomingDeadlines;
+  final List upcomingDeadlines;
 
   const UpcomingDeadlinesCard({super.key, required this.upcomingDeadlines});
 
@@ -12,66 +13,91 @@ class UpcomingDeadlinesCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final deadlineColor = Colors.orange.shade700;
+
     return FadeSlideAnimation(
       delay: 150,
       child: Card(
-        elevation: 4,
-        shadowColor: Colors.black12,
+        elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        color: colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: deadlineColor.withOpacity(.16)),
+        ),
         clipBehavior: Clip.antiAlias,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.orange.shade500, Colors.deepOrange.shade400],
-            ),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ─────────────────────────────
-              // HEADER
-              // ─────────────────────────────
+              // Header
               Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(.18),
-                      shape: BoxShape.circle,
+                      color: deadlineColor.withOpacity(.10),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.notifications_active_outlined,
-                      color: Colors.white,
-                      size: 25,
+                      color: deadlineColor,
+                      size: 23,
                     ),
                   ),
 
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
 
-                  const Expanded(
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Upcoming Deadlines',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Goals that need your attention',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withOpacity(.58),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: deadlineColor.withOpacity(.10),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Text(
-                      'Upcoming Deadlines',
+                      '${upcomingDeadlines.length}',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        color: deadlineColor,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
                       ),
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // ─────────────────────────────
-              // DEADLINE ITEMS
-              // ─────────────────────────────
+              // Deadline items
               ...upcomingDeadlines.asMap().entries.map((entry) {
                 final index = entry.key;
                 final goal = entry.value;
@@ -84,7 +110,7 @@ class UpcomingDeadlinesCard extends StatelessWidget {
                 final isLast = index == upcomingDeadlines.length - 1;
 
                 return Padding(
-                  padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                  padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
                   child: _DeadlineItem(
                     title: title,
                     daysRemaining: daysRemaining,
@@ -107,29 +133,48 @@ class _DeadlineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final days = daysRemaining.ceil();
 
+    final Color urgencyColor;
+
+    if (days <= 1) {
+      urgencyColor = Colors.red;
+    } else if (days <= 3) {
+      urgencyColor = Colors.orange;
+    } else {
+      urgencyColor = colorScheme.primary;
+    }
+
+    final String remainingText;
+
+    if (days <= 0) {
+      remainingText = 'Due today';
+    } else if (days == 1) {
+      remainingText = '1 day remaining';
+    } else {
+      remainingText = '$days days remaining';
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.15),
+        color: colorScheme.surfaceContainerHighest.withOpacity(.45),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(.10)),
+        border: Border.all(color: colorScheme.outline.withOpacity(.08)),
       ),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(.18),
-              shape: BoxShape.circle,
+              color: urgencyColor.withOpacity(.10),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.flag_circle_outlined,
-              color: Colors.white,
-              size: 19,
-            ),
+            child: Icon(Icons.flag_outlined, color: urgencyColor, size: 20),
           ),
 
           const SizedBox(width: 12),
@@ -142,26 +187,31 @@ class _DeadlineItem extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
 
                 const SizedBox(height: 4),
 
                 Text(
-                  days == 1 ? '1 day remaining' : '$days days remaining',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  remainingText,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: urgencyColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
 
-          const Icon(Icons.chevron_right, color: Colors.white70, size: 22),
+          Icon(
+            Icons.schedule_outlined,
+            size: 18,
+            color: colorScheme.onSurface.withOpacity(.40),
+          ),
         ],
       ),
     );

@@ -82,20 +82,32 @@ class GoalListItem extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
 
-      GoalActionHelpers.showMessage(context, 'Failed to archive goal: $e');
+      GoalActionHelpers.showMessage(context, 'Failed to delete goal: $e');
     }
   }
 
   Future<void> _handleSwipeDelete(BuildContext context) async {
     final connectivity = GoalActionHelpers.getConnectivity(context);
 
+    // Optimistically remove the goal from the visible list.
     goalsController.removeGoal(goal.id);
 
     final snackBar = SnackBar(
-      content: Text(
-        connectivity.isOnline
-            ? 'Goal deleted successfully'
-            : 'Goal deleted offline. Changes will sync automatically.',
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      content: Row(
+        children: [
+          const Icon(Icons.delete_outline, color: Colors.white),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              connectivity.isOnline
+                  ? 'Goal deleted successfully'
+                  : 'Goal deleted offline. Changes will sync automatically.',
+            ),
+          ),
+        ],
       ),
       duration: const Duration(seconds: 5),
       action: SnackBarAction(
@@ -147,51 +159,75 @@ class GoalListItem extends StatelessWidget {
     }
   }
 
-  Future<bool> _confirmSwipeDelete(BuildContext context) {
-    return GoalActionHelpers.confirmDelete(context, goalTitle: goal.title);
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Dismissible(
-      key: ValueKey(goal.id),
-      direction: DismissDirection.endToStart,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        color: Colors.red.withOpacity(0.8),
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Dismissible(
+        key: ValueKey(goal.id),
+        direction: DismissDirection.endToStart,
 
-      confirmDismiss: (_) => _confirmSwipeDelete(context),
-
-      onDismissed: (_) => _handleSwipeDelete(context),
-
-      child: GoalCard(
-        goal: goal,
-        target: goal.targetAmount,
-        saved: goal.savedAmount,
-        percentage: goal.percentage,
-        currency: currency,
-
-        insight: goalsController.insights[goal.id] as Map<String, dynamic>?,
-
-        forecast: goalsController.forecasts[goal.id] as Map<String, dynamic>?,
-
-        onDelete: () => _deleteGoal(context),
-
-        onAddSavings: () {
-          showDialog(
-            context: context,
-            builder: (_) => AddSavingsDialog(
-              goalId: goal.id,
-              goalsController: goalsController,
+        background: Container(
+          margin: const EdgeInsets.only(bottom: 24),
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 22),
+          decoration: BoxDecoration(
+            color: colorScheme.error.withOpacity(.10),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: colorScheme.error.withOpacity(.18)),
+          ),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: colorScheme.error.withOpacity(.12),
+              shape: BoxShape.circle,
             ),
+            child: Icon(
+              Icons.delete_outline,
+              color: colorScheme.error,
+              size: 24,
+            ),
+          ),
+        ),
+
+        confirmDismiss: (_) {
+          return GoalActionHelpers.confirmDelete(
+            context,
+            goalTitle: goal.title,
           );
         },
 
-        onArchive: () => _archiveGoal(context),
+        onDismissed: (_) => _handleSwipeDelete(context),
+
+        child: GoalCard(
+          goal: goal,
+          target: goal.targetAmount,
+          saved: goal.savedAmount,
+          percentage: goal.percentage,
+          currency: currency,
+
+          insight: goalsController.insights[goal.id] as Map<String, dynamic>?,
+
+          forecast: goalsController.forecasts[goal.id] as Map<String, dynamic>?,
+
+          onDelete: () => _deleteGoal(context),
+
+          onAddSavings: () {
+            showDialog(
+              context: context,
+              builder: (_) => AddSavingsDialog(
+                goalId: goal.id,
+                goalsController: goalsController,
+              ),
+            );
+          },
+
+          onArchive: () => _archiveGoal(context),
+        ),
       ),
     );
   }

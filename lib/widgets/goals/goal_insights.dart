@@ -13,49 +13,58 @@ class GoalInsights extends StatelessWidget {
     required this.currency,
   });
 
+  Color _insightColor(String status, ColorScheme colorScheme) {
+    switch (status) {
+      case 'urgent':
+        return Colors.red;
+
+      case 'completed':
+        return Colors.green;
+
+      default:
+        return colorScheme.primary;
+    }
+  }
+
+  IconData _insightIcon(String status) {
+    switch (status) {
+      case 'completed':
+        return Icons.emoji_events_rounded;
+
+      case 'urgent':
+        return Icons.warning_amber_rounded;
+
+      default:
+        return Icons.auto_awesome_rounded;
+    }
+  }
+
+  String _statusLabel(String status) {
+    if (status.isEmpty) {
+      return 'INSIGHT';
+    }
+
+    return status.replaceAll('_', ' ').toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
-    // No insight available yet.
     if (insight == null) {
       return const SizedBox.shrink();
     }
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final data = insight!;
 
-    Color insightColor;
+    final status = data['status']?.toString() ?? '';
 
-    switch (data['status']) {
-      case 'urgent':
-        insightColor = Colors.red;
-        break;
+    final insightColor = _insightColor(status, colorScheme);
 
-      case 'completed':
-        insightColor = Colors.green;
-        break;
+    final insightIcon = _insightIcon(status);
 
-      default:
-        insightColor = Colors.blue;
-    }
-
-    IconData insightIcon;
-
-    switch (data['status']) {
-      case 'completed':
-        insightIcon = Icons.emoji_events;
-        break;
-
-      case 'urgent':
-        insightIcon = Icons.warning_amber_rounded;
-        break;
-
-      default:
-        insightIcon = Icons.track_changes;
-    }
-
-    final statusLabel = data['status']
-        .toString()
-        .replaceAll('_', ' ')
-        .toUpperCase();
+    final statusLabel = _statusLabel(status);
 
     final daysRemaining = (data['days_remaining'] as num?)?.ceil() ?? 0;
 
@@ -63,65 +72,70 @@ class GoalInsights extends StatelessWidget {
 
     final monthlyNeeded = (data['monthly_needed'] as num?)?.toDouble() ?? 0;
 
-    final message = data['message']?.toString() ?? '';
+    final message = data['message']?.toString().trim() ?? '';
 
     return FadeSlideAnimation(
       delay: 300,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 18),
-        padding: const EdgeInsets.all(18),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: insightColor.withOpacity(.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: insightColor.withOpacity(.25)),
+          color: insightColor.withOpacity(.055),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: insightColor.withOpacity(.14)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ─────────────────────────────────────────
-            // Insight header
+            // Header
             // ─────────────────────────────────────────
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: insightColor.withOpacity(.15),
-                  child: Icon(insightIcon, color: insightColor),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: insightColor.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(insightIcon, color: insightColor, size: 21),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(width: 11),
 
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Goal Insight',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Goal Insight',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 2),
+                      const SizedBox(height: 3),
 
-                    Text(
-                      statusLabel,
-                      style: TextStyle(
-                        color: insightColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        letterSpacing: .4,
+                      Text(
+                        statusLabel,
+                        style: TextStyle(
+                          color: insightColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: .6,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
             // ─────────────────────────────────────────
-            // Remaining + Days Left
+            // Key metrics
             // ─────────────────────────────────────────
             Row(
               children: [
@@ -134,11 +148,11 @@ class GoalInsights extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
 
                 Expanded(
                   child: _InsightMetric(
-                    title: 'Days Left',
+                    title: 'Days left',
                     value: '$daysRemaining',
                     icon: Icons.calendar_today_outlined,
                     color: insightColor,
@@ -147,38 +161,52 @@ class GoalInsights extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
-            // ─────────────────────────────────────────
-            // Monthly needed
-            // ─────────────────────────────────────────
             _InsightMetric(
-              title: 'Monthly Needed',
+              title: 'Monthly needed',
               value: currency.format(monthlyNeeded),
               icon: Icons.savings_outlined,
               color: insightColor,
             ),
 
-            const SizedBox(height: 16),
+            // ─────────────────────────────────────────
+            // Message
+            // ─────────────────────────────────────────
+            if (message.isNotEmpty) ...[
+              const SizedBox(height: 14),
 
-            // ─────────────────────────────────────────
-            // Insight message
-            // ─────────────────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.05),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(
-                message,
-                style: const TextStyle(
-                  fontStyle: FontStyle.italic,
-                  height: 1.4,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withOpacity(.55),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.lightbulb_outline_rounded,
+                      size: 17,
+                      color: insightColor,
+                    ),
+
+                    const SizedBox(width: 9),
+
+                    Expanded(
+                      child: Text(
+                        message,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          height: 1.45,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -201,21 +229,29 @@ class _InsightMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
-        color: color.withOpacity(.06),
+        color: colorScheme.surface.withOpacity(.65),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(.08)),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 17,
-            backgroundColor: color.withOpacity(.12),
-            child: Icon(icon, color: color, size: 18),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withOpacity(.09),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 17),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 9),
 
           Expanded(
             child: Column(
@@ -223,21 +259,22 @@ class _InsightMetric extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 11,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
 
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
 
                 Text(
                   value,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
