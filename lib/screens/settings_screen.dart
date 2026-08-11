@@ -3,9 +3,14 @@ import 'package:pesapulse_mobile/screens/register_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../services/api_services.dart';
 import '../services/session_service.dart';
+
+import '../core/constants/app_constants.dart';
+import '../controllers/settings_preferences_controller.dart';
+import '../providers/connectivity_provider.dart';
 
 import '../screens/login_screen.dart';
 import '../screens/edit_profile_screen.dart';
@@ -26,6 +31,10 @@ import '../widgets/settings/settings_support_section.dart';
 import '../widgets/settings/settings_session_section.dart';
 import '../widgets/settings/settings_footer.dart';
 import '../widgets/settings/settings_section_header.dart';
+import '../widgets/settings/dialogs/about_pesapulse_dialog.dart';
+import '../widgets/settings/dialogs/privacy_policy_dialog.dart';
+import '../widgets/settings/dialogs/terms_of_service_dialog.dart';
+import '../widgets/settings/dialogs/logout_confirmation_dialog.dart';
 
 import '../repositories/settings_repository.dart';
 
@@ -39,8 +48,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String userName = '';
   String userEmail = '';
-
-  bool isLoading = false;
 
   bool dailyReminder = true;
 
@@ -56,31 +63,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
   DateTime? lastSyncTime;
 
   final SettingsRepository settingsRepository = SettingsRepository();
+  late final SettingsPreferencesController settingsPreferencesController;
 
   bool isGuest = false;
-  bool isLoggedIn = false;
 
   @override
   void initState() {
     super.initState();
 
-    loadSessionState();
+    settingsPreferencesController = SettingsPreferencesController(
+      settingsRepository: settingsRepository,
+    );
 
-    loadSettings();
-    loadProfile();
-    loadDashboardStats();
-    loadLastSyncTime();
+    _initializeSettings();
+  }
+
+  Future<void> _initializeSettings() async {
+    await loadSessionState();
+
+    if (!mounted) return;
+
+    await Future.wait([
+      loadSettings(),
+      loadProfile(),
+      loadDashboardStats(),
+      loadLastSyncTime(),
+    ]);
   }
 
   Future<void> loadProfile() async {
-    if (await SessionService.isGuest()) {
+    if (isGuest) {
       if (!mounted) return;
 
       setState(() {
-        userName = "Guest Account";
-        userEmail = "Login to sync your data";
-        isGuest = true;
-        isLoading = false;
+        userName = 'Guest Account';
+        userEmail = 'Login to sync your data';
       });
 
       return;
@@ -92,16 +109,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
 
       setState(() {
-        userName = user["name"] ?? "";
-        userEmail = user["email"] ?? "";
-        isLoading = false;
+        userName = user['name'] ?? '';
+        userEmail = user['email'] ?? '';
       });
     } catch (e) {
       if (!mounted) return;
-
-      setState(() {
-        isLoading = false;
-      });
 
       AuthMessageHelper.showOffline(context);
     }
@@ -145,11 +157,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> loadSessionState() async {
-    isGuest = await SessionService.isGuest();
-    isLoggedIn = await SessionService.isLoggedIn();
+    final guest = await SessionService.isGuest();
 
-    if (mounted) {
-      setState(() {});
+    if (!mounted) return;
+
+    setState(() {
+      isGuest = guest;
+    });
+  }
+
+  Future<void> _updateNotificationPreferences({
+    required String title,
+    required bool value,
+  }) async {
+    final previousDailyReminder = dailyReminder;
+    final previousExpenseAlerts = expenseAlerts;
+    final previousWeeklySummary = weeklySummary;
+
+    setState(() {
+      switch (title) {
+        case 'Daily Reminder':
+          dailyReminder = value;
+          break;
+
+        case 'Expense Alerts':
+          expenseAlerts = value;
+          break;
+
+        case 'Weekly Summary':
+          weeklySummary = value;
+          break;
+      }
+    });
+
+    final connectivity = context.read<ConnectivityProvider>();
+
+    try {
+      await settingsPreferencesController.updateNotificationPreference(
+        title: title,
+        value: value,
+        isOnline: connectivity.isOnline,
+        dailyReminder: dailyReminder,
+        expenseAlerts: expenseAlerts,
+        weeklySummary: weeklySummary,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        dailyReminder = previousDailyReminder;
+        expenseAlerts = previousExpenseAlerts;
+        weeklySummary = previousWeeklySummary;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update $title. Please try again.')),
+      );
+
+      debugPrint('Failed to update notification preference "$title": $e');
     }
   }
 
@@ -174,56 +239,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return DateFormat("dd MMM • hh:mm a").format(date);
   }
 
-  void showAboutPesaPulse() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("About PesaPulse"),
-        content: const SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "PesaPulse is a personal finance management application designed to help users take control of their finances.",
-              ),
-
-              SizedBox(height: 15),
-
-              Text("Features"),
-
-              SizedBox(height: 8),
-
-              Text("• Expense Tracking"),
-              Text("• Budget Management"),
-              Text("• Savings Goals"),
-              Text("• Financial Analytics"),
-              Text("• Smart Insights"),
-              Text("• Secure Account Management"),
-
-              SizedBox(height: 20),
-
-              Text(
-                "Version 1.0.0",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-
-              SizedBox(height: 10),
-
-              Text("© 2026 PesaPulse"),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> contactSupport() async {
     final Uri emailUri = Uri(
       scheme: 'mailto',
@@ -244,7 +259,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void shareApp() {
     Share.share('''
-I'm using PesaPulse to manage my expenses, budgets and savings goals.
+I'm using ${AppConstants.appName} to manage my expenses, budgets and savings goals.
 
 Download it here:
 
@@ -269,116 +284,6 @@ https://github.com/ramslon/PesaPulse
         ],
       ),
     );
-  }
-
-  void showPrivacyPolicy() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Privacy Policy"),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Your privacy matters to us.",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-
-              SizedBox(height: 15),
-
-              Text(
-                "PesaPulse securely stores your financial information to provide budgeting, expense tracking and savings features.",
-              ),
-
-              SizedBox(height: 15),
-
-              Text("We do not:"),
-              SizedBox(height: 8),
-
-              Text("• Sell your personal data"),
-              Text("• Share your financial records with third parties"),
-              Text("• Access your passwords"),
-
-              SizedBox(height: 15),
-
-              Text("We may collect:"),
-
-              SizedBox(height: 8),
-
-              Text("• Your profile information"),
-              Text("• Budget and expense data"),
-              Text("• Goal progress"),
-              Text("• App preferences"),
-
-              SizedBox(height: 20),
-
-              Text(
-                "Last Updated: July 2026",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void showTermsOfService() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Terms of Service"),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "By using PesaPulse you agree to:",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-
-              SizedBox(height: 15),
-
-              Text("• Use the application responsibly."),
-              Text("• Keep your login credentials secure."),
-              Text("• Maintain accurate financial records."),
-              Text("• Comply with applicable laws."),
-
-              SizedBox(height: 20),
-
-              Text(
-                "PesaPulse is intended as a financial management tool and should not be considered financial or investment advice.",
-              ),
-
-              SizedBox(height: 20),
-
-              Text(
-                "Version 1.0.0",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   @override
@@ -476,21 +381,24 @@ https://github.com/ramslon/PesaPulse
                 weeklySummary: weeklySummary,
 
                 onDailyReminderChanged: (value) {
-                  setState(() {
-                    dailyReminder = value;
-                  });
+                  _updateNotificationPreferences(
+                    title: 'Daily Reminder',
+                    value: value,
+                  );
                 },
 
                 onExpenseAlertsChanged: (value) {
-                  setState(() {
-                    expenseAlerts = value;
-                  });
+                  _updateNotificationPreferences(
+                    title: 'Expense Alerts',
+                    value: value,
+                  );
                 },
 
                 onWeeklySummaryChanged: (value) {
-                  setState(() {
-                    weeklySummary = value;
-                  });
+                  _updateNotificationPreferences(
+                    title: 'Weekly Summary',
+                    value: value,
+                  );
                 },
               ),
 
@@ -508,10 +416,25 @@ https://github.com/ramslon/PesaPulse
               SettingsSectionHeader(title: 'About', icon: Icons.info),
 
               SettingsAboutSection(
-                onAbout: showAboutPesaPulse,
-                onPrivacyPolicy: showPrivacyPolicy,
-                onTermsOfService: showTermsOfService,
-                version: 'v1.0.0',
+                onAbout: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => const AboutPesaPulseDialog(),
+                  );
+                },
+                onPrivacyPolicy: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => const PrivacyPolicyDialog(),
+                  );
+                },
+                onTermsOfService: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => const TermsOfServiceDialog(),
+                  );
+                },
+                version: AppConstants.appVersionLabel,
               ),
 
               const SizedBox(height: 30),
@@ -535,7 +458,10 @@ https://github.com/ramslon/PesaPulse
                 isGuest: isGuest,
 
                 onSignOut: () async {
-                  final confirm = await showLogoutDialog();
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => const LogoutConfirmationDialog(),
+                  );
 
                   if (confirm != true) return;
 
@@ -567,69 +493,15 @@ https://github.com/ramslon/PesaPulse
               const SizedBox(height: 25),
 
               SettingsFooter(
-                appName: 'PesaPulse',
+                appName: AppConstants.appName,
                 tagline: 'Personal Finance Manager',
-                version: '1.0.0',
-                year: 2026,
+                version: AppConstants.appVersion,
+                year: AppConstants.appYear,
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Future<bool?> showLogoutDialog() {
-    return showDialog<bool>(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-
-          title: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.red.shade100,
-                child: const Icon(Icons.logout_rounded, color: Colors.red),
-              ),
-
-              const SizedBox(width: 12),
-
-              const Text("Sign Out"),
-            ],
-          ),
-
-          content: const Text(
-            "Are you sure you want to sign out?\n\n"
-            "You'll need to log in again to access your financial data.",
-          ),
-
-          actions: [
-            TextButton.icon(
-              onPressed: () => Navigator.pop(context, false),
-
-              icon: const Icon(Icons.close),
-
-              label: const Text("Cancel"),
-            ),
-
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-
-              onPressed: () => Navigator.pop(context, true),
-
-              icon: const Icon(Icons.logout),
-
-              label: const Text("Sign Out"),
-            ),
-          ],
-        );
-      },
     );
   }
 }
