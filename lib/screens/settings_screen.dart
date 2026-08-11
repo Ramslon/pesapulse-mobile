@@ -25,6 +25,7 @@ import '../widgets/settings/settings_about_section.dart';
 import '../widgets/settings/settings_support_section.dart';
 import '../widgets/settings/settings_session_section.dart';
 import '../widgets/settings/settings_footer.dart';
+import '../widgets/settings/settings_section_header.dart';
 
 import '../repositories/settings_repository.dart';
 
@@ -53,7 +54,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int totalBudgets = 0;
 
   DateTime? lastSyncTime;
-  final DateFormat dateFormatter = DateFormat("dd MMM • hh:mm a");
 
   final SettingsRepository settingsRepository = SettingsRepository();
 
@@ -204,7 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SizedBox(height: 20),
 
               Text(
-                "Version 2.1.0",
+                "Version 1.0.0",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
 
@@ -360,7 +360,7 @@ https://github.com/ramslon/PesaPulse
               SizedBox(height: 20),
 
               Text(
-                "Version 2.1.0",
+                "Version 1.0.0",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
@@ -383,22 +383,6 @@ https://github.com/ramslon/PesaPulse
 
   @override
   Widget build(BuildContext context) {
-    Widget _buildSectionTitle(String title, IconData icon) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 20, bottom: 10),
-        child: Row(
-          children: [
-            Icon(icon, color: Theme.of(context).primaryColor),
-            const SizedBox(width: 10),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      );
-    }
-
     return AppScaffold(
       showOfflineBanner: false,
       appBar: const AdaptiveAppBar(title: null),
@@ -411,7 +395,7 @@ https://github.com/ramslon/PesaPulse
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              _buildSectionTitle('Account', Icons.person),
+              SettingsSectionHeader(title: 'Account', icon: Icons.person),
 
               SettingsAccountCard(
                 isGuest: isGuest,
@@ -457,13 +441,13 @@ https://github.com/ramslon/PesaPulse
 
               const SizedBox(height: 30),
 
-              _buildSectionTitle('Appearance', Icons.palette),
+              SettingsSectionHeader(title: 'Appearance', icon: Icons.palette),
 
               SettingsAppearanceSection(),
 
               const SizedBox(height: 30),
 
-              _buildSectionTitle('Security', Icons.lock),
+              SettingsSectionHeader(title: 'Security', icon: Icons.lock),
 
               SettingsSecuritySection(
                 isGuest: isGuest,
@@ -479,10 +463,9 @@ https://github.com/ramslon/PesaPulse
 
               const SizedBox(height: 20),
 
-              Align(
-                alignment: Alignment.centerLeft,
-
-                child: _buildSectionTitle('Notifications', Icons.notifications),
+              SettingsSectionHeader(
+                title: 'Notifications',
+                icon: Icons.notifications,
               ),
 
               const SizedBox(height: 10),
@@ -512,7 +495,7 @@ https://github.com/ramslon/PesaPulse
               ),
 
               const SizedBox(height: 30),
-              _buildSectionTitle("Sync & Offline", Icons.sync),
+              SettingsSectionHeader(title: 'Sync & Offline', icon: Icons.sync),
 
               SettingsSyncSection(
                 isGuest: isGuest,
@@ -522,7 +505,7 @@ https://github.com/ramslon/PesaPulse
 
               const SizedBox(height: 30),
 
-              _buildSectionTitle("About", Icons.info),
+              SettingsSectionHeader(title: 'About', icon: Icons.info),
 
               SettingsAboutSection(
                 onAbout: showAboutPesaPulse,
@@ -533,7 +516,10 @@ https://github.com/ramslon/PesaPulse
 
               const SizedBox(height: 30),
 
-              _buildSectionTitle('Support', Icons.support_agent),
+              SettingsSectionHeader(
+                title: 'Support',
+                icon: Icons.support_agent,
+              ),
 
               SettingsSupportSection(
                 onContactSupport: contactSupport,
@@ -543,7 +529,7 @@ https://github.com/ramslon/PesaPulse
 
               const SizedBox(height: 30),
 
-              _buildSectionTitle('Session', Icons.logout),
+              SettingsSectionHeader(title: 'Session', icon: Icons.logout),
 
               SettingsSessionSection(
                 isGuest: isGuest,
