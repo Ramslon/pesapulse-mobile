@@ -5,22 +5,26 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 
 import '../services/api_services.dart';
-import '../services/notification_service.dart';
 import '../services/session_service.dart';
 
-import 'package:provider/provider.dart';
-import '../providers/theme_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/edit_profile_screen.dart';
 import '../screens/change_password_screen.dart';
 import '../screens/delete_account_screen.dart';
-import '../providers/connectivity_provider.dart';
-import '../services/sync_service.dart';
-import '../services/sync_events.dart';
 
 import '../widgets/auth_message_helper.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
+import '../widgets/settings/settings_account_card.dart';
+import '../widgets/settings/settings_statitistics_section.dart';
+import '../widgets/settings/settings_appearance_section.dart';
+import '../widgets/settings/settings_security_section.dart';
+import '../widgets/settings/settings_notifications_section.dart';
+import '../widgets/settings/settings_sync_sections.dart';
+import '../widgets/settings/settings_about_section.dart';
+import '../widgets/settings/settings_support_section.dart';
+import '../widgets/settings/settings_session_section.dart';
+import '../widgets/settings/settings_footer.dart';
 
 import '../repositories/settings_repository.dart';
 
@@ -378,7 +382,6 @@ https://github.com/ramslon/PesaPulse
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
     Widget _buildSectionTitle(String title, IconData icon) {
       return Padding(
@@ -410,308 +413,70 @@ https://github.com/ramslon/PesaPulse
             children: [
               _buildSectionTitle('Account', Icons.person),
 
-              Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.green.shade100,
-                        child: const Icon(
-                          Icons.account_circle,
-                          size: 60,
-                          color: Colors.green,
-                        ),
-                      ),
+              SettingsAccountCard(
+                isGuest: isGuest,
+                userName: userName,
+                userEmail: userEmail,
 
-                      const SizedBox(height: 15),
+                onEditProfile: () async {
+                  final updated = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen(),
+                    ),
+                  );
 
-                      Text(
-                        isGuest ? "Guest Mode" : "Welcome back!",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                  if (updated == true) {
+                    loadProfile();
+                  }
+                },
 
-                      Text(
-                        isGuest
-                            ? "Guest User"
-                            : (userName.isEmpty ? "User" : userName),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
+                onCreateAccount: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                  );
+                },
 
-                      const SizedBox(height: 5),
-
-                      Text(
-                        isGuest
-                            ? "Your data is stored only on this device."
-                            : userEmail,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 15,
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      if (isGuest) ...[
-                        const SizedBox(height: 16),
-
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.orange.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.info_outline,
-                                color: Colors.orange,
-                              ),
-
-                              const SizedBox(width: 12),
-
-                              Expanded(
-                                child: Text(
-                                  "You're using PesaPulse as a guest. Create an account to enable cloud sync, backups and multi-device access.",
-                                  style: TextStyle(
-                                    color: Colors.orange.shade900,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 18),
-                      ],
-
-                      const Divider(),
-
-                      const SizedBox(height: 18),
-                      if (!isGuest)
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.green.shade100,
-                            child: const Icon(Icons.edit, color: Colors.green),
-                          ),
-                          title: const Text("Edit Profile"),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 18,
-                          ),
-                          onTap: () async {
-                            final updated = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const EditProfileScreen(),
-                              ),
-                            );
-
-                            if (updated == true) {
-                              loadProfile();
-                            }
-                          },
-                        )
-                      else
-                        ListTile(
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.orange.shade500,
-                            child: const Icon(Icons.person_add_alt_1),
-                          ),
-                          title: const Text("Create Account"),
-                          subtitle: const Text("Sync your data across devices"),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 18,
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const RegisterScreen(),
-                              ),
-                            );
-                          },
-                        ),
-
-                      const Divider(),
-
-                      ListTile(
-                        leading: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.blue.shade100,
-                          child: const Icon(Icons.login, color: Colors.blue),
-                        ),
-                        title: const Text("Sign In"),
-                        subtitle: const Text("Already have an account?"),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+                onSignIn: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
               ),
 
-              _buildSectionTitle('Statistics', Icons.bar_chart),
+              const SizedBox(height: 30),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildProfileStat(
-                      '$totalGoals',
-                      'Goals Created',
-                      Icons.flag,
-                      Colors.green,
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: _buildProfileStat(
-                      '$completedGoals',
-                      'Completed Goals',
-                      Icons.emoji_events,
-                      Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildProfileStat(
-                      '$totalBudgets',
-                      'Budgets Created',
-                      Icons.account_balance_wallet,
-                      Colors.blue,
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: _buildProfileStat(
-                      '$totalExpenses',
-                      'Expenses Recorded',
-                      Icons.receipt_long,
-                      Colors.red,
-                    ),
-                  ),
-                ],
+              SettingsStatisticsSection(
+                totalGoals: totalGoals,
+                completedGoals: completedGoals,
+                totalBudgets: totalBudgets,
+                totalExpenses: totalExpenses,
               ),
 
               const SizedBox(height: 30),
 
               _buildSectionTitle('Appearance', Icons.palette),
-              Card(
-                child: Consumer<ThemeProvider>(
-                  builder: (context, themeProvider, child) {
-                    return SwitchListTile(
-                      secondary: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.indigo.shade100,
-                        child: const Icon(
-                          Icons.dark_mode_outlined,
-                          color: Colors.indigo,
-                        ),
-                      ),
 
-                      title: const Text(
-                        "Dark Mode",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+              SettingsAppearanceSection(),
 
-                      subtitle: const Text(
-                        "Switch between light and dark appearance.",
-                      ),
-
-                      value: themeProvider.isDarkMode,
-
-                      activeColor: Colors.green,
-
-                      onChanged: (value) {
-                        themeProvider.toggleTheme(value);
-                      },
-                    );
-                  },
-                ),
-              ),
               const SizedBox(height: 30),
+
               _buildSectionTitle('Security', Icons.lock),
 
-              if (!isGuest)
-                Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.orange.shade100,
-                      child: const Icon(
-                        Icons.lock_outline,
-                        color: Colors.orange,
-                      ),
+              SettingsSecuritySection(
+                isGuest: isGuest,
+                onChangePassword: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ChangePasswordScreen(),
                     ),
-                    title: const Text(
-                      "Change Password",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: const Text(
-                      "Update your account password securely.",
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ChangePasswordScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-              const Divider(height: 1),
-
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.green.shade100,
-                  child: const Icon(Icons.verified_user, color: Colors.green),
-                ),
-
-                title: const Text(
-                  "Security Status",
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-
-                subtitle: Text("Your account is protected."),
+                  );
+                },
               ),
+
               const SizedBox(height: 20),
 
               Align(
@@ -722,785 +487,107 @@ https://github.com/ramslon/PesaPulse
 
               const SizedBox(height: 10),
 
-              Card(
-                child: Column(
-                  children: [
-                    SwitchListTile(
-                      secondary: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.green.shade100,
-                        child: const Icon(Icons.alarm, color: Colors.green),
-                      ),
+              SettingsNotificationsSection(
+                dailyReminder: dailyReminder,
+                expenseAlerts: expenseAlerts,
+                weeklySummary: weeklySummary,
 
-                      title: const Text(
-                        "Daily Reminder",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                onDailyReminderChanged: (value) {
+                  setState(() {
+                    dailyReminder = value;
+                  });
+                },
 
-                      subtitle: const Text("Receive a reminder every day."),
+                onExpenseAlertsChanged: (value) {
+                  setState(() {
+                    expenseAlerts = value;
+                  });
+                },
 
-                      value: dailyReminder,
-
-                      activeColor: Colors.green,
-
-                      onChanged: (value) async {
-                        setState(() {
-                          dailyReminder = value;
-                        });
-
-                        final connectivity = context
-                            .read<ConnectivityProvider>();
-
-                        if (connectivity.isOnline) {
-                          await settingsRepository.updatePreferencesOnline(
-                            dailyReminder: dailyReminder,
-                            expenseAlerts: expenseAlerts,
-                            weeklySummary: weeklySummary,
-                          );
-                        } else {
-                          await settingsRepository.updatePreferencesOffline(
-                            dailyReminder: dailyReminder,
-                            expenseAlerts: expenseAlerts,
-                            weeklySummary: weeklySummary,
-                          );
-                        }
-
-                        SyncEvents.instance.notifySettingsUpdated();
-
-                        NotificationService.showNotification(
-                          title: 'Daily Reminder',
-
-                          body: value
-                              ? 'Daily reminders enabled'
-                              : 'Daily reminders disabled',
-                        );
-                      },
-                    ),
-
-                    const Divider(height: 1),
-
-                    SwitchListTile(
-                      secondary: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.orange.shade100,
-                        child: const Icon(
-                          Icons.notifications_active_outlined,
-                          color: Colors.orange,
-                        ),
-                      ),
-
-                      title: const Text(
-                        "Expense Alerts",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-
-                      subtitle: const Text(
-                        "Notify me when spending exceeds my budget.",
-                      ),
-
-                      value: expenseAlerts,
-
-                      activeColor: Colors.green,
-
-                      onChanged: (value) async {
-                        setState(() {
-                          expenseAlerts = value;
-                        });
-
-                        final connectivity = context
-                            .read<ConnectivityProvider>();
-
-                        if (connectivity.isOnline) {
-                          await settingsRepository.updatePreferencesOnline(
-                            dailyReminder: dailyReminder,
-                            expenseAlerts: expenseAlerts,
-                            weeklySummary: weeklySummary,
-                          );
-                        } else {
-                          await settingsRepository.updatePreferencesOffline(
-                            dailyReminder: dailyReminder,
-                            expenseAlerts: expenseAlerts,
-                            weeklySummary: weeklySummary,
-                          );
-                        }
-
-                        SyncEvents.instance.notifySettingsUpdated();
-
-                        NotificationService.showNotification(
-                          title: 'Expense Alerts',
-
-                          body: value
-                              ? 'Expense alerts enabled'
-                              : 'Expense alerts disabled',
-                        );
-                      },
-                    ),
-
-                    const Divider(height: 1),
-
-                    SwitchListTile(
-                      secondary: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.blue.shade100,
-                        child: const Icon(
-                          Icons.summarize_outlined,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      title: const Text(
-                        "Weekly Summary",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-
-                      subtitle: const Text("Receive weekly financial reports."),
-
-                      value: weeklySummary,
-
-                      activeColor: Colors.green,
-
-                      onChanged: (value) async {
-                        setState(() {
-                          weeklySummary = value;
-                        });
-
-                        final connectivity = context
-                            .read<ConnectivityProvider>();
-
-                        if (connectivity.isOnline) {
-                          await settingsRepository.updatePreferencesOnline(
-                            dailyReminder: dailyReminder,
-                            expenseAlerts: expenseAlerts,
-                            weeklySummary: weeklySummary,
-                          );
-                        } else {
-                          await settingsRepository.updatePreferencesOffline(
-                            dailyReminder: dailyReminder,
-                            expenseAlerts: expenseAlerts,
-                            weeklySummary: weeklySummary,
-                          );
-                        }
-
-                        SyncEvents.instance.notifySettingsUpdated();
-
-                        NotificationService.showNotification(
-                          title: 'Weekly Summary',
-
-                          body: value
-                              ? 'Weekly summaries enabled'
-                              : 'Weekly summaries disabled',
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                onWeeklySummaryChanged: (value) {
+                  setState(() {
+                    weeklySummary = value;
+                  });
+                },
               ),
+
               const SizedBox(height: 30),
               _buildSectionTitle("Sync & Offline", Icons.sync),
 
-              if (isGuest)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.orange.shade100,
-                          child: const Icon(
-                            Icons.cloud_off,
-                            color: Colors.orange,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                "Cloud Sync Unavailable",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                "You're using PesaPulse as a guest. "
-                                "Create an account to enable cloud sync, automatic backups, "
-                                "and access your data across devices.",
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                Consumer<ConnectivityProvider>(
-                  builder: (context, network, child) {
-                    return Card(
-                      child: Column(
-                        children: [
-                          ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: network.isOnline
-                                  ? Colors.green.shade100
-                                  : Colors.orange.shade100,
-                              child: Icon(
-                                network.isOnline
-                                    ? Icons.cloud_done
-                                    : Icons.cloud_off,
-                                color: network.isOnline
-                                    ? Colors.green
-                                    : Colors.orange,
-                              ),
-                            ),
-
-                            title: Text(
-                              network.isOnline ? "Online" : "Offline",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-
-                            subtitle: Text(
-                              network.isOnline
-                                  ? "Your data is syncing normally."
-                                  : "Changes will sync automatically when you're online.",
-                            ),
-                          ),
-
-                          const Divider(height: 1),
-
-                          ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.blue.shade100,
-                              child: const Icon(Icons.sync, color: Colors.blue),
-                            ),
-
-                            title: const Text(
-                              "Pending Changes",
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-
-                            subtitle: Text(
-                              "${network.pendingChanges} item(s) waiting to sync",
-                            ),
-                          ),
-
-                          const Divider(height: 1),
-
-                          ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.purple.shade100,
-                              child: const Icon(
-                                Icons.schedule,
-                                color: Colors.purple,
-                              ),
-                            ),
-
-                            title: const Text(
-                              "Last Sync",
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-
-                            subtitle: Text(formatLastSync(lastSyncTime)),
-                          ),
-
-                          const Divider(height: 1),
-
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: network.isSyncing
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : const Icon(Icons.sync),
-                                label: Text(
-                                  network.isSyncing ? "Syncing..." : "Sync Now",
-                                ),
-                                onPressed: network.isOnline
-                                    ? () async {
-                                        network.setSyncing(true);
-
-                                        try {
-                                          await SyncService.instance
-                                              .syncPendingOperations();
-
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                "Sync completed successfully",
-                                              ),
-                                            ),
-                                          );
-                                        } catch (e) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text("Sync failed: $e"),
-                                            ),
-                                          );
-                                        } finally {
-                                          network.setSyncing(false);
-                                        }
-                                      }
-                                    : null,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+              SettingsSyncSection(
+                isGuest: isGuest,
+                lastSyncTime: lastSyncTime,
+                formatLastSync: formatLastSync,
+              ),
 
               const SizedBox(height: 30),
 
               _buildSectionTitle("About", Icons.info),
 
-              Card(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.blue.shade100,
-                        child: const Icon(
-                          Icons.info_outline,
-                          color: Colors.blue,
-                        ),
-                      ),
-
-                      title: const Text(
-                        "About PesaPulse",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-
-                      subtitle: const Text(
-                        "Version, credits and application information.",
-                      ),
-
-                      trailing: const Icon(Icons.chevron_right),
-
-                      onTap: showAboutPesaPulse,
-                    ),
-
-                    const Divider(height: 1),
-
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.purple.shade100,
-                        child: const Icon(
-                          Icons.privacy_tip_outlined,
-                          color: Colors.purple,
-                        ),
-                      ),
-
-                      title: const Text(
-                        "Privacy Policy",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-
-                      subtitle: const Text("Learn how your data is protected."),
-
-                      trailing: const Icon(Icons.chevron_right),
-
-                      onTap: showPrivacyPolicy,
-                    ),
-
-                    const Divider(height: 1),
-
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.teal.shade100,
-                        child: const Icon(
-                          Icons.description_outlined,
-                          color: Colors.teal,
-                        ),
-                      ),
-
-                      title: const Text(
-                        "Terms of Service",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-
-                      subtitle: const Text(
-                        "Review the terms of using PesaPulse.",
-                      ),
-
-                      trailing: const Icon(Icons.chevron_right),
-
-                      onTap: showTermsOfService,
-                    ),
-
-                    const Divider(height: 1),
-
-                    const ListTile(
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Color(0xFFE8F5E9),
-                        child: Icon(
-                          Icons.verified_outlined,
-                          color: Colors.green,
-                        ),
-                      ),
-
-                      title: Text(
-                        "Application Version",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-
-                      subtitle: Text("Current installed version"),
-
-                      trailing: Text(
-                        "v1.0.0",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              SettingsAboutSection(
+                onAbout: showAboutPesaPulse,
+                onPrivacyPolicy: showPrivacyPolicy,
+                onTermsOfService: showTermsOfService,
+                version: 'v1.0.0',
               ),
+
+              const SizedBox(height: 30),
 
               _buildSectionTitle('Support', Icons.support_agent),
 
-              Card(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.blue.shade100,
-                        child: const Icon(
-                          Icons.support_agent,
-                          color: Colors.blue,
-                        ),
-                      ),
-
-                      title: const Text(
-                        "Contact Support",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-
-                      subtitle: const Text(
-                        "Need help? Reach out to our support team.",
-                      ),
-
-                      trailing: const Icon(Icons.chevron_right),
-
-                      onTap: contactSupport,
-                    ),
-
-                    const Divider(height: 1),
-
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.amber.shade100,
-                        child: const Icon(
-                          Icons.star_rate_rounded,
-                          color: Colors.amber,
-                        ),
-                      ),
-
-                      title: const Text(
-                        "Rate PesaPulse",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-
-                      subtitle: const Text("Share your experience with us."),
-
-                      trailing: const Icon(Icons.chevron_right),
-
-                      onTap: rateApp,
-                    ),
-
-                    const Divider(height: 1),
-
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.green.shade100,
-                        child: const Icon(
-                          Icons.share_rounded,
-                          color: Colors.green,
-                        ),
-                      ),
-
-                      title: const Text(
-                        "Share App",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-
-                      subtitle: const Text(
-                        "Invite your friends to use PesaPulse.",
-                      ),
-
-                      trailing: const Icon(Icons.chevron_right),
-
-                      onTap: shareApp,
-                    ),
-                  ],
-                ),
+              SettingsSupportSection(
+                onContactSupport: contactSupport,
+                onRateApp: rateApp,
+                onShareApp: shareApp,
               ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 30),
 
               _buildSectionTitle('Session', Icons.logout),
 
-              Card(
-                elevation: 2,
-                shadowColor: Colors.black12,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.red.shade100,
-                            child: const Icon(
-                              Icons.logout_rounded,
-                              color: Colors.red,
-                            ),
-                          ),
+              SettingsSessionSection(
+                isGuest: isGuest,
 
-                          const SizedBox(width: 14),
+                onSignOut: () async {
+                  final confirm = await showLogoutDialog();
 
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Sign Out",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                  if (confirm != true) return;
 
-                                SizedBox(height: 4),
+                  await SessionService.logout();
 
-                                Text(
-                                  "Securely sign out from your account.",
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                  settingsRepository.clearCache();
 
-                      const SizedBox(height: 20),
+                  if (!mounted) return;
 
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.shade600,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
 
-                          icon: const Icon(Icons.logout_rounded),
+                  ApiService.logoutUser().catchError((_) {});
+                },
 
-                          label: const Text(
-                            "Sign Out",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          onPressed: () async {
-                            final confirm = await showLogoutDialog();
-
-                            if (confirm != true) return;
-
-                            await SessionService.logout();
-
-                            settingsRepository.clearCache();
-
-                            if (!mounted) return;
-
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LoginScreen(),
-                              ),
-                              (route) => false,
-                            );
-
-                            ApiService.logoutUser().catchError((_) {});
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      const Divider(),
-                      if (!isGuest) ...[
-                        ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.red.shade100,
-                            child: const Icon(
-                              Icons.delete_forever,
-                              color: Colors.red,
-                            ),
-                          ),
-                          title: const Text(
-                            "Delete Account",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.red,
-                            ),
-                          ),
-                          subtitle: const Text(
-                            "Permanently delete your account and all data.",
-                          ),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 18,
-                          ),
-
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const DeleteAccountScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                onDeleteAccount: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const DeleteAccountScreen(),
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(height: 25),
-              Column(
-                children: [
-                  const SizedBox(height: 30),
 
-                  Divider(color: Colors.grey.shade300),
-
-                  const SizedBox(height: 25),
-
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.green.shade100,
-                    child: const Icon(
-                      Icons.account_balance_wallet,
-                      color: Colors.green,
-                      size: 30,
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  Text(
-                    "PesaPulse",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Text(
-                    "Personal Finance Manager",
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      "Version 1.0.0",
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  Text(
-                    "© 2026 PesaPulse\nAll rights reserved.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-
-                  const SizedBox(height: 30),
-                ],
+              SettingsFooter(
+                appName: 'PesaPulse',
+                tagline: 'Personal Finance Manager',
+                version: '1.0.0',
+                year: 2026,
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileStat(
-    String value,
-    String title,
-    IconData icon,
-    Color iconColor,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: iconColor.withOpacity(0.12),
-              child: Icon(icon, color: iconColor, size: 24),
-            ),
-
-            const SizedBox(height: 14),
-
-            Text(
-              value,
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-
-            Text(title, textAlign: TextAlign.center),
-          ],
         ),
       ),
     );
