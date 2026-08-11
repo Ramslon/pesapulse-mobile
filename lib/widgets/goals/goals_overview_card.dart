@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../fade_slide_animation.dart';
+import '../../utils/responsive_helper.dart';
 
 class GoalsOverviewCard extends StatelessWidget {
   final int totalGoals;
@@ -17,13 +18,20 @@ class GoalsOverviewCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final isLandscape = ResponsiveHelper.isLandscape(context);
+    final isCompact = ResponsiveHelper.useCompactLayout(context);
+
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
     return FadeSlideAnimation(
       child: Card(
         elevation: 1,
         shadowColor: colorScheme.shadow.withOpacity(.08),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(isCompact ? 18 : 22),
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(cardPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -34,20 +42,20 @@ class GoalsOverviewCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 46,
-                    height: 46,
+                    width: isCompact ? 42 : 46,
+                    height: isCompact ? 42 : 46,
                     decoration: BoxDecoration(
                       color: colorScheme.primary.withOpacity(.10),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(isCompact ? 12 : 14),
                     ),
                     child: Icon(
                       Icons.flag_outlined,
                       color: colorScheme.primary,
-                      size: 24,
+                      size: isCompact ? 22 : 24,
                     ),
                   ),
 
-                  const SizedBox(width: 13),
+                  SizedBox(width: isCompact ? 10 : 13),
 
                   Expanded(
                     child: Column(
@@ -58,6 +66,7 @@ class GoalsOverviewCard extends StatelessWidget {
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             letterSpacing: -.2,
+                            fontSize: isCompact ? 18 : null,
                           ),
                         ),
 
@@ -74,7 +83,7 @@ class GoalsOverviewCard extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(width: 8),
+                  SizedBox(width: isCompact ? 4 : 8),
 
                   IconButton(
                     tooltip: 'Archived Goals',
@@ -82,26 +91,33 @@ class GoalsOverviewCard extends StatelessWidget {
                     style: IconButton.styleFrom(
                       backgroundColor: colorScheme.primary.withOpacity(.08),
                       foregroundColor: colorScheme.primary,
+                      minimumSize: Size(
+                        isCompact ? 40 : 44,
+                        isCompact ? 40 : 44,
+                      ),
                     ),
-                    icon: const Icon(Icons.archive_outlined, size: 21),
+                    icon: Icon(
+                      Icons.archive_outlined,
+                      size: isCompact ? 19 : 21,
+                    ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 22),
+              SizedBox(height: isLandscape ? 16 : 22),
 
               // ─────────────────────────────────────────────
               // Total goals
               // ─────────────────────────────────────────────
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 15,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 14 : 16,
+                  vertical: isCompact ? 12 : 15,
                 ),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHighest.withOpacity(.45),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(isCompact ? 14 : 16),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -116,12 +132,13 @@ class GoalsOverviewCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             height: 1,
                             letterSpacing: -1,
+                            fontSize: isCompact ? 30 : null,
                           ),
                         );
                       },
                     ),
 
-                    const SizedBox(width: 10),
+                    SizedBox(width: isCompact ? 8 : 10),
 
                     Padding(
                       padding: const EdgeInsets.only(bottom: 2),

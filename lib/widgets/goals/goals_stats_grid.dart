@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../goal_stat_card.dart';
+import '../../utils/responsive_helper.dart';
 
 class GoalsStatsGrid extends StatelessWidget {
   final int totalGoals;
@@ -43,19 +44,41 @@ class GoalsStatsGrid extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isLandscape = ResponsiveHelper.isLandscape(context);
+        final isCompact = ResponsiveHelper.useCompactLayout(context);
+        final spacing = ResponsiveHelper.spacing(context);
+
         final isWide = constraints.maxWidth >= 600;
+
+        final int crossAxisCount = isWide ? 4 : 2;
+
+        // childAspectRatio = width / height.
+        // Lower values give the cards more vertical height.
+        final double childAspectRatio;
+
+        if (isLandscape) {
+          if (isCompact) {
+            childAspectRatio = 1.15;
+          } else {
+            childAspectRatio = 1.25;
+          }
+        } else if (isCompact) {
+          childAspectRatio = 0.95;
+        } else if (isWide) {
+          childAspectRatio = 1.45;
+        } else {
+          childAspectRatio = 1.05;
+        }
 
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: stats.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isWide ? 4 : 2,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-
-            // Give the cards enough vertical space.
-            childAspectRatio: isWide ? 1.55 : 1.05,
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            childAspectRatio: childAspectRatio,
           ),
           itemBuilder: (context, index) {
             final stat = stats[index];

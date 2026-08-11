@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pesapulse_mobile/models/goal.dart';
+import 'package:pesapulse_mobile/utils/responsive_helper.dart';
 
 import 'package:pesapulse_mobile/widgets/goals/goal_insights.dart';
 import 'package:pesapulse_mobile/widgets/goals/goal_savings_forecast.dart';
@@ -91,21 +92,33 @@ class GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     final colorScheme = theme.colorScheme;
 
     final progressPercentage = percentage.clamp(0.0, 1.0);
 
+    // ─────────────────────────────────────────────
+    // Responsive values
+    // ─────────────────────────────────────────────
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+    final spacing = ResponsiveHelper.spacing(context);
+    final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
+    final isLandscape = ResponsiveHelper.isLandscape(context);
+    final isCompact = ResponsiveHelper.useCompactLayout(context);
+
+    // Landscape screens have less vertical space, so slightly
+    // reduce some vertical spacing without changing the design.
+    final verticalScale = isLandscape ? 0.85 : 1.0;
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 18),
+      margin: EdgeInsets.only(bottom: 18 * verticalScale),
       elevation: 0,
       color: colorScheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isCompact ? 20 : 24),
         side: BorderSide(color: colorScheme.outline.withOpacity(0.10)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(cardPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -115,9 +128,9 @@ class GoalCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildGoalIcon(colorScheme),
+                _buildGoalIcon(colorScheme, isCompact: isCompact),
 
-                const SizedBox(width: 14),
+                SizedBox(width: spacing),
 
                 Expanded(
                   child: Column(
@@ -133,20 +146,20 @@ class GoalCard extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8 * verticalScale),
 
                       _buildStatusChip(),
                     ],
                   ),
                 ),
 
-                const SizedBox(width: 8),
+                SizedBox(width: spacing * 0.55),
 
-                _buildDeleteButton(colorScheme),
+                _buildDeleteButton(colorScheme, isCompact: isCompact),
               ],
             ),
 
-            const SizedBox(height: 14),
+            SizedBox(height: 14 * verticalScale),
 
             // ─────────────────────────────────────────────
             // Deadline
@@ -155,33 +168,36 @@ class GoalCard extends StatelessWidget {
               children: [
                 Icon(
                   Icons.calendar_today_outlined,
-                  size: 15,
+                  size: isCompact ? 14 : 15,
                   color: colorScheme.onSurfaceVariant,
                 ),
 
-                const SizedBox(width: 7),
+                SizedBox(width: spacing * 0.5),
 
-                Text(
-                  targetDate,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    targetDate,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 22),
+            SizedBox(height: 22 * verticalScale),
 
             // ─────────────────────────────────────────────
             // Financial progress
             // ─────────────────────────────────────────────
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(isCompact ? 14 : 16),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHighest.withOpacity(.45),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(isCompact ? 16 : 18),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,7 +210,7 @@ class GoalCard extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 5),
+                  SizedBox(height: 5 * verticalScale),
 
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -202,6 +218,8 @@ class GoalCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           currency.format(saved),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.5,
@@ -209,13 +227,13 @@ class GoalCard extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(width: 8),
+                      SizedBox(width: spacing * 0.55),
 
                       _buildPercentageBadge(),
                     ],
                   ),
 
-                  const SizedBox(height: 5),
+                  SizedBox(height: 5 * verticalScale),
 
                   Text(
                     'of ${currency.format(target)} target',
@@ -224,14 +242,14 @@ class GoalCard extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16 * verticalScale),
 
                   GoalProgress(percentage: progressPercentage),
                 ],
               ),
             ),
 
-            const SizedBox(height: 18),
+            SizedBox(height: sectionSpacing * verticalScale),
 
             // ─────────────────────────────────────────────
             // Insights
@@ -243,11 +261,11 @@ class GoalCard extends StatelessWidget {
                 title: 'Insight',
               ),
 
-              const SizedBox(height: 8),
+              SizedBox(height: 8 * verticalScale),
 
               GoalInsights(insight: insight, currency: currency),
 
-              const SizedBox(height: 14),
+              SizedBox(height: 14 * verticalScale),
             ],
 
             // ─────────────────────────────────────────────
@@ -255,18 +273,12 @@ class GoalCard extends StatelessWidget {
             // ─────────────────────────────────────────────
             GoalMilestone(percentage: progressPercentage, onArchive: onArchive),
 
-            const SizedBox(height: 18),
+            SizedBox(height: sectionSpacing * verticalScale),
 
             // ─────────────────────────────────────────────
             // Savings forecast
             // ─────────────────────────────────────────────
-            _buildSectionLabel(
-              context,
-              icon: Icons.trending_up_rounded,
-              title: 'Savings forecast',
-            ),
-
-            const SizedBox(height: 8),
+            SizedBox(height: 8 * verticalScale),
 
             GoalSavingsForecast(
               forecast: forecast,
@@ -280,18 +292,21 @@ class GoalCard extends StatelessWidget {
     );
   }
 
-  Widget _buildGoalIcon(ColorScheme colorScheme) {
+  Widget _buildGoalIcon(ColorScheme colorScheme, {required bool isCompact}) {
+    final size = isCompact ? 44.0 : 48.0;
+    final iconSize = isCompact ? 23.0 : 25.0;
+
     return Container(
-      width: 48,
-      height: 48,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: statusColor.withOpacity(.10),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(isCompact ? 13 : 15),
       ),
       child: Icon(
         statusIcon,
         color: isCompleted ? Colors.amber.shade700 : statusColor,
-        size: 25,
+        size: iconSize,
       ),
     );
   }
@@ -330,23 +345,28 @@ class GoalCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDeleteButton(ColorScheme colorScheme) {
+  Widget _buildDeleteButton(
+    ColorScheme colorScheme, {
+    required bool isCompact,
+  }) {
+    final size = isCompact ? 36.0 : 40.0;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onDelete,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          width: 40,
-          height: 40,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             color: Colors.red.withOpacity(.07),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.delete_outline_rounded,
             color: Colors.red,
-            size: 20,
+            size: isCompact ? 19 : 20,
           ),
         ),
       ),
@@ -355,6 +375,7 @@ class GoalCard extends StatelessWidget {
 
   Widget _buildPercentageBadge() {
     final progressPercentage = percentage.clamp(0.0, 1.0);
+
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 700),
       curve: Curves.easeOutCubic,

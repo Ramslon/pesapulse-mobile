@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../fade_slide_animation.dart';
+import '../../utils/responsive_helper.dart';
 
 class GoalInsights extends StatelessWidget {
   final Map<String, dynamic>? insight;
@@ -74,14 +75,38 @@ class GoalInsights extends StatelessWidget {
 
     final message = data['message']?.toString().trim() ?? '';
 
+    // ─────────────────────────────────────────────
+    // Responsive configuration
+    // ─────────────────────────────────────────────
+    final isCompact = ResponsiveHelper.useCompactLayout(context);
+
+    final isLandscape = ResponsiveHelper.isLandscape(context);
+
+    final spacing = ResponsiveHelper.spacing(context);
+
+    final horizontalPadding = isCompact ? 13.0 : 16.0;
+
+    final verticalPadding = isLandscape
+        ? 13.0
+        : isCompact
+        ? 14.0
+        : 16.0;
+
+    final iconSize = isCompact ? 38.0 : 40.0;
+
+    final metricIconSize = isCompact ? 30.0 : 32.0;
+
     return FadeSlideAnimation(
       delay: 300,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
         decoration: BoxDecoration(
           color: insightColor.withOpacity(.055),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(isCompact ? 16 : 18),
           border: Border.all(color: insightColor.withOpacity(.14)),
         ),
         child: Column(
@@ -93,16 +118,20 @@ class GoalInsights extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: iconSize,
+                  height: iconSize,
                   decoration: BoxDecoration(
                     color: insightColor.withOpacity(.10),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(isCompact ? 11 : 12),
                   ),
-                  child: Icon(insightIcon, color: insightColor, size: 21),
+                  child: Icon(
+                    insightIcon,
+                    color: insightColor,
+                    size: isCompact ? 20 : 21,
+                  ),
                 ),
 
-                const SizedBox(width: 11),
+                SizedBox(width: spacing * 0.75),
 
                 Expanded(
                   child: Column(
@@ -119,6 +148,8 @@ class GoalInsights extends StatelessWidget {
 
                       Text(
                         statusLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: insightColor,
                           fontSize: 10,
@@ -132,7 +163,7 @@ class GoalInsights extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 16),
+            SizedBox(height: isLandscape ? 12 : 16),
 
             // ─────────────────────────────────────────
             // Key metrics
@@ -145,10 +176,12 @@ class GoalInsights extends StatelessWidget {
                     value: currency.format(remainingAmount),
                     icon: Icons.account_balance_wallet_outlined,
                     color: insightColor,
+                    iconSize: metricIconSize,
+                    compact: isCompact,
                   ),
                 ),
 
-                const SizedBox(width: 10),
+                SizedBox(width: spacing * 0.7),
 
                 Expanded(
                   child: _InsightMetric(
@@ -156,43 +189,53 @@ class GoalInsights extends StatelessWidget {
                     value: '$daysRemaining',
                     icon: Icons.calendar_today_outlined,
                     color: insightColor,
+                    iconSize: metricIconSize,
+                    compact: isCompact,
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 10),
+            SizedBox(height: isLandscape ? 8 : 10),
 
+            // ─────────────────────────────────────────
+            // Monthly needed
+            // ─────────────────────────────────────────
             _InsightMetric(
               title: 'Monthly needed',
               value: currency.format(monthlyNeeded),
               icon: Icons.savings_outlined,
               color: insightColor,
+              iconSize: metricIconSize,
+              compact: isCompact,
             ),
 
             // ─────────────────────────────────────────
             // Message
             // ─────────────────────────────────────────
             if (message.isNotEmpty) ...[
-              const SizedBox(height: 14),
+              SizedBox(height: isLandscape ? 11 : 14),
 
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 11 : 13,
+                  vertical: isCompact ? 10 : 12,
+                ),
                 decoration: BoxDecoration(
                   color: colorScheme.surface.withOpacity(.55),
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(isCompact ? 12 : 13),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       Icons.lightbulb_outline_rounded,
-                      size: 17,
+                      size: isCompact ? 16 : 17,
                       color: insightColor,
                     ),
 
-                    const SizedBox(width: 9),
+                    SizedBox(width: spacing * 0.6),
 
                     Expanded(
                       child: Text(
@@ -219,12 +262,16 @@ class _InsightMetric extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final double iconSize;
+  final bool compact;
 
   const _InsightMetric({
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
+    required this.iconSize,
+    required this.compact,
   });
 
   @override
@@ -233,25 +280,28 @@ class _InsightMetric extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 9 : 11,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surface.withOpacity(.65),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(compact ? 12 : 14),
         border: Border.all(color: color.withOpacity(.08)),
       ),
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: iconSize,
+            height: iconSize,
             decoration: BoxDecoration(
               color: color.withOpacity(.09),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(compact ? 9 : 10),
             ),
-            child: Icon(icon, color: color, size: 17),
+            child: Icon(icon, color: color, size: compact ? 16 : 17),
           ),
 
-          const SizedBox(width: 9),
+          SizedBox(width: compact ? 7 : 9),
 
           Expanded(
             child: Column(

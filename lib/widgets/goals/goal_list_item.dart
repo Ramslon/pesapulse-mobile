@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/goal.dart';
 import '../../controllers/goals_controller.dart';
 import '../../services/sync_events.dart';
+import '../../utils/responsive_helper.dart';
 import 'goal_action_helpers.dart';
 import 'goal_card.dart';
 import 'add_savings_dialog.dart';
@@ -82,7 +83,8 @@ class GoalListItem extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
 
-      GoalActionHelpers.showMessage(context, 'Failed to delete goal: $e');
+      // Corrected: this is an archive failure.
+      GoalActionHelpers.showMessage(context, 'Failed to archive goal: $e');
     }
   }
 
@@ -92,19 +94,37 @@ class GoalListItem extends StatelessWidget {
     // Optimistically remove the goal from the visible list.
     goalsController.removeGoal(goal.id);
 
+    final isCompact = ResponsiveHelper.useCompactLayout(context);
+
+    final horizontalMargin = isCompact ? 12.0 : 16.0;
+    final bottomMargin = isCompact ? 12.0 : 16.0;
+
     final snackBar = SnackBar(
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      margin: EdgeInsets.fromLTRB(
+        horizontalMargin,
+        0,
+        horizontalMargin,
+        bottomMargin,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isCompact ? 12 : 14),
+      ),
       content: Row(
         children: [
-          const Icon(Icons.delete_outline, color: Colors.white),
-          const SizedBox(width: 10),
+          Icon(
+            Icons.delete_outline,
+            color: Colors.white,
+            size: isCompact ? 20 : 22,
+          ),
+          SizedBox(width: isCompact ? 8 : 10),
           Expanded(
             child: Text(
               connectivity.isOnline
                   ? 'Goal deleted successfully'
                   : 'Goal deleted offline. Changes will sync automatically.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -161,27 +181,41 @@ class GoalListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final isCompact = ResponsiveHelper.useCompactLayout(context);
+    final isLandscape = ResponsiveHelper.isLandscape(context);
+
+    final cardRadius = isCompact ? 18.0 : 22.0;
+    final swipeHorizontalPadding = isCompact
+        ? 16.0
+        : isLandscape
+        ? 20.0
+        : 22.0;
+
+    final swipeIconSize = isCompact ? 44.0 : 48.0;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: EdgeInsets.only(bottom: isCompact ? 1 : 2),
       child: Dismissible(
         key: ValueKey(goal.id),
         direction: DismissDirection.endToStart,
 
+        // ─────────────────────────────────────────────
+        // Swipe delete background
+        // ─────────────────────────────────────────────
         background: Container(
-          margin: const EdgeInsets.only(bottom: 24),
+          margin: EdgeInsets.only(bottom: isCompact ? 18 : 24),
           alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 22),
+          padding: EdgeInsets.only(right: swipeHorizontalPadding),
           decoration: BoxDecoration(
             color: colorScheme.error.withOpacity(.10),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(cardRadius),
             border: Border.all(color: colorScheme.error.withOpacity(.18)),
           ),
           child: Container(
-            width: 48,
-            height: 48,
+            width: swipeIconSize,
+            height: swipeIconSize,
             decoration: BoxDecoration(
               color: colorScheme.error.withOpacity(.12),
               shape: BoxShape.circle,
@@ -189,7 +223,7 @@ class GoalListItem extends StatelessWidget {
             child: Icon(
               Icons.delete_outline,
               color: colorScheme.error,
-              size: 24,
+              size: isCompact ? 22 : 24,
             ),
           ),
         ),
@@ -203,6 +237,9 @@ class GoalListItem extends StatelessWidget {
 
         onDismissed: (_) => _handleSwipeDelete(context),
 
+        // ─────────────────────────────────────────────
+        // Goal content
+        // ─────────────────────────────────────────────
         child: GoalCard(
           goal: goal,
           target: goal.targetAmount,

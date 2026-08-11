@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../fade_slide_animation.dart';
 import 'forecast_metric.dart';
+import '../../utils/responsive_helper.dart';
 
 class GoalSavingsForecast extends StatelessWidget {
   final Map<String, dynamic>? forecast;
@@ -97,6 +98,12 @@ class GoalSavingsForecast extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final forecastColor = _forecastColor(context);
 
+    final isLandscape = ResponsiveHelper.isLandscape(context);
+    final isCompact = ResponsiveHelper.useCompactLayout(context);
+
+    final spacing = ResponsiveHelper.spacing(context);
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -108,7 +115,7 @@ class GoalSavingsForecast extends StatelessWidget {
             Icon(
               Icons.auto_graph_rounded,
               color: colorScheme.primary,
-              size: 20,
+              size: isCompact ? 19 : 20,
             ),
             const SizedBox(width: 8),
             Text(
@@ -120,7 +127,7 @@ class GoalSavingsForecast extends StatelessWidget {
           ],
         ),
 
-        const SizedBox(height: 12),
+        SizedBox(height: isLandscape ? 10 : 12),
 
         // ─────────────────────────────────────────────
         // Forecast card
@@ -129,7 +136,7 @@ class GoalSavingsForecast extends StatelessWidget {
           FadeSlideAnimation(
             delay: 450,
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(cardPadding),
               decoration: BoxDecoration(
                 color: forecastColor.withOpacity(.07),
                 borderRadius: BorderRadius.circular(18),
@@ -142,8 +149,8 @@ class GoalSavingsForecast extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        width: 42,
-                        height: 42,
+                        width: isCompact ? 40 : 42,
+                        height: isCompact ? 40 : 42,
                         decoration: BoxDecoration(
                           color: forecastColor.withOpacity(.12),
                           shape: BoxShape.circle,
@@ -151,7 +158,7 @@ class GoalSavingsForecast extends StatelessWidget {
                         child: Icon(
                           _forecastIcon(),
                           color: forecastColor,
-                          size: 21,
+                          size: isCompact ? 20 : 21,
                         ),
                       ),
 
@@ -183,13 +190,13 @@ class GoalSavingsForecast extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 14),
+                  SizedBox(height: isLandscape ? 12 : 14),
 
                   // Forecast message
                   if ((forecast?['message']?.toString() ?? '').isNotEmpty)
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(13),
+                      padding: EdgeInsets.all(isCompact ? 12 : 13),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface.withOpacity(.55),
                         borderRadius: BorderRadius.circular(13),
@@ -203,7 +210,7 @@ class GoalSavingsForecast extends StatelessWidget {
                       ),
                     ),
 
-                  const SizedBox(height: 14),
+                  SizedBox(height: isLandscape ? 12 : 14),
 
                   // Completion + daily saving
                   Row(
@@ -217,7 +224,7 @@ class GoalSavingsForecast extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(width: 10),
+                      SizedBox(width: spacing),
 
                       Expanded(
                         child: ForecastMetric(
@@ -232,7 +239,7 @@ class GoalSavingsForecast extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 10),
+                  SizedBox(height: isLandscape ? 8 : 10),
 
                   // Monthly saving
                   ForecastMetric(
@@ -248,7 +255,7 @@ class GoalSavingsForecast extends StatelessWidget {
             ),
           ),
 
-        const SizedBox(height: 14),
+        SizedBox(height: isLandscape ? 10 : 14),
 
         // ─────────────────────────────────────────────
         // Add savings action
@@ -264,7 +271,7 @@ class GoalSavingsForecast extends StatelessWidget {
             ),
             label: Text(isCompleted ? 'Goal Completed' : 'Add Savings'),
             style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
+              minimumSize: Size.fromHeight(isCompact ? 48 : 50),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
               ),

@@ -43,7 +43,7 @@ class AppScaffold extends StatelessWidget {
         // Floating Sync Icon
         if (showSyncIcon)
           Positioned(
-            top: topPadding - 4,
+            top: topPadding + 6,
             right: 12,
             child: const SyncStatusIcon(),
           ),
@@ -51,7 +51,7 @@ class AppScaffold extends StatelessWidget {
         // Floating Offline Banner
         if (showOfflineBanner)
           Positioned(
-            top: topPadding + 10,
+            top: topPadding + 2,
             left: 12,
             child: SizedBox(
               width: MediaQuery.of(context).size.width * 0.75,

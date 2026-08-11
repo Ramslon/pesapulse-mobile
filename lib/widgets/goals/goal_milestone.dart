@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/responsive_helper.dart';
+
 class GoalMilestone extends StatelessWidget {
   final double percentage;
   final Future Function() onArchive;
@@ -61,33 +63,56 @@ class _MilestoneBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final isCompact = ResponsiveHelper.useCompactLayout(context);
+
+    final isLandscape = ResponsiveHelper.isLandscape(context);
+
+    final horizontalPadding = isCompact ? 10.0 : 12.0;
+
+    final verticalPadding = isLandscape
+        ? 7.0
+        : isCompact
+        ? 8.0
+        : 9.0;
+
+    final iconSize = isCompact ? 28.0 : 30.0;
+
+    final iconContainerRadius = isCompact ? 8.0 : 9.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(.07),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(isCompact ? 13 : 14),
         border: Border.all(color: color.withOpacity(.14)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 30,
-            height: 30,
+            width: iconSize,
+            height: iconSize,
             decoration: BoxDecoration(
               color: color.withOpacity(.10),
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(iconContainerRadius),
             ),
-            child: Icon(icon, color: color, size: 17),
+            child: Icon(icon, color: color, size: isCompact ? 16 : 17),
           ),
 
-          const SizedBox(width: 9),
+          SizedBox(width: isCompact ? 7 : 9),
 
-          Text(
-            title,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -106,34 +131,53 @@ class _CompletedMilestone extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final isCompact = ResponsiveHelper.useCompactLayout(context);
+
+    final isLandscape = ResponsiveHelper.isLandscape(context);
+
+    final cardPadding = isCompact ? 12.0 : 14.0;
+
+    final iconContainerSize = isCompact ? 36.0 : 38.0;
+
+    final iconSize = isCompact ? 20.0 : 21.0;
+
+    final buttonHeight = isLandscape
+        ? 44.0
+        : isCompact
+        ? 46.0
+        : 48.0;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(cardPadding),
       decoration: BoxDecoration(
         color: Colors.amber.withOpacity(.07),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isCompact ? 14 : 16),
         border: Border.all(color: Colors.amber.withOpacity(.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ─────────────────────────────────────────
+          // Completion header
+          // ─────────────────────────────────────────
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: iconContainerSize,
+                height: iconContainerSize,
                 decoration: BoxDecoration(
                   color: Colors.amber.withOpacity(.12),
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(isCompact ? 10 : 11),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.emoji_events_rounded,
                   color: Colors.amber,
-                  size: 21,
+                  size: iconSize,
                 ),
               ),
 
-              const SizedBox(width: 11),
+              SizedBox(width: isCompact ? 9 : 11),
 
               Expanded(
                 child: Column(
@@ -150,6 +194,8 @@ class _CompletedMilestone extends StatelessWidget {
 
                     Text(
                       'Congratulations! You reached your target.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -160,18 +206,22 @@ class _CompletedMilestone extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 13),
+          SizedBox(height: isLandscape ? 10 : 13),
 
+          // ─────────────────────────────────────────
+          // Archive action
+          // ─────────────────────────────────────────
           SizedBox(
             width: double.infinity,
+            height: buttonHeight,
             child: FilledButton.icon(
               onPressed: onArchive,
-              icon: const Icon(Icons.archive_outlined, size: 18),
+              icon: Icon(Icons.archive_outlined, size: isCompact ? 17 : 18),
               label: const Text('Archive Goal'),
               style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(isCompact ? 11 : 12),
                 ),
               ),
             ),
