@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pesapulse_mobile/screens/register_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -10,6 +8,7 @@ import '../services/session_service.dart';
 
 import '../core/constants/app_constants.dart';
 import '../controllers/settings_preferences_controller.dart';
+import '../controllers/settings_support_controller.dart';
 import '../providers/connectivity_provider.dart';
 
 import '../screens/login_screen.dart';
@@ -63,6 +62,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   DateTime? lastSyncTime;
 
   final SettingsRepository settingsRepository = SettingsRepository();
+  final SettingsSupportController supportController =
+      SettingsSupportController();
   late final SettingsPreferencesController settingsPreferencesController;
 
   bool isGuest = false;
@@ -239,53 +240,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return DateFormat("dd MMM • hh:mm a").format(date);
   }
 
-  Future<void> contactSupport() async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: 'support@pesapulse.app',
-      queryParameters: {'subject': 'PesaPulse Support'},
-    );
-
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open email application')),
-      );
-    }
-  }
-
-  void shareApp() {
-    Share.share('''
-I'm using ${AppConstants.appName} to manage my expenses, budgets and savings goals.
-
-Download it here:
-
-https://github.com/ramslon/PesaPulse
-''');
-  }
-
-  void rateApp() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Rate PesaPulse"),
-        content: const Text(
-          "Thank you for using PesaPulse!\n\n"
-          "The app will be available on Google Play soon, where you'll be able to leave a rating and review.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -445,11 +399,16 @@ https://github.com/ramslon/PesaPulse
               ),
 
               SettingsSupportSection(
-                onContactSupport: contactSupport,
-                onRateApp: rateApp,
-                onShareApp: shareApp,
+                onContactSupport: () {
+                  supportController.contactSupport(context);
+                },
+                onRateApp: () {
+                  supportController.showRateAppDialog(context);
+                },
+                onShareApp: () {
+                  supportController.shareApp();
+                },
               ),
-
               const SizedBox(height: 30),
 
               SettingsSectionHeader(title: 'Session', icon: Icons.logout),
