@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../utils/responsive_helper.dart';
 
+import '../../widgets/expense_content/expense_statistics.dart';
+
 class ExpenseSummarySection extends StatelessWidget {
   final double totalAmount;
   final int expenseCount;
@@ -35,8 +37,6 @@ class ExpenseSummarySection extends StatelessWidget {
 
     final amountFontSize = compact ? 19.0 : 24.0;
     final transactionFontSize = compact ? 12.0 : 14.0;
-    final statValueFontSize = compact ? 12.0 : 15.0;
-    final statTitleFontSize = compact ? 10.0 : 12.0;
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -99,40 +99,10 @@ class ExpenseSummarySection extends StatelessWidget {
                           : ResponsiveHelper.sectionSpacing(context) * 0.55,
                     ),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMiniStat(
-                            context,
-                            title: "Categories",
-                            value: categoryCount.toString(),
-                            valueFontSize: statValueFontSize,
-                            titleFontSize: statTitleFontSize,
-                          ),
-                        ),
-
-                        Expanded(
-                          child: _buildMiniStat(
-                            context,
-                            title: "Highest",
-                            value:
-                                "KES ${currencyFormatter.format(highestExpense)}",
-                            valueFontSize: statValueFontSize,
-                            titleFontSize: statTitleFontSize,
-                          ),
-                        ),
-
-                        Expanded(
-                          child: _buildMiniStat(
-                            context,
-                            title: "Average",
-                            value:
-                                "KES ${currencyFormatter.format(averageExpense)}",
-                            valueFontSize: statValueFontSize,
-                            titleFontSize: statTitleFontSize,
-                          ),
-                        ),
-                      ],
+                    ExpenseStatistics(
+                      categoryCount: categoryCount,
+                      highestExpense: highestExpense,
+                      averageExpense: averageExpense,
                     ),
                   ],
                 ),
@@ -140,44 +110,6 @@ class ExpenseSummarySection extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildMiniStat(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required double valueFontSize,
-    required double titleFontSize,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: ResponsiveHelper.spacing(context) * 0.25,
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: valueFontSize,
-            ),
-          ),
-
-          const SizedBox(height: 4),
-
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey, fontSize: titleFontSize),
-          ),
-        ],
       ),
     );
   }

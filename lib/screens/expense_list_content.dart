@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:pesapulse_mobile/screens/expense_details_screen.dart';
-
-import 'edit_expense_screen.dart';
 import '../services/sync_service.dart';
+
+import '../actions/expense_actions.dart';
+import '../controllers/expense_controller.dart';
 
 import '../widgets/expense_loading_skeleton.dart';
 import '../widgets/app/adaptive_app_bar.dart';
@@ -19,8 +19,9 @@ import '../widgets/expense_content/expense_category_filters.dart';
 import '../widgets/expense_content/expense_list_section.dart';
 
 import '../utils/responsive_helper.dart';
-
-import '../repositories/expense_repository.dart';
+import '../utils/expense_filters.dart';
+import '../utils/expense_date_utils.dart';
+import '../utils/expense_search_utils.dart';
 
 import '../screens/add_expense_screen.dart';
 
@@ -35,13 +36,12 @@ class ExpenseListContent extends StatefulWidget {
 
 class ExpenseListContentState extends State<ExpenseListContent>
     with AutomaticKeepAliveClientMixin {
-  List expenses = [];
+  List<Map<String, dynamic>> expenses = [];
+  List<Map<String, dynamic>> filteredExpenses = [];
 
-  final ExpenseRepository repository = ExpenseRepository();
+  final ExpenseController expenseController = ExpenseController();
 
   final NumberFormat currencyFormatter = NumberFormat("#,##0.00");
-
-  List filteredExpenses = [];
 
   String selectedDateFilter = 'All';
 
@@ -83,12 +83,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
   bool isLoading = true;
 
   bool isGuest = false;
-
-  int currentPage = 1;
-
-  bool hasMore = true;
-
-  bool isFetchingMore = false;
 
   double totalAmount = 0;
 
@@ -196,34 +190,23 @@ class ExpenseListContentState extends State<ExpenseListContent>
   }
 
   Future<void> fetchExpenses() async {
-    if (isFetchingMore || !hasMore) return;
-
-    setState(() {
-      isFetchingMore = true;
-    });
-
     try {
-      final response = await repository.getExpenses(page: currentPage);
+      final newExpenses = await expenseController.fetchExpenses();
 
-      final List newExpenses = response['data'] ?? [];
+      if (!mounted) return;
 
       setState(() {
         expenses.addAll(newExpenses);
 
         filterExpenses();
 
-        currentPage++;
-
-        hasMore = response['next_page_url'] != null;
-
         isLoading = false;
-
-        isFetchingMore = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         isLoading = false;
-        isFetchingMore = false;
       });
 
       ScaffoldMessenger.of(
@@ -238,14 +221,11 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
       expenses.clear();
       filteredExpenses.clear();
-
-      currentPage = 1;
-      hasMore = true;
     });
 
-    await fetchExpenses();
+    expenseController.resetPagination();
 
-    filterExpenses();
+    await fetchExpenses();
 
     if (!mounted) return;
 
@@ -264,178 +244,39 @@ class ExpenseListContentState extends State<ExpenseListContent>
     );
   }
 
-  Map<String, List<Map<String, dynamic>>> groupExpensesByDate() {
-    final Map<String, List<Map<String, dynamic>>> grouped = {};
-
-    for (final expense in filteredExpenses) {
-      final rawDate = expense["expense_date"];
-
-      if (rawDate == null) continue;
-
-      final date = DateTime.tryParse(rawDate.toString());
-
-      if (date == null) continue;
-
-      final now = DateTime.now();
-
-      String label;
-
-      final difference = now.difference(date).inDays;
-
-      if (difference == 0) {
-        label = "Today";
-      } else if (difference == 1) {
-        label = "Yesterday";
-      } else {
-        label = DateFormat("dd MMM yyyy").format(date);
-      }
-
-      grouped.putIfAbsent(label, () => []);
-
-      grouped[label]!.add(Map<String, dynamic>.from(expense));
-    }
-
-    return grouped;
-  }
-
   void filterExpenses() {
-    List temp = List.from(expenses);
-
-    // Search
-    if (searchController.text.isNotEmpty) {
-      final query = searchController.text.trim().toLowerCase();
-
-      temp = temp.where((expense) {
-        final title = (expense["title"] ?? "").toString().toLowerCase();
-
-        final category = (expense["category"] ?? "").toString().toLowerCase();
-
-        final description = (expense["description"] ?? "")
-            .toString()
-            .toLowerCase();
-
-        final amount = expense["amount"].toString().toLowerCase();
-
-        final date = formatDate(expense["expense_date"]).toLowerCase();
-
-        return title.contains(query) ||
-            category.contains(query) ||
-            description.contains(query) ||
-            amount.contains(query) ||
-            date.contains(query);
-      }).toList();
-    }
-
-    // Category
-    if (selectedCategory != 'All') {
-      temp = temp.where((expense) {
-        final expenseCategory = (expense['category'] ?? '')
-            .toString()
-            .trim()
-            .toLowerCase();
-
-        final selected = selectedCategory.trim().toLowerCase();
-
-        return expenseCategory == selected;
-      }).toList();
-    }
-
-    applyDateFilter(temp);
-
-    sortExpenses();
-
-    setState(() {});
+    filteredExpenses = ExpenseFilters.filter(
+      expenses: expenses,
+      searchQuery: searchController.text,
+      selectedCategory: selectedCategory,
+      selectedDateFilter: selectedDateFilter,
+      selectedSort: selectedSort,
+      formatDate: ExpenseDateUtils.formatDate,
+    );
   }
 
   void resetFilters() {
-    searchController.clear();
+    setState(() {
+      searchController.clear();
 
-    selectedCategory = "All";
-    selectedSort = "Newest";
+      selectedCategory = "All";
+      selectedSort = "Newest";
+      selectedDateFilter = "All";
 
-    selectedDateFilter = "All";
-
-    filterExpenses();
-
-    setState(() {});
-  }
-
-  void sortExpenses() {
-    switch (selectedSort) {
-      case 'Newest':
-        filteredExpenses.sort(
-          (a, b) => DateTime.parse(
-            b['expense_date'],
-          ).compareTo(DateTime.parse(a['expense_date'])),
-        );
-        break;
-
-      case 'Oldest':
-        filteredExpenses.sort(
-          (a, b) => DateTime.parse(
-            a['expense_date'],
-          ).compareTo(DateTime.parse(b['expense_date'])),
-        );
-        break;
-
-      case 'Highest Amount':
-        filteredExpenses.sort(
-          (a, b) => (double.tryParse(b['amount'].toString()) ?? 0).compareTo(
-            double.tryParse(a['amount'].toString()) ?? 0,
-          ),
-        );
-        break;
-
-      case 'Lowest Amount':
-        filteredExpenses.sort(
-          (a, b) => (double.tryParse(a['amount'].toString()) ?? 0).compareTo(
-            double.tryParse(b['amount'].toString()) ?? 0,
-          ),
-        );
-        break;
-
-      case 'A-Z':
-        filteredExpenses.sort(
-          (a, b) => a['title'].toString().toLowerCase().compareTo(
-            b['title'].toString().toLowerCase(),
-          ),
-        );
-        break;
-
-      case 'Z-A':
-        filteredExpenses.sort(
-          (a, b) => b['title'].toString().toLowerCase().compareTo(
-            a['title'].toString().toLowerCase(),
-          ),
-        );
-        break;
-    }
-  }
-
-  void addRecentSearch(String query) {
-    query = query.trim();
-
-    if (query.isEmpty) return;
-
-    recentSearches.remove(query);
-
-    recentSearches.insert(0, query);
-
-    if (recentSearches.length > 5) {
-      recentSearches.removeLast();
-    }
+      filterExpenses();
+    });
   }
 
   void clearFilters() {
-    searchController.clear();
+    setState(() {
+      searchController.clear();
 
-    selectedCategory = "All";
-    selectedDateFilter = "All";
-    selectedSort = "Newest";
+      selectedCategory = "All";
+      selectedDateFilter = "All";
+      selectedSort = "Newest";
 
-    filterExpenses();
-
-    setState(() {});
+      filterExpenses();
+    });
   }
 
   void showSortSheet() {
@@ -472,11 +313,12 @@ class ExpenseListContentState extends State<ExpenseListContent>
                   groupValue: selectedSort,
                   title: Text(option),
                   onChanged: (value) {
-                    setState(() {
-                      selectedSort = value!;
-                    });
+                    if (value == null) return;
 
-                    filterExpenses();
+                    setState(() {
+                      selectedSort = value;
+                      filterExpenses();
+                    });
 
                     Navigator.pop(context);
                   },
@@ -487,50 +329,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
         );
       },
     );
-  }
-
-  void applyDateFilter(List source) {
-    final now = DateTime.now();
-
-    final today = DateTime(now.year, now.month, now.day);
-
-    filteredExpenses = source.where((expense) {
-      final rawDate = DateTime.parse(expense['expense_date']);
-
-      final date = DateTime(rawDate.year, rawDate.month, rawDate.day);
-
-      switch (selectedDateFilter) {
-        case 'Today':
-          return date == today;
-
-        case 'This Week':
-          final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
-
-          final endOfWeek = startOfWeek.add(const Duration(days: 6));
-
-          return !date.isBefore(startOfWeek) && !date.isAfter(endOfWeek);
-
-        case 'This Month':
-          return date.year == today.year && date.month == today.month;
-
-        default:
-          return true;
-      }
-    }).toList();
-  }
-
-  String formatDate(String date) {
-    final expenseDate = DateTime.parse(date);
-
-    final today = DateTime.now();
-
-    final difference = today.difference(expenseDate).inDays;
-
-    if (difference == 0) return "Today";
-
-    if (difference == 1) return "Yesterday";
-
-    return "${expenseDate.day}/${expenseDate.month}/${expenseDate.year}";
   }
 
   @override
@@ -551,7 +349,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
     final compact = ResponsiveHelper.useCompactLayout(context);
     final landscape = ResponsiveHelper.isLandscape(context);
-    final spacing = ResponsiveHelper.spacing(context);
 
     final horizontalPadding = compact
         ? 14.0
@@ -615,7 +412,10 @@ class ExpenseListContentState extends State<ExpenseListContent>
                   filterExpenses();
 
                   if (value.trim().isNotEmpty) {
-                    addRecentSearch(value);
+                    recentSearches = ExpenseSearchUtils.addRecentSearch(
+                      recentSearches: recentSearches,
+                      query: value,
+                    );
                   }
 
                   setState(() {});
@@ -670,9 +470,8 @@ class ExpenseListContentState extends State<ExpenseListContent>
                           onFilterSelected: (filter) {
                             setState(() {
                               selectedDateFilter = filter;
+                              filterExpenses();
                             });
-
-                            filterExpenses();
                           },
                         ),
 
@@ -684,9 +483,8 @@ class ExpenseListContentState extends State<ExpenseListContent>
                           onCategorySelected: (category) {
                             setState(() {
                               selectedCategory = category;
+                              filterExpenses();
                             });
-
-                            filterExpenses();
                           },
                         ),
 
@@ -718,7 +516,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
             _buildExpenseList(),
 
-            if (hasMore)
+            if (expenseController.hasMore)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.all(compact ? 14 : 20),
@@ -784,8 +582,9 @@ class ExpenseListContentState extends State<ExpenseListContent>
   }
 
   Widget _buildExpenseList() {
-    final groupedExpenses = groupExpensesByDate();
-
+    final groupedExpenses = ExpenseDateUtils.groupExpensesByDate(
+      filteredExpenses,
+    );
     final sections = groupedExpenses.entries.toList();
 
     return ExpenseListSection(
@@ -801,73 +600,63 @@ class ExpenseListContentState extends State<ExpenseListContent>
       onRefresh: refreshExpenses,
 
       onEdit: (expense) async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EditExpenseScreen(expense: expense),
-          ),
-        );
+        final result = await ExpenseActions.editExpense(context, expense);
 
         if (result == true) {
           expenses.clear();
           filteredExpenses.clear();
-          currentPage = 1;
-          hasMore = true;
+
+          expenseController.resetPagination();
 
           await fetchExpenses();
         }
       },
-
       onDelete: (expense) async {
         recentlyDeletedExpense = expense;
+
         recentlyDeletedIndex = expenses.indexWhere(
           (e) => e["id"] == expense["id"],
         );
-        expenses.removeWhere((e) => e["id"] == expense["id"]);
-        filterExpenses();
-        setState(() {});
-        bool undoPressed = false;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
-              SnackBar(
-                duration: const Duration(seconds: 5),
-                content: const Text("Expense deleted"),
-                action: SnackBarAction(
-                  label: "UNDO",
-                  onPressed: () {
-                    undoPressed = true;
-                    if (recentlyDeletedExpense != null &&
-                        recentlyDeletedIndex != null) {
-                      expenses.insert(
-                        recentlyDeletedIndex!,
-                        recentlyDeletedExpense!,
-                      );
-                      filterExpenses();
-                      setState(() {});
-                    }
-                  },
-                ),
-              ),
-            )
-            .closed
-            .then((_) async {
-              if (!undoPressed && recentlyDeletedExpense != null) {
-                await repository.deleteExpense(recentlyDeletedExpense!["id"]);
-                await SyncService.instance.getPendingChanges();
-              }
-              recentlyDeletedExpense = null;
-              recentlyDeletedIndex = null;
-            });
+
+        await ExpenseActions.deleteExpense(
+          context: context,
+
+          onDeleteLocally: () {
+            expenses.removeWhere((e) => e["id"] == expense["id"]);
+
+            filterExpenses();
+
+            setState(() {});
+          },
+
+          onUndo: () {
+            if (recentlyDeletedExpense != null &&
+                recentlyDeletedIndex != null) {
+              expenses.insert(recentlyDeletedIndex!, recentlyDeletedExpense!);
+
+              filterExpenses();
+
+              setState(() {});
+            }
+          },
+
+          onDeletePermanently: () async {
+            if (recentlyDeletedExpense != null) {
+              await expenseController.deleteExpense(
+                recentlyDeletedExpense!["id"],
+              );
+
+              await SyncService.instance.getPendingChanges();
+            }
+
+            recentlyDeletedExpense = null;
+            recentlyDeletedIndex = null;
+          },
+        );
       },
 
       onDuplicate: (expense) async {
-        // Keep the current temporary logic for now.
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ExpenseDetailsScreen(expense: expense),
-          ),
-        );
+        final result = await ExpenseActions.duplicateExpense(context, expense);
 
         if (result == true) {
           await refreshExpenses();
