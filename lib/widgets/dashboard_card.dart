@@ -1,65 +1,85 @@
 import 'package:flutter/material.dart';
+import '../utils/responsive_helper.dart';
 
 class DashboardCard extends StatelessWidget {
   final String title;
-  final String value;
   final String subtitle;
+  final String value;
   final IconData icon;
   final Color iconColor;
 
   const DashboardCard({
     super.key,
     required this.title,
+    required this.subtitle,
     required this.value,
     required this.icon,
-    required this.subtitle,
     required this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final padding = compact ? 12.0 : 16.0;
+    final iconSize = compact ? 20.0 : 24.0;
+    final titleSize = compact ? 13.0 : 14.0;
+    final subtitleSize = compact ? 11.0 : 12.0;
+    final valueSize = compact ? 18.0 : 21.0;
+
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(compact ? 14 : 18),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: iconColor.withOpacity(.12),
-              child: Icon(icon, color: iconColor),
+            Row(
+              children: [
+                Icon(icon, size: iconSize, color: iconColor),
+
+                SizedBox(width: compact ? 6 : 8),
+
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: titleSize,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(height: 12),
+            SizedBox(height: compact ? 5 : 7),
+
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: subtitleSize, color: Colors.grey),
+            ),
+
+            SizedBox(height: compact ? 5 : 7),
 
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 26,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: valueSize,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-
-            const SizedBox(height: 10),
-
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-
-            Text(
-              subtitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/responsive_helper.dart';
+
 class QuickActionCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -16,6 +18,45 @@ class QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+
+    final cardPadding = compact
+        ? 12.0
+        : landscape
+        ? 15.0
+        : 18.0;
+
+    final horizontalPadding = compact
+        ? 8.0
+        : landscape
+        ? 10.0
+        : 12.0;
+
+    final iconRadius = compact
+        ? 18.0
+        : landscape
+        ? 20.0
+        : 22.0;
+
+    final iconSize = compact
+        ? 20.0
+        : landscape
+        ? 21.0
+        : 22.0;
+
+    final titleFontSize = compact
+        ? 12.0
+        : landscape
+        ? 13.0
+        : 14.0;
+
+    final spacing = compact
+        ? 8.0
+        : landscape
+        ? 10.0
+        : 12.0;
+
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -26,21 +67,30 @@ class QuickActionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+            padding: EdgeInsets.symmetric(
+              vertical: cardPadding,
+              horizontal: horizontalPadding,
+            ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 CircleAvatar(
-                  radius: 22,
+                  radius: iconRadius,
                   backgroundColor: color.withOpacity(.12),
-                  child: Icon(icon, color: color),
+                  child: Icon(icon, color: color, size: iconSize),
                 ),
 
-                const SizedBox(height: 12),
+                SizedBox(height: spacing),
 
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: titleFontSize,
+                  ),
                 ),
               ],
             ),

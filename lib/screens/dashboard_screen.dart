@@ -16,6 +16,7 @@ import '../widgets/empty_state_helper.dart';
 import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 import 'package:flutter/foundation.dart';
+import '../utils/responsive_helper.dart';
 
 List<Map<String, dynamic>> _decodeExpenses(dynamic raw) {
   return List<Map<String, dynamic>>.from(raw);
@@ -281,17 +282,40 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  Widget _buildTodayOverviewBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(.12),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.insights, size: 16, color: Colors.green),
+          SizedBox(width: 6),
+          Text(
+            "Today's Overview",
+            style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   bool get wantKeepAlive => true;
 
   Widget _buildOverviewHeader() {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "$greeting 👋",
-          style: const TextStyle(
-            fontSize: 16,
+          style: TextStyle(
+            fontSize: ResponsiveHelper.useCompactLayout(context) ? 14 : 16,
             color: Colors.grey,
             fontWeight: FontWeight.w500,
           ),
@@ -299,47 +323,41 @@ class _DashboardScreenState extends State<DashboardScreen>
 
         const SizedBox(height: 6),
 
-        const Text(
+        Text(
           "Welcome Back",
-          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: ResponsiveHelper.useCompactLayout(context) ? 26 : 30,
+            fontWeight: FontWeight.bold,
+          ),
         ),
 
         const SizedBox(height: 10),
 
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(.12),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.insights, size: 16, color: Colors.green),
-                  SizedBox(width: 6),
-                  Text(
-                    "Today's Overview",
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const Spacer(),
-
-            Text(formattedDate, style: const TextStyle(color: Colors.grey)),
-          ],
-        ),
+        if (compact)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTodayOverviewBadge(),
+              const SizedBox(height: 8),
+              Text(formattedDate, style: const TextStyle(color: Colors.grey)),
+            ],
+          )
+        else
+          Row(
+            children: [
+              _buildTodayOverviewBadge(),
+              const Spacer(),
+              Text(formattedDate, style: const TextStyle(color: Colors.grey)),
+            ],
+          ),
       ],
     );
   }
 
   Widget _buildStatisticsCards(double cardHeight) {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final cardSpacing = compact ? 10.0 : 15.0;
+
     return Column(
       children: [
         Row(
@@ -357,7 +375,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
 
-            const SizedBox(width: 15),
+            SizedBox(width: cardSpacing),
 
             Expanded(
               child: SizedBox(
@@ -374,7 +392,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ],
         ),
 
-        const SizedBox(height: 20),
+        SizedBox(height: compact ? 12 : 18),
 
         Row(
           children: [
@@ -391,7 +409,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
 
-            const SizedBox(width: 15),
+            SizedBox(width: cardSpacing),
 
             Expanded(
               child: SizedBox(
@@ -420,9 +438,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Financial Health",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: ResponsiveHelper.useCompactLayout(context) ? 17 : 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 15),
@@ -455,41 +476,79 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildBudgetOverviewCard() {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(compact ? 14 : 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Budget Overview",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: compact ? 17 : 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 20),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _budgetItem(
-                  "Budget",
-                  "KES ${currentBudget.toStringAsFixed(0)}",
-                  Colors.blue,
-                ),
-                _budgetItem(
-                  "Spent",
-                  "KES ${spentThisMonth.toStringAsFixed(0)}",
-                  Colors.orange,
-                ),
-                _budgetItem(
-                  "Remaining",
-                  "KES ${remainingBudget.toStringAsFixed(0)}",
-                  remainingBudget >= 0 ? Colors.green : Colors.red,
-                ),
-              ],
-            ),
+            if (compact)
+              Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _budgetItem(
+                        "Budget",
+                        "KES ${currentBudget.toStringAsFixed(0)}",
+                        Colors.blue,
+                      ),
+                      _budgetItem(
+                        "Spent",
+                        "KES ${spentThisMonth.toStringAsFixed(0)}",
+                        Colors.orange,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      _budgetItem(
+                        "Remaining",
+                        "KES ${remainingBudget.toStringAsFixed(0)}",
+                        remainingBudget >= 0 ? Colors.green : Colors.red,
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _budgetItem(
+                    "Budget",
+                    "KES ${currentBudget.toStringAsFixed(0)}",
+                    Colors.blue,
+                  ),
+                  _budgetItem(
+                    "Spent",
+                    "KES ${spentThisMonth.toStringAsFixed(0)}",
+                    Colors.orange,
+                  ),
+                  _budgetItem(
+                    "Remaining",
+                    "KES ${remainingBudget.toStringAsFixed(0)}",
+                    remainingBudget >= 0 ? Colors.green : Colors.red,
+                  ),
+                ],
+              ),
 
             const SizedBox(height: 20),
 
@@ -522,16 +581,28 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _budgetItem(String title, String value, Color color) {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-        const SizedBox(height: 6),
         Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+          title,
+          style: TextStyle(color: Colors.grey, fontSize: compact ? 12 : 13),
+        ),
+
+        const SizedBox(height: 6),
+
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: compact ? 14 : 16,
+            ),
           ),
         ),
       ],
@@ -547,13 +618,18 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.lightbulb, color: Colors.amber),
                 SizedBox(width: 8),
                 Text(
                   "Smart Insights",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: ResponsiveHelper.useCompactLayout(context)
+                        ? 17
+                        : 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -597,13 +673,27 @@ class _DashboardScreenState extends State<DashboardScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: ResponsiveHelper.useCompactLayout(context)
+                      ? 13
+                      : 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
 
               const SizedBox(height: 4),
 
               Text(
                 message,
-                style: const TextStyle(color: Colors.grey, height: 1.4),
+                style: TextStyle(
+                  fontSize: ResponsiveHelper.useCompactLayout(context)
+                      ? 12
+                      : 13,
+                  color: Colors.grey,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -613,59 +703,90 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildQuickActions() {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final actions = [
+      QuickActionCard(
+        icon: Icons.receipt_long,
+        title: "Expense",
+        color: Colors.green,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+          );
+        },
+      ),
+
+      QuickActionCard(
+        icon: Icons.account_balance_wallet,
+        title: "Budget",
+        color: Colors.blue,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BudgetPage()),
+          );
+        },
+      ),
+
+      QuickActionCard(
+        icon: Icons.flag,
+        title: "Goal",
+        color: Colors.orange,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddGoalScreen()),
+          );
+        },
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Quick Actions",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: compact ? 18 : 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
 
         const SizedBox(height: 15),
 
-        Row(
-          children: [
-            QuickActionCard(
-              icon: Icons.receipt_long,
-              title: "Expense",
-              color: Colors.green,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
-                );
-              },
-            ),
+        if (compact)
+          Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(child: actions[0]),
+                  const SizedBox(width: 10),
+                  Expanded(child: actions[1]),
+                ],
+              ),
 
-            const SizedBox(width: 12),
+              const SizedBox(height: 10),
 
-            QuickActionCard(
-              icon: Icons.account_balance_wallet,
-              title: "Budget",
-              color: Colors.blue,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const BudgetPage()),
-                );
-              },
-            ),
-
-            const SizedBox(width: 12),
-
-            QuickActionCard(
-              icon: Icons.flag,
-              title: "Goal",
-              color: Colors.orange,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddGoalScreen()),
-                );
-              },
-            ),
-          ],
-        ),
+              Row(
+                children: [
+                  Expanded(child: actions[2]),
+                  const Spacer(),
+                ],
+              ),
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(child: actions[0]),
+              const SizedBox(width: 12),
+              Expanded(child: actions[1]),
+              const SizedBox(width: 12),
+              Expanded(child: actions[2]),
+            ],
+          ),
       ],
     );
   }
@@ -707,7 +828,25 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final cardHeight = MediaQuery.of(context).size.height * 0.22;
+
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+    final spacing = ResponsiveHelper.spacing(context);
+
+    final horizontalPadding = compact
+        ? 14.0
+        : landscape
+        ? 24.0
+        : 20.0;
+
+    final sectionSpacing = compact ? 20.0 : 30.0;
+
+    final cardHeight = compact
+        ? 160.0
+        : landscape
+        ? 155.0
+        : 165.0;
+
     if (isLoading) {
       return const DashboardLoadingSkeleton();
     }
@@ -718,59 +857,71 @@ class _DashboardScreenState extends State<DashboardScreen>
         onRefresh: refreshDashboard,
         child: SingleChildScrollView(
           key: const PageStorageKey("dashboard"),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 500),
-                opacity: opacity,
-                child: _buildOverviewHeader(),
-              ),
-
-              const SizedBox(height: 30),
-
-              _buildStatisticsCards(cardHeight),
-              const SizedBox(height: 20),
-
-              _buildBudgetOverviewCard(),
-              const SizedBox(height: 20),
-
-              _buildFinancialHealthCard(),
-              const SizedBox(height: 20),
-
-              _buildSmartInsightsCard(),
-              const SizedBox(height: 30),
-
-              _buildQuickActions(),
-              const SizedBox(height: 30),
-
-              // Recent expenses section
-              Row(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: spacing,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1000),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Recent Expenses",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 10),
+
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 500),
+                    opacity: opacity,
+                    child: _buildOverviewHeader(),
                   ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ExpenseScreen(),
+
+                  SizedBox(height: sectionSpacing),
+
+                  _buildStatisticsCards(cardHeight),
+                  const SizedBox(height: 20),
+                  _buildBudgetOverviewCard(),
+                  const SizedBox(height: 20),
+                  _buildFinancialHealthCard(),
+                  const SizedBox(height: 20),
+
+                  _buildSmartInsightsCard(),
+                  SizedBox(height: sectionSpacing),
+
+                  _buildQuickActions(),
+                  SizedBox(height: sectionSpacing),
+
+                  // Recent expenses section
+                  Row(
+                    children: [
+                      Text(
+                        "Recent Expenses",
+                        style: TextStyle(
+                          fontSize: ResponsiveHelper.useCompactLayout(context)
+                              ? 18
+                              : 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                      );
-                    },
-                    child: const Text("View All"),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ExpenseScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text("View All"),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 10),
+                  _buildRecentExpensesCard(),
                 ],
               ),
-              const SizedBox(height: 10),
-              _buildRecentExpensesCard(),
-            ],
+            ),
           ),
         ),
       ),
