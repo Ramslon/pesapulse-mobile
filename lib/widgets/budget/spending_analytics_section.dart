@@ -31,21 +31,15 @@ class SpendingAnalyticsSection extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     final compact = ResponsiveHelper.useCompactLayout(context);
-
     final landscape = ResponsiveHelper.isLandscape(context);
-
     final tablet = ResponsiveHelper.isTablet(context);
-
     final desktop = ResponsiveHelper.isDesktop(context);
 
     final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
-
     final spacing = ResponsiveHelper.spacing(context);
-
     final cardPadding = ResponsiveHelper.cardPadding(context);
 
     final chartHeight = _chartHeight(
-      context,
       compact: compact,
       tablet: tablet,
       desktop: desktop,
@@ -53,7 +47,6 @@ class SpendingAnalyticsSection extends StatelessWidget {
     );
 
     final analyticsCardHeight = _analyticsCardHeight(
-      context,
       compact: compact,
       tablet: tablet,
       desktop: desktop,
@@ -63,13 +56,16 @@ class SpendingAnalyticsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BudgetSectionHeader(
+        const BudgetSectionHeader(
           title: "Spending Analytics",
           subtitle: "Insights from your spending habits",
         ),
 
         SizedBox(height: sectionSpacing),
 
+        // ─────────────────────────────────────────
+        // Spending trend chart
+        // ─────────────────────────────────────────
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 30, end: 0),
           duration: const Duration(milliseconds: 900),
@@ -104,20 +100,34 @@ class SpendingAnalyticsSection extends StatelessWidget {
                         },
                       ),
                     )
-                  : SizedBox(
-                      height: chartHeight,
-                      child: SpendingTrendChart(dailySpending: dailySpending),
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildChartHeader(
+                          context,
+                          colorScheme,
+                          compact: compact,
+                        ),
+
+                        SizedBox(height: compact ? 8 : 12),
+
+                        SizedBox(
+                          height: chartHeight,
+                          child: SpendingTrendChart(
+                            dailySpending: dailySpending,
+                          ),
+                        ),
+                      ],
                     ),
             ),
           ),
         ),
 
-        SizedBox(height: spacing),
-
-        _buildChartLegend(context, colorScheme, compact: compact),
-
         SizedBox(height: sectionSpacing),
 
+        // ─────────────────────────────────────────
+        // Analytics summary cards
+        // ─────────────────────────────────────────
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 20, end: 0),
           duration: const Duration(milliseconds: 1100),
@@ -139,45 +149,79 @@ class SpendingAnalyticsSection extends StatelessWidget {
     );
   }
 
-  Widget _buildChartLegend(
+  Widget _buildChartHeader(
     BuildContext context,
     ColorScheme colorScheme, {
     required bool compact,
   }) {
-    return Center(
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 10 : 14,
-          vertical: compact ? 6 : 8,
+    final total = dailySpending.values.fold<double>(
+      0,
+      (sum, value) => sum + value,
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: compact ? 34 : 40,
+          height: compact ? 34 : 40,
+          decoration: BoxDecoration(
+            color: colorScheme.primary.withOpacity(.10),
+            borderRadius: BorderRadius.circular(compact ? 10 : 12),
+          ),
+          child: Icon(
+            Icons.trending_up_rounded,
+            color: colorScheme.primary,
+            size: compact ? 18 : 21,
+          ),
         ),
-        decoration: BoxDecoration(
-          color: colorScheme.primary.withOpacity(.07),
-          borderRadius: BorderRadius.circular(30),
+
+        SizedBox(width: compact ? 10 : 12),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Daily Spending Trend",
+                style: TextStyle(
+                  fontSize: compact ? 13 : 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                "Last 7 days",
+                style: TextStyle(
+                  fontSize: compact ? 10 : 11,
+                  color: colorScheme.onSurface.withOpacity(.55),
+                ),
+              ),
+            ],
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Container(
-              width: compact ? 9 : 11,
-              height: compact ? 9 : 11,
-              decoration: BoxDecoration(
-                color: colorScheme.primary,
-                shape: BoxShape.circle,
+            Text(
+              CurrencyFormatter.format(total),
+              style: TextStyle(
+                fontSize: compact ? 13 : 15,
+                fontWeight: FontWeight.w800,
               ),
             ),
-
-            SizedBox(width: compact ? 7 : 9),
-
+            const SizedBox(height: 2),
             Text(
-              "Daily Spending",
+              "Total",
               style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: compact ? 12 : 13,
+                fontSize: compact ? 9 : 10,
+                color: colorScheme.onSurface.withOpacity(.5),
               ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
@@ -190,67 +234,68 @@ class SpendingAnalyticsSection extends StatelessWidget {
     required bool tablet,
     required bool desktop,
   }) {
-    final cards = [
-      AnalyticsCard(
-        icon: Icons.calendar_today_rounded,
-        title: "Highest Day",
-        value: "${CurrencyFormatter.format(highestDayAmount)} • $highestDay",
-        color: colorScheme.primary,
-      ),
-      AnalyticsCard(
-        icon: Icons.analytics_rounded,
-        title: "Avg Daily Spending",
-        value: CurrencyFormatter.format(averageDaily),
-        color: colorScheme.primary,
-      ),
-    ];
+    final highestDayCard = AnalyticsCard(
+      icon: Icons.calendar_today_rounded,
+      title: "Highest Day",
+      value: "${CurrencyFormatter.format(highestDayAmount)} • $highestDay",
+      color: colorScheme.primary,
+    );
 
-    // On larger screens, keep the three analytics cards
-    // in one row where there is enough horizontal space.
+    final averageCard = AnalyticsCard(
+      icon: Icons.analytics_rounded,
+      title: "Avg Daily Spending",
+      value: CurrencyFormatter.format(averageDaily),
+      color: colorScheme.primary,
+    );
+
+    final projectionCard = AnalyticsCard(
+      icon: Icons.trending_up_rounded,
+      title: "Projected Month-End",
+      value: CurrencyFormatter.format(estimatedMonthEnd),
+      color: colorScheme.primary,
+    );
+
+    // Tablet and desktop:
+    // three cards in one row.
     if (desktop || tablet) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: SizedBox(height: cardHeight, child: cards[0]),
+            child: SizedBox(height: cardHeight, child: highestDayCard),
           ),
 
           SizedBox(width: spacing),
 
           Expanded(
-            child: SizedBox(height: cardHeight, child: cards[1]),
+            child: SizedBox(height: cardHeight, child: averageCard),
           ),
 
           SizedBox(width: spacing),
 
           Expanded(
-            child: SizedBox(
-              height: cardHeight,
-              child: AnalyticsCard(
-                icon: Icons.trending_up_rounded,
-                title: "Projected Month-End",
-                value: CurrencyFormatter.format(estimatedMonthEnd),
-                color: colorScheme.primary,
-              ),
-            ),
+            child: SizedBox(height: cardHeight, child: projectionCard),
           ),
         ],
       );
     }
 
+    // Mobile:
+    // two cards on the first row,
+    // projection card below.
     return Column(
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: SizedBox(height: cardHeight, child: cards[0]),
+              child: SizedBox(height: cardHeight, child: highestDayCard),
             ),
 
             SizedBox(width: spacing),
 
             Expanded(
-              child: SizedBox(height: cardHeight, child: cards[1]),
+              child: SizedBox(height: cardHeight, child: averageCard),
             ),
           ],
         ),
@@ -260,19 +305,13 @@ class SpendingAnalyticsSection extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           height: cardHeight,
-          child: AnalyticsCard(
-            icon: Icons.trending_up_rounded,
-            title: "Projected Month-End Spending",
-            value: CurrencyFormatter.format(estimatedMonthEnd),
-            color: colorScheme.primary,
-          ),
+          child: projectionCard,
         ),
       ],
     );
   }
 
-  double _chartHeight(
-    BuildContext context, {
+  double _chartHeight({
     required bool compact,
     required bool tablet,
     required bool desktop,
@@ -297,8 +336,7 @@ class SpendingAnalyticsSection extends StatelessWidget {
     return 240;
   }
 
-  double _analyticsCardHeight(
-    BuildContext context, {
+  double _analyticsCardHeight({
     required bool compact,
     required bool tablet,
     required bool desktop,

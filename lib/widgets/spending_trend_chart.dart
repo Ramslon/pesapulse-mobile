@@ -1,132 +1,380 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+
+import '../../utils/responsive_helper.dart';
 
 class SpendingTrendChart extends StatelessWidget {
   final Map<String, double> dailySpending;
 
   const SpendingTrendChart({super.key, required this.dailySpending});
 
+  static const List<String> _days = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    final spots = List.generate(days.length, (index) {
-      return FlSpot(index.toDouble(), dailySpending[days[index]] ?? 0);
-    });
+    final isCompact = ResponsiveHelper.useCompactLayout(context);
+    final isLandscape = ResponsiveHelper.useDenseVerticalLayout(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+    final isDesktop = ResponsiveHelper.isDesktop(context);
 
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
+    final primaryColor = colorScheme.primary;
 
-    final chartHeight = isLandscape ? 150.0 : 240.0;
+    final spots = List.generate(
+      _days.length,
+      (index) => FlSpot(index.toDouble(), dailySpending[_days[index]] ?? 0),
+    );
+
+    final maxSpending = spots.fold<double>(
+      0,
+      (max, spot) => math.max(max, spot.y),
+    );
+
+    final highestIndex = _highestSpendingIndex(spots);
+
+    final chartHeight = isDesktop
+        ? 300.0
+        : isTablet
+        ? 270.0
+        : isLandscape
+        ? 155.0
+        : 235.0;
+
+    final horizontalPadding = isDesktop
+        ? 16.0
+        : isTablet
+        ? 14.0
+        : isCompact
+        ? 8.0
+        : 10.0;
+
+    final lineWidth = isCompact ? 3.0 : 3.5;
+    final dotRadius = isCompact ? 3.5 : 4.5;
+
+    final chartMaxY = _calculateMaxY(maxSpending);
+    final interval = _calculateInterval(chartMaxY);
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1100),
       curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: 0.92 + (value * 0.08),
-          child: Opacity(opacity: value, child: child),
+      builder: (context, animation, child) {
+        return Opacity(
+          opacity: animation,
+          child: Transform.translate(
+            offset: Offset(0, 14 * (1 - animation)),
+            child: child,
+          ),
         );
       },
       child: SizedBox(
         height: chartHeight,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: 8,
+          ),
+          child: LineChart(
+            LineChartData(
+              minX: 0,
+              maxX: 6,
+              minY: 0,
+              maxY: chartMaxY,
 
-        child: LineChart(
-          LineChartData(
-            minX: 0,
-            maxX: 6,
+              clipData: const FlClipData.all(),
 
-            minY: 0,
-
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: false,
-              horizontalInterval: 1000,
-              getDrawingHorizontalLine: (_) {
-                return FlLine(
-                  color: Colors.grey.withOpacity(.15),
-                  strokeWidth: 1,
-                );
-              },
-            ),
-            borderData: FlBorderData(show: false),
-
-            titlesData: FlTitlesData(
-              topTitles: const AxisTitles(),
-
-              rightTitles: const AxisTitles(),
-
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (value, meta) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        days[value.toInt()],
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(showTitles: true, reservedSize: 42),
-              ),
-            ),
-
-            lineTouchData: LineTouchData(
-              touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (_) => Colors.black87,
-                getTooltipItems: (spots) {
-                  return spots.map((spot) {
-                    return LineTooltipItem(
-                      "KES ${spot.y.toStringAsFixed(0)}",
-                      const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  }).toList();
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: interval,
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(
+                    color: theme.dividerColor.withOpacity(0.16),
+                    strokeWidth: 1,
+                    dashArray: [5, 5],
+                  );
                 },
               ),
-            ),
 
-            lineBarsData: [
-              LineChartBarData(
-                spots: spots,
+              borderData: FlBorderData(show: false),
 
-                isCurved: true,
-
-                curveSmoothness: 0.35,
-
-                barWidth: 5,
-
-                color: Theme.of(context).colorScheme.primary,
-
-                dotData: FlDotData(
-                  show: true,
-                  getDotPainter: (spot, percent, bar, index) {
-                    return FlDotCirclePainter(
-                      radius: 5,
-                      color: Theme.of(context).colorScheme.primary,
-                      strokeWidth: 2,
-                      strokeColor: Colors.white,
-                    );
-                  },
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
                 ),
 
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: Theme.of(context).colorScheme.primary.withOpacity(.12),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: isCompact ? 24 : 30,
+                    interval: 1,
+                    getTitlesWidget: (value, meta) {
+                      final index = value.toInt();
+
+                      if (index < 0 || index >= _days.length) {
+                        return const SizedBox.shrink();
+                      }
+
+                      final isHighest = index == highestIndex;
+
+                      return Padding(
+                        padding: EdgeInsets.only(top: isCompact ? 6 : 9),
+                        child: Text(
+                          _days[index],
+                          style: TextStyle(
+                            fontSize: isCompact ? 10 : 11.5,
+                            fontWeight: isHighest
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isHighest
+                                ? primaryColor
+                                : colorScheme.onSurface.withOpacity(0.58),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: isCompact ? 36 : 48,
+                    interval: interval,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        _formatAxisAmount(value),
+                        style: TextStyle(
+                          fontSize: isCompact ? 9 : 10.5,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
-            ],
+
+              lineTouchData: LineTouchData(
+                enabled: true,
+                handleBuiltInTouches: true,
+
+                touchSpotThreshold: 24,
+
+                getTouchedSpotIndicator:
+                    (LineChartBarData barData, List<int> spotIndexes) {
+                      return spotIndexes.map((index) {
+                        return TouchedSpotIndicatorData(
+                          FlLine(
+                            color: primaryColor.withOpacity(0.35),
+                            strokeWidth: 1.5,
+                            dashArray: [4, 4],
+                          ),
+                          FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, bar, index) {
+                              return FlDotCirclePainter(
+                                radius: dotRadius + 2,
+                                color: primaryColor,
+                                strokeWidth: 3,
+                                strokeColor: colorScheme.surface,
+                              );
+                            },
+                          ),
+                        );
+                      }).toList();
+                    },
+
+                touchTooltipData: LineTouchTooltipData(
+                  fitInsideHorizontally: true,
+                  fitInsideVertically: true,
+
+                  getTooltipColor: (_) {
+                    return colorScheme.inverseSurface;
+                  },
+
+                  tooltipRoundedRadius: 12,
+
+                  tooltipPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+
+                  getTooltipItems: (touchedSpots) {
+                    return touchedSpots.map((spot) {
+                      final index = spot.x.toInt();
+
+                      final day = index >= 0 && index < _days.length
+                          ? _days[index]
+                          : '';
+
+                      return LineTooltipItem(
+                        '$day\n',
+                        TextStyle(
+                          color: colorScheme.onInverseSurface.withOpacity(0.7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: 'KES ${_formatCurrency(spot.y)}',
+                            style: TextStyle(
+                              color: colorScheme.onInverseSurface,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList();
+                  },
+                ),
+              ),
+
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+
+                  isCurved: true,
+                  curveSmoothness: 0.28,
+
+                  barWidth: lineWidth,
+                  color: primaryColor,
+
+                  preventCurveOverShooting: true,
+
+                  isStrokeCapRound: true,
+                  isStrokeJoinRound: true,
+
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, bar, index) {
+                      final isHighest = index == highestIndex;
+
+                      return FlDotCirclePainter(
+                        radius: isHighest ? dotRadius + 1.5 : dotRadius,
+                        color: isHighest ? colorScheme.surface : primaryColor,
+                        strokeWidth: isHighest ? 3 : 2,
+                        strokeColor: primaryColor,
+                      );
+                    },
+                  ),
+
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        primaryColor.withOpacity(0.20),
+                        primaryColor.withOpacity(0.06),
+                        primaryColor.withOpacity(0.01),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  static double _calculateMaxY(double maxSpending) {
+    if (maxSpending <= 0) {
+      return 1000;
+    }
+
+    final padded = maxSpending * 1.25;
+
+    if (padded <= 1000) {
+      return 1000;
+    }
+
+    final magnitude = math
+        .pow(10, (math.log(padded) / math.ln10).floor())
+        .toDouble();
+
+    final normalized = padded / magnitude;
+
+    final niceMultiplier = normalized <= 1
+        ? 1
+        : normalized <= 2
+        ? 2
+        : normalized <= 5
+        ? 5
+        : 10;
+
+    return niceMultiplier * magnitude;
+  }
+
+  static double _calculateInterval(double maxY) {
+    final rawInterval = maxY / 4;
+
+    final magnitude = math
+        .pow(10, (math.log(rawInterval) / math.ln10).floor())
+        .toDouble();
+
+    final normalized = rawInterval / magnitude;
+
+    final niceMultiplier = normalized <= 1
+        ? 1
+        : normalized <= 2
+        ? 2
+        : normalized <= 5
+        ? 5
+        : 10;
+
+    return niceMultiplier * magnitude;
+  }
+
+  static int _highestSpendingIndex(List<FlSpot> spots) {
+    if (spots.isEmpty) return -1;
+
+    var highestIndex = 0;
+
+    for (var i = 1; i < spots.length; i++) {
+      if (spots[i].y > spots[highestIndex].y) {
+        highestIndex = i;
+      }
+    }
+
+    return spots[highestIndex].y > 0 ? highestIndex : -1;
+  }
+
+  static String _formatAxisAmount(double amount) {
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(amount % 1000000 == 0 ? 0 : 1)}M';
+    }
+
+    if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(amount % 1000 == 0 ? 0 : 1)}K';
+    }
+
+    return amount.toStringAsFixed(0);
+  }
+
+  static String _formatCurrency(double amount) {
+    return amount.round().toString().replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (match) => ',',
     );
   }
 }
