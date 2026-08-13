@@ -35,7 +35,7 @@ class ResponsiveHelper {
   }
 
   static bool isDesktop(BuildContext context) {
-    return MediaQuery.sizeOf(context).shortestSide >= tabletBreakpoint;
+    return MediaQuery.sizeOf(context).shortestSide >= desktopBreakpoint;
   }
 
   // ─────────────────────────────────────────────

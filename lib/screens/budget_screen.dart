@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'package:pesapulse_mobile/widgets/budget_alert_card.dart';
 import '../widgets/budget/budget_overview_card.dart';
 import '../widgets/budget/budget_breakdown_card.dart';
@@ -12,19 +14,18 @@ import '../widgets/budget/budget_section_header.dart';
 import '../widgets/budget/budget_fab.dart';
 import '../widgets/budget_dialog.dart';
 import '../widgets/delete_budget_dialog.dart';
+import '../widgets/budget/budget_stats_grid.dart';
+
 import '../repositories/budget_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 import '../features/budget/controllers/budget_controller.dart';
-
-import '../widgets/budget/budget_stats_grid.dart';
-
-import '../providers/connectivity_provider.dart';
-import '../../widgets/app/adaptive_app_bar.dart';
-import 'package:provider/provider.dart';
-import '../../core/constants/app_spacing.dart';
 import '../features/budget/utils/budget_calculator.dart';
 import '../features/budget/models/budget_state.dart';
+
+import '../providers/connectivity_provider.dart';
+import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
+import '../utils/responsive_helper.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -42,6 +43,8 @@ class BudgetScreenState extends State<BudgetScreen>
 
   BudgetState state = const BudgetState();
 
+  final TextEditingController budgetController = TextEditingController();
+
   double get percentageUsed =>
       BudgetCalculator.percentageUsed(budget: state.budget, spent: state.spent);
 
@@ -54,8 +57,6 @@ class BudgetScreenState extends State<BudgetScreen>
       BudgetCalculator.statusColor(context, state.budgetStatus);
 
   String get statusText => BudgetCalculator.statusText(state.budgetStatus);
-
-  final TextEditingController budgetController = TextEditingController();
 
   @override
   void initState() {
@@ -75,6 +76,7 @@ class BudgetScreenState extends State<BudgetScreen>
 
       setState(() {
         state = newState;
+
         budgetController.text = state.budget.toStringAsFixed(0);
       });
     } catch (_) {
@@ -108,7 +110,7 @@ class BudgetScreenState extends State<BudgetScreen>
         return;
       }
 
-      final bool isUpdate = state.budget > 0;
+      final isUpdate = state.budget > 0;
 
       final newState = await controller.saveBudget(amount: amount);
 
@@ -116,6 +118,7 @@ class BudgetScreenState extends State<BudgetScreen>
 
       setState(() {
         state = newState;
+
         budgetController.text = state.budget.toStringAsFixed(0);
       });
 
@@ -129,6 +132,8 @@ class BudgetScreenState extends State<BudgetScreen>
         ),
       );
     } catch (_) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Failed to save budget.")));
@@ -154,6 +159,8 @@ class BudgetScreenState extends State<BudgetScreen>
 
       return;
     }
+
+    await loadBudget();
   }
 
   Future<void> deleteBudget() async {
@@ -171,6 +178,8 @@ class BudgetScreenState extends State<BudgetScreen>
         const SnackBar(content: Text("Budget deleted successfully")),
       );
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
@@ -217,18 +226,29 @@ class BudgetScreenState extends State<BudgetScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
 
-    final orientation = MediaQuery.of(context).orientation;
-    final isLandscape = orientation == Orientation.landscape;
+    final compact = ResponsiveHelper.useCompactLayout(context);
 
-    final sectionSpacing = isLandscape ? 18.0 : screenHeight * 0.035;
+    final landscape = ResponsiveHelper.isLandscape(context);
+
+    final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
+
+    final spacing = ResponsiveHelper.spacing(context);
+
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
+    final horizontalPadding = compact
+        ? 14.0
+        : landscape
+        ? 28.0
+        : 20.0;
 
     final network = context.watch<ConnectivityProvider>();
+
     if (state.isLoading) {
       return const BudgetLoadingSkeleton();
     }
+
     if (state.budget <= 0) {
       return Center(
         child: buildEmptyState(
@@ -242,14 +262,14 @@ class BudgetScreenState extends State<BudgetScreen>
       );
     }
 
-    // replace with your chart widget
-
     return AppScaffold(
       appBar: const AdaptiveAppBar(title: null),
+
       floatingActionButton: BudgetFAB(
         hasBudget: state.budget > 0,
         onPressed: showCreateBudgetDialog,
       ),
+
       body: RefreshIndicator(
         onRefresh: refreshBudgetData,
 
@@ -258,16 +278,20 @@ class BudgetScreenState extends State<BudgetScreen>
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
-          padding: EdgeInsets.symmetric(
-            horizontal: isLandscape ? 32 : screenWidth * .05,
-            vertical: isLandscape ? 10 : 10,
+
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            compact ? 8 : 12,
+            horizontalPadding,
+            compact ? 90 : 100,
           ),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const BudgetHeader(),
 
-              SizedBox(height: 12),
+              SizedBox(height: compact ? 10 : 14),
 
               BudgetStatsGrid(
                 spent: state.spent,
@@ -275,8 +299,9 @@ class BudgetScreenState extends State<BudgetScreen>
                 percentageUsed: percentageUsed,
                 daysRemaining: daysRemaining,
                 statusColor: statusColor,
-                isLandscape: isLandscape,
+                isLandscape: landscape,
               ),
+
               SizedBox(height: sectionSpacing),
 
               BudgetStatusBar(statusText: statusText, statusColor: statusColor),
@@ -288,129 +313,129 @@ class BudgetScreenState extends State<BudgetScreen>
                 subtitle: "Track your monthly spending and stay within budget",
               ),
 
-              AppSpacing.hSm,
+              SizedBox(height: compact ? 10 : spacing),
 
-              if (isLandscape)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: BudgetOverviewCard(
-                        budget: state.budget,
-                        spent: state.spent,
-                        remaining: remainingAmount,
-                        percentageUsed: percentageUsed,
-                        statusColor: statusColor,
-                        isLandscape: isLandscape,
-                      ),
-                    ),
-
-                    const SizedBox(width: 20),
-
-                    Expanded(
-                      flex: 6,
-                      child: BudgetBreakdownCard(
-                        categoryTotals: state.categoryTotals,
-                        totalSpent: state.spent,
-                        isLandscape: isLandscape,
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Column(
-                  children: [
-                    BudgetOverviewCard(
-                      budget: state.budget,
-                      spent: state.spent,
-                      remaining: remainingAmount,
-                      percentageUsed: percentageUsed,
-                      statusColor: statusColor,
-                      isLandscape: isLandscape,
-                    ),
-
-                    SizedBox(height: sectionSpacing),
-
-                    BudgetBreakdownCard(
-                      categoryTotals: state.categoryTotals,
-                      totalSpent: state.spent,
-                      isLandscape: isLandscape,
-                    ),
-                  ],
-                ),
+              _buildOverviewSection(
+                context,
+                compact: compact,
+                landscape: landscape,
+                sectionSpacing: sectionSpacing,
+              ),
 
               SizedBox(height: sectionSpacing),
 
-              if (isLandscape)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 6,
-                      child: SpendingAnalyticsSection(
-                        dailySpending: state.dailySpending,
-                        highestDay: state.highestDay,
-                        highestDayAmount: state.highestDayAmount,
-                        averageDaily: state.averageDaily,
-                        estimatedMonthEnd: state.estimatedMonthEnd,
-                      ),
-                    ),
-
-                    const SizedBox(width: 20),
-
-                    Expanded(
-                      flex: 5,
-                      child: FinancialHealthSection(
-                        financialScore: state.financialScore,
-                        financialLabel: state.financialLabel,
-                        percentageUsed: percentageUsed,
-                        budget: state.budget,
-                        spent: state.spent,
-                        budgetAlert: BudgetAlertCard(
-                          budgetStatus: state.budgetStatus,
-                          budget: state.budget,
-                          percentageUsed: percentageUsed,
-                          recommendation: state.recommendation,
-                        ),
-                        categoryAdvice: state.categoryAdvice,
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Column(
-                  children: [
-                    SpendingAnalyticsSection(
-                      dailySpending: state.dailySpending,
-                      highestDay: state.highestDay,
-                      highestDayAmount: state.highestDayAmount,
-                      averageDaily: state.averageDaily,
-                      estimatedMonthEnd: state.estimatedMonthEnd,
-                    ),
-
-                    SizedBox(height: sectionSpacing),
-
-                    FinancialHealthSection(
-                      financialScore: state.financialScore,
-                      financialLabel: state.financialLabel,
-                      percentageUsed: percentageUsed,
-                      budget: state.budget,
-                      spent: state.spent,
-                      budgetAlert: BudgetAlertCard(
-                        budgetStatus: state.budgetStatus,
-                        budget: state.budget,
-                        percentageUsed: percentageUsed,
-                        recommendation: state.recommendation,
-                      ),
-                      categoryAdvice: state.categoryAdvice,
-                    ),
-                  ],
-                ),
+              _buildAnalyticsSection(
+                context,
+                compact: compact,
+                landscape: landscape,
+                sectionSpacing: sectionSpacing,
+                cardPadding: cardPadding,
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildOverviewSection(
+    BuildContext context, {
+    required bool compact,
+    required bool landscape,
+    required double sectionSpacing,
+  }) {
+    final overviewCard = BudgetOverviewCard(
+      budget: state.budget,
+      spent: state.spent,
+      remaining: remainingAmount,
+      percentageUsed: percentageUsed,
+      statusColor: statusColor,
+      isLandscape: landscape,
+    );
+
+    final breakdownCard = BudgetBreakdownCard(
+      categoryTotals: state.categoryTotals,
+      totalSpent: state.spent,
+      isLandscape: landscape,
+    );
+
+    if (landscape) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 5, child: overviewCard),
+
+          SizedBox(width: compact ? 12 : 20),
+
+          Expanded(flex: 6, child: breakdownCard),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        overviewCard,
+
+        SizedBox(height: sectionSpacing),
+
+        breakdownCard,
+      ],
+    );
+  }
+
+  Widget _buildAnalyticsSection(
+    BuildContext context, {
+    required bool compact,
+    required bool landscape,
+    required double sectionSpacing,
+    required double cardPadding,
+  }) {
+    final analytics = SpendingAnalyticsSection(
+      dailySpending: state.dailySpending,
+      highestDay: state.highestDay,
+      highestDayAmount: state.highestDayAmount,
+      averageDaily: state.averageDaily,
+      estimatedMonthEnd: state.estimatedMonthEnd,
+    );
+
+    final health = FinancialHealthSection(
+      financialScore: state.financialScore,
+      financialLabel: state.financialLabel,
+      percentageUsed: percentageUsed,
+      budget: state.budget,
+      spent: state.spent,
+
+      budgetAlert: BudgetAlertCard(
+        budgetStatus: state.budgetStatus,
+        budget: state.budget,
+        percentageUsed: percentageUsed,
+        recommendation: state.recommendation,
+      ),
+
+      categoryAdvice: state.categoryAdvice,
+    );
+
+    if (landscape) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 6, child: analytics),
+
+          SizedBox(width: compact ? 12 : 20),
+
+          Expanded(flex: 5, child: health),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        analytics,
+
+        SizedBox(height: sectionSpacing),
+
+        health,
+      ],
     );
   }
 }

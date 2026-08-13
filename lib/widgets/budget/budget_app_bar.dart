@@ -2,26 +2,43 @@ import 'package:flutter/material.dart';
 
 import '../offline_banner.dart';
 import '../sync_status_icon.dart';
+import '../../utils/responsive_helper.dart';
 
 class BudgetAppBar extends StatelessWidget implements PreferredSizeWidget {
   const BudgetAppBar({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final landscape = ResponsiveHelper.isLandscape(context);
+
+    final toolbarHeight = landscape
+        ? compact
+              ? 36.0
+              : 40.0
+        : kToolbarHeight;
+
+    final bannerHeight = landscape
+        ? 18.0
+        : compact
+        ? 34.0
+        : 36.0;
 
     return AppBar(
-      toolbarHeight: isLandscape ? 36 : kToolbarHeight,
+      toolbarHeight: toolbarHeight,
 
-      title: isLandscape ? null : const Text(""),
+      title: landscape ? null : const Text(""),
 
-      actions: const [
-        Padding(padding: EdgeInsets.only(right: 12), child: SyncStatusIcon()),
+      actions: [
+        Padding(
+          padding: EdgeInsets.only(right: compact ? 8 : 12),
+          child: const SyncStatusIcon(),
+        ),
       ],
 
       bottom: PreferredSize(
-        preferredSize: Size.fromHeight(isLandscape ? 18 : 36),
+        preferredSize: Size.fromHeight(bannerHeight),
         child: const OfflineBanner(),
       ),
     );
@@ -29,12 +46,6 @@ class BudgetAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize {
-    final view = WidgetsBinding.instance.platformDispatcher.views.first;
-
-    final isLandscape = view.physicalSize.width > view.physicalSize.height;
-
-    return Size.fromHeight(
-      (isLandscape ? 46 : kToolbarHeight) + (isLandscape ? 18 : 40),
-    );
+    return const Size.fromHeight(kToolbarHeight + 36);
   }
 }
