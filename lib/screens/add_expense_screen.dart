@@ -4,6 +4,9 @@ import '../widgets/custom_button.dart';
 import '../widgets/input_icon_badge.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
+
+import '../utils/responsive_helper.dart';
+
 import '../services/notification_service.dart';
 import '../repositories/expense_repository.dart';
 import '../services/sync_service.dart';
@@ -185,6 +188,27 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+    final spacing = ResponsiveHelper.spacing(context);
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+    final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
+
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    final surfaceContainer = theme.colorScheme.surfaceContainerHighest;
+
+    final titleFontSize = compact
+        ? 24.0
+        : landscape
+        ? 28.0
+        : 30.0;
+    final subtitleFontSize = compact ? 14.0 : 15.0;
+
+    final sectionSpacing = compact ? 16.0 : 24.0;
+    final fieldSpacing = compact ? 16.0 : 24.0;
+    final cardRadius = compact ? 16.0 : 20.0;
+
     return AppScaffold(
       showOfflineBanner: true,
       showSyncIcon: true,
@@ -204,372 +228,391 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         onTap: () => FocusScope.of(context).unfocus(),
         child: SafeArea(
           child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             child: Padding(
-              padding: const EdgeInsets.all(20.0),
-
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Record a new expense",
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Text(
-                    "Keep your spending up to date.",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
-                  ),
-
-                  const SizedBox(height: 25),
-
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Row(
-                      children: [
-                        InputIconBadge(
-                          icon: Icons.receipt_long_rounded,
-                          color: Theme.of(context).colorScheme.primary,
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: compact ? 12 : 20,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: landscape ? 800 : 700),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Record a new expense",
+                        style: TextStyle(
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Expense Details",
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  Form(
-                    key: _formKey,
-                    child: Card(
-                      elevation: 1.5,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            TextFormField(
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return "Please enter an expense title";
-                                }
 
-                                if (value.trim().length < 3) {
-                                  return "Title is too short";
-                                }
+                      SizedBox(height: spacing * 0.4),
 
-                                return null;
-                              },
-                              textInputAction: TextInputAction.next,
-                              controller: titleController,
-                              decoration: InputDecoration(
-                                labelText: "Expense Title",
-                                hintText: "e.g. Grocery Shopping",
-                                prefixIcon: InputIconBadge(
-                                  icon: Icons.edit_note_rounded,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
+                      Text(
+                        "Keep your spending up to date.",
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: subtitleFontSize,
+                        ),
+                      ),
+
+                      SizedBox(height: sectionSpacing),
+
+                      Row(
+                        children: [
+                          InputIconBadge(
+                            icon: Icons.receipt_long_rounded,
+                            color: primaryColor,
+                          ),
+                          SizedBox(width: spacing * 0.5),
+                          Text(
+                            "Expense Details",
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
+                          ),
+                        ],
+                      ),
 
-                            const SizedBox(height: 24),
+                      SizedBox(height: spacing * 0.7),
 
-                            TextFormField(
-                              controller: amountController,
-                              textInputAction: TextInputAction.next,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              decoration: InputDecoration(
-                                labelText: "Amount",
-                                hintText: "Enter amount",
-                                prefixText: "KES ",
-                                prefixIcon: const InputIconBadge(
-                                  icon: Icons.payments_rounded,
-                                  color: Colors.green,
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  ),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return "Please enter an amount";
-                                }
+                      Form(
+                        key: _formKey,
+                        child: Card(
+                          elevation: 1.5,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(cardRadius),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(cardPadding),
+                            child: Column(
+                              children: [
+                                // ─────────────────────────────
+                                // EXPENSE TITLE
+                                // ─────────────────────────────
+                                TextFormField(
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return "Please enter an expense title";
+                                    }
 
-                                final amount = double.tryParse(value);
+                                    if (value.trim().length < 3) {
+                                      return "Title is too short";
+                                    }
 
-                                if (amount == null) {
-                                  return "Enter a valid number";
-                                }
-
-                                if (amount <= 0) {
-                                  return "Amount must be greater than zero";
-                                }
-
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: [100, 200, 500, 1000, 2000].map((
-                                amount,
-                              ) {
-                                return ActionChip(
-                                  label: Text("KES $amount"),
-                                  onPressed: () {
-                                    amountController.text = amount.toString();
+                                    return null;
                                   },
-                                );
-                              }).toList(),
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            DropdownButtonFormField<String>(
-                              value: selectedCategory,
-
-                              decoration: InputDecoration(
-                                labelText: "Category",
-
-                                prefixIcon: InputIconBadge(
-                                  icon: categoryIcons[selectedCategory]!,
-                                  color: categoryColors[selectedCategory]!,
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
+                                  textInputAction: TextInputAction.next,
+                                  controller: titleController,
+                                  decoration: InputDecoration(
+                                    labelText: "Expense Title",
+                                    hintText: "e.g. Grocery Shopping",
+                                    prefixIcon: InputIconBadge(
+                                      icon: Icons.edit_note_rounded,
+                                      color: primaryColor,
+                                    ),
+                                    filled: true,
+                                    fillColor: surfaceContainer,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide(
+                                        color: primaryColor,
+                                        width: 1.5,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
 
-                              items: categories.map((category) {
-                                return DropdownMenuItem(
-                                  value: category,
+                                SizedBox(height: fieldSpacing),
+
+                                // ─────────────────────────────
+                                // AMOUNT
+                                // ─────────────────────────────
+                                TextFormField(
+                                  controller: amountController,
+                                  textInputAction: TextInputAction.next,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                  decoration: InputDecoration(
+                                    labelText: "Amount",
+                                    hintText: "Enter amount",
+                                    prefixText: "KES ",
+                                    prefixIcon: const InputIconBadge(
+                                      icon: Icons.payments_rounded,
+                                      color: Colors.green,
+                                    ),
+                                    filled: true,
+                                    fillColor: surfaceContainer,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide(
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return "Please enter an amount";
+                                    }
+
+                                    final amount = double.tryParse(value);
+
+                                    if (amount == null) {
+                                      return "Enter a valid number";
+                                    }
+
+                                    if (amount <= 0) {
+                                      return "Amount must be greater than zero";
+                                    }
+
+                                    return null;
+                                  },
+                                ),
+
+                                SizedBox(height: spacing * 0.5),
+
+                                // ─────────────────────────────
+                                // QUICK AMOUNT CHIPS
+                                // ─────────────────────────────
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Wrap(
+                                    spacing: compact ? 8 : 10,
+                                    runSpacing: compact ? 8 : 10,
+                                    children: [100, 200, 500, 1000, 2000].map((
+                                      amount,
+                                    ) {
+                                      return ActionChip(
+                                        label: Text("KES $amount"),
+                                        onPressed: () {
+                                          amountController.text = amount
+                                              .toString();
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+
+                                SizedBox(height: fieldSpacing),
+
+                                // ─────────────────────────────
+                                // CATEGORY
+                                // ─────────────────────────────
+                                DropdownButtonFormField<String>(
+                                  value: selectedCategory,
+                                  decoration: InputDecoration(
+                                    labelText: "Category",
+                                    prefixIcon: InputIconBadge(
+                                      icon: categoryIcons[selectedCategory]!,
+                                      color: categoryColors[selectedCategory]!,
+                                    ),
+                                    filled: true,
+                                    fillColor: surfaceContainer,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide(
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  items: categories.map((category) {
+                                    return DropdownMenuItem<String>(
+                                      value: category,
+                                      child: Row(
+                                        children: [
+                                          InputIconBadge(
+                                            icon: categoryIcons[category]!,
+                                            color: categoryColors[category]!,
+                                          ),
+                                          SizedBox(width: spacing * 0.5),
+                                          Text(category),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+
+                                    setState(() {
+                                      selectedCategory = value;
+                                    });
+                                  },
+                                ),
+
+                                SizedBox(height: fieldSpacing),
+
+                                // ─────────────────────────────
+                                // DATE
+                                // ─────────────────────────────
+                                TextFormField(
+                                  textInputAction: TextInputAction.next,
+                                  controller: dateController,
+                                  readOnly: true,
+                                  onTap: pickExpenseDate,
+                                  decoration: InputDecoration(
+                                    labelText: "Expense Date",
+                                    hintText: "Select date",
+                                    prefixIcon: const InputIconBadge(
+                                      icon: Icons.calendar_month_rounded,
+                                      color: Colors.orange,
+                                    ),
+                                    suffixIcon: const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                    ),
+                                    filled: true,
+                                    fillColor: surfaceContainer,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide(
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return "Select an expense date";
+                                    }
+
+                                    return null;
+                                  },
+                                ),
+
+                                SizedBox(height: fieldSpacing),
+
+                                // ─────────────────────────────
+                                // ADDITIONAL NOTES
+                                // ─────────────────────────────
+                                Align(
+                                  alignment: Alignment.centerLeft,
                                   child: Row(
                                     children: [
-                                      InputIconBadge(
-                                        icon: categoryIcons[category]!,
-                                        color: categoryColors[category]!,
+                                      const InputIconBadge(
+                                        icon: Icons.sticky_note_2_rounded,
+                                        color: Colors.blue,
                                       ),
-                                      const SizedBox(width: 10),
-                                      Text(category),
+                                      SizedBox(width: spacing * 0.5),
+                                      Text(
+                                        "Additional Notes",
+                                        style: theme.textTheme.titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
                                     ],
                                   ),
-                                );
-                              }).toList(),
+                                ),
 
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedCategory = value!;
-                                });
-                              },
-                            ),
+                                SizedBox(height: spacing * 0.5),
 
-                            const SizedBox(height: 24),
+                                TextFormField(
+                                  textInputAction: TextInputAction.done,
+                                  controller: descriptionController,
+                                  maxLines: compact ? 4 : 5,
+                                  maxLength: 250,
+                                  decoration: InputDecoration(
+                                    labelText: "Description",
+                                    hintText: "Optional notes...",
+                                    prefixIcon: Padding(
+                                      padding: EdgeInsets.only(
+                                        bottom: compact ? 45 : 60,
+                                      ),
+                                      child: const InputIconBadge(
+                                        icon: Icons.notes_rounded,
+                                        color: Colors.blue,
+                                      ),
+                                    ),
+                                    alignLabelWithHint: true,
+                                    filled: true,
+                                    fillColor: surfaceContainer,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide(
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value != null && value.length > 250) {
+                                      return "Maximum 250 characters";
+                                    }
 
-                            TextFormField(
-                              textInputAction: TextInputAction.next,
-                              controller: dateController,
-                              readOnly: true,
-                              onTap: pickExpenseDate,
-                              decoration: InputDecoration(
-                                labelText: "Expense Date",
-                                hintText: "Select date",
-                                prefixIcon: const InputIconBadge(
-                                  icon: Icons.calendar_month_rounded,
-                                  color: Colors.orange,
+                                    return null;
+                                  },
                                 ),
-                                suffixIcon: const Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                ),
-                                filled: true,
-                                fillColor: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
+
+                                SizedBox(height: compact ? 24 : 36),
+
+                                // ─────────────────────────────
+                                // SAVE BUTTON
+                                // ─────────────────────────────
+                                AnimatedScale(
+                                  duration: const Duration(milliseconds: 180),
+                                  scale: isLoading ? 0.97 : 1,
+                                  curve: Curves.easeOut,
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    height: compact ? 52 : 56,
+                                    child: CustomButton(
+                                      text: "Save Expense",
+                                      isLoading: isLoading,
+                                      onPressed: isLoading ? null : addExpense,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return "Select an expense date";
-                                }
 
-                                return null;
-                              },
+                                SizedBox(height: spacing),
+                              ],
                             ),
-                            const SizedBox(height: 24),
-
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Row(
-                                children: [
-                                  const InputIconBadge(
-                                    icon: Icons.sticky_note_2_rounded,
-                                    color: Colors.blue,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Additional Notes",
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            TextFormField(
-                              textInputAction: TextInputAction.done,
-                              controller: descriptionController,
-                              maxLines: 5,
-                              maxLength: 250,
-                              decoration: InputDecoration(
-                                labelText: "Description",
-                                hintText: "Optional notes...",
-                                prefixIcon: const Padding(
-                                  padding: EdgeInsets.only(bottom: 60),
-                                  child: InputIconBadge(
-                                    icon: Icons.notes_rounded,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                                alignLabelWithHint: true,
-                                filled: true,
-                                fillColor: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  ),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value != null && value.length > 250) {
-                                  return "Maximum 250 characters";
-                                }
-
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 36),
-
-                            AnimatedScale(
-                              duration: const Duration(milliseconds: 180),
-                              scale: isLoading ? 0.97 : 1,
-                              curve: Curves.easeOut,
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: 56,
-                                child: CustomButton(
-                                  text: "Save Expense",
-                                  isLoading: isLoading,
-                                  onPressed: isLoading ? null : addExpense,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 25),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

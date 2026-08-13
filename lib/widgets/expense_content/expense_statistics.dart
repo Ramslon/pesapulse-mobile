@@ -17,7 +17,6 @@ class ExpenseStatistics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = ResponsiveHelper.useCompactLayout(context);
-    final spacing = ResponsiveHelper.spacing(context);
 
     return Row(
       children: [
