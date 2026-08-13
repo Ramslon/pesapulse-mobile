@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../screens/edit_expense_screen.dart';
 import '../repositories/expense_repository.dart';
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
+import '../utils/responsive_helper.dart';
 
 class ExpenseDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> expense;
@@ -14,6 +18,7 @@ class ExpenseDetailsScreen extends StatefulWidget {
 
 class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
   Map<String, dynamic> get expense => widget.expense;
+
   final NumberFormat currencyFormatter = NumberFormat("#,##0.00");
 
   final ExpenseRepository repository = ExpenseRepository();
@@ -31,7 +36,6 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text("Cancel"),
           ),
-
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
@@ -54,25 +58,18 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
     switch (category.toLowerCase()) {
       case 'food':
         return Colors.orange;
-
       case 'transport':
         return Colors.blue;
-
       case 'shopping':
         return Colors.purple;
-
       case 'bills':
         return Colors.red;
-
       case 'health':
         return Colors.green;
-
       case 'education':
         return Colors.indigo;
-
       case 'entertainment':
         return Colors.pink;
-
       default:
         return Colors.grey;
     }
@@ -82,25 +79,18 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
     switch (category.toLowerCase()) {
       case 'food':
         return Icons.restaurant;
-
       case 'transport':
         return Icons.directions_car;
-
       case 'shopping':
         return Icons.shopping_bag;
-
       case 'bills':
         return Icons.receipt_long;
-
       case 'health':
         return Icons.favorite;
-
       case 'education':
         return Icons.school;
-
       case 'entertainment':
         return Icons.movie;
-
       default:
         return Icons.account_balance_wallet;
     }
@@ -114,28 +104,42 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
     required IconData icon,
     required String title,
     required String value,
+    required double cardPadding,
+    required double iconContainerSize,
+    required double iconSize,
+    required double titleFontSize,
+    required double valueFontSize,
+    required double spacing,
   }) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Card(
       elevation: 0,
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
-      margin: const EdgeInsets.only(bottom: 14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      margin: EdgeInsets.only(bottom: spacing),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(
+          ResponsiveHelper.useCompactLayout(context) ? 15 : 18,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        padding: EdgeInsets.all(cardPadding),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: iconContainerSize,
+              height: iconContainerSize,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(.10),
-                borderRadius: BorderRadius.circular(14),
+                color: primaryColor.withOpacity(.10),
+                borderRadius: BorderRadius.circular(
+                  ResponsiveHelper.useCompactLayout(context) ? 12 : 14,
+                ),
               ),
-              child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+              child: Icon(icon, color: primaryColor, size: iconSize),
             ),
 
-            const SizedBox(width: 16),
+            SizedBox(width: spacing),
 
             Expanded(
               child: Column(
@@ -145,17 +149,17 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
                     title,
                     style: TextStyle(
                       color: Colors.grey.shade600,
-                      fontSize: 13,
+                      fontSize: titleFontSize,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
 
-                  const SizedBox(height: 6),
+                  SizedBox(height: spacing * .4),
 
                   Text(
                     value,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: valueFontSize,
                       fontWeight: FontWeight.w600,
                       height: 1.4,
                     ),
@@ -171,122 +175,235 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Expense Details")),
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+
+    final spacing = ResponsiveHelper.spacing(context);
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
+    final horizontalPadding = compact
+        ? ResponsiveHelper.horizontalPadding(context)
+        : landscape
+        ? 28.0
+        : 24.0;
+
+    final category = expense["category"] ?? "Other";
+    final categoryAccent = categoryColor(category);
+
+    final amount = double.tryParse(expense["amount"].toString()) ?? 0;
+
+    final title = expense["title"]?.toString() ?? "";
+
+    final description =
+        expense["description"] == null ||
+            expense["description"].toString().trim().isEmpty
+        ? "No description"
+        : expense["description"].toString();
+
+    final formattedDate = formatDate(expense["expense_date"].toString());
+
+    final avatarRadius = compact
+        ? 38.0
+        : landscape
+        ? 48.0
+        : 46.0;
+
+    final categoryIconSize = compact
+        ? 34.0
+        : landscape
+        ? 44.0
+        : 42.0;
+
+    final amountFontSize = compact
+        ? 28.0
+        : landscape
+        ? 38.0
+        : 36.0;
+
+    final categoryFontSize = compact ? 12.0 : 14.0;
+
+    final dateFontSize = compact ? 13.0 : 15.0;
+
+    final infoTitleFontSize = compact ? 11.0 : 13.0;
+
+    final infoValueFontSize = compact ? 14.0 : 16.0;
+
+    final infoIconContainerSize = compact ? 42.0 : 46.0;
+
+    final infoIconSize = compact ? 19.0 : 21.0;
+
+    return AppScaffold(
+      showOfflineBanner: true,
+      showSyncIcon: true,
+
+      appBar: const AdaptiveAppBar(
+        titleWidget: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.receipt_long_rounded),
+            SizedBox(width: 8),
+            Text(
+              "Expense Details",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          compact ? 18 : 24,
+          horizontalPadding,
+          compact ? 18 : 24,
+        ),
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            SizedBox(height: compact ? 8 : 20),
 
             Hero(
               tag: "expense_${expense["id"]}",
               child: CircleAvatar(
-                radius: 46,
-                backgroundColor: categoryColor(
-                  expense["category"] ?? "Other",
-                ).withOpacity(.12),
+                radius: avatarRadius,
+                backgroundColor: categoryAccent.withOpacity(.12),
                 child: Icon(
-                  categoryIcon(expense["category"] ?? "Other"),
-                  color: categoryColor(expense["category"] ?? "Other"),
-                  size: 42,
+                  categoryIcon(category),
+                  color: categoryAccent,
+                  size: categoryIconSize,
                 ),
               ),
             ),
 
-            const SizedBox(height: 20),
+            SizedBox(height: compact ? 16 : 20),
 
             TweenAnimationBuilder<double>(
               duration: const Duration(milliseconds: 900),
-              tween: Tween(
-                begin: 0,
-                end: double.tryParse(expense["amount"].toString()) ?? 0,
-              ),
+              tween: Tween(begin: 0, end: amount),
               builder: (context, value, child) {
                 return Text(
                   "KES ${currencyFormatter.format(value)}",
-                  style: const TextStyle(
-                    fontSize: 36,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: amountFontSize,
                     fontWeight: FontWeight.bold,
                     letterSpacing: .3,
                   ),
                 );
               },
             ),
-            const SizedBox(height: 10),
+
+            SizedBox(height: compact ? 8 : 10),
 
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 13 : 16,
+                vertical: compact ? 6 : 8,
+              ),
               decoration: BoxDecoration(
-                color: categoryColor(
-                  expense["category"] ?? "Other",
-                ).withOpacity(.12),
+                color: categoryAccent.withOpacity(.12),
                 borderRadius: BorderRadius.circular(30),
               ),
               child: Text(
-                expense["category"] ?? "Other",
+                category,
                 style: TextStyle(
-                  color: categoryColor(expense["category"] ?? "Other"),
+                  color: categoryAccent,
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: categoryFontSize,
                 ),
               ),
             ),
 
-            const SizedBox(height: 12),
+            SizedBox(height: compact ? 8 : 12),
 
             Text(
-              formatDate(expense["expense_date"]),
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+              formattedDate,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: dateFontSize,
+              ),
             ),
 
-            const SizedBox(height: 28),
+            SizedBox(height: compact ? 20 : 28),
 
             Divider(thickness: 1, color: Colors.grey.shade300),
 
-            const SizedBox(height: 24),
+            SizedBox(height: compact ? 18 : 24),
 
             buildInfoCard(
               icon: Icons.title,
               title: "Expense Title",
-              value: expense["title"] ?? "",
+              value: title,
+              cardPadding: cardPadding,
+              iconContainerSize: infoIconContainerSize,
+              iconSize: infoIconSize,
+              titleFontSize: infoTitleFontSize,
+              valueFontSize: infoValueFontSize,
+              spacing: spacing,
             ),
 
             buildInfoCard(
               icon: Icons.category,
               title: "Category",
-              value: expense["category"] ?? "",
+              value: category,
+              cardPadding: cardPadding,
+              iconContainerSize: infoIconContainerSize,
+              iconSize: infoIconSize,
+              titleFontSize: infoTitleFontSize,
+              valueFontSize: infoValueFontSize,
+              spacing: spacing,
             ),
 
             buildInfoCard(
               icon: Icons.calendar_today,
               title: "Expense Date",
-              value: formatDate(expense["expense_date"]),
+              value: formattedDate,
+              cardPadding: cardPadding,
+              iconContainerSize: infoIconContainerSize,
+              iconSize: infoIconSize,
+              titleFontSize: infoTitleFontSize,
+              valueFontSize: infoValueFontSize,
+              spacing: spacing,
             ),
 
             buildInfoCard(
               icon: Icons.notes,
               title: "Description",
-              value:
-                  (expense["description"] == null ||
-                      expense["description"].toString().trim().isEmpty)
-                  ? "No description"
-                  : expense["description"],
+              value: description,
+              cardPadding: cardPadding,
+              iconContainerSize: infoIconContainerSize,
+              iconSize: infoIconSize,
+              titleFontSize: infoTitleFontSize,
+              valueFontSize: infoValueFontSize,
+              spacing: spacing,
             ),
+
+            SizedBox(height: compact ? 8 : 12),
           ],
         ),
       ),
 
       bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.all(16),
+        minimum: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          compact ? 10 : 16,
+          horizontalPadding,
+          compact ? 10 : 16,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
               width: double.infinity,
+              height: compact ? 50 : 56,
               child: FilledButton.icon(
-                icon: const Icon(Icons.edit),
-                label: const Text("Edit Expense"),
+                icon: Icon(Icons.edit, size: compact ? 19 : 22),
+                label: Text(
+                  "Edit Expense",
+                  style: TextStyle(fontSize: compact ? 13 : 15),
+                ),
                 onPressed: () async {
                   final result = await Navigator.push(
                     context,
@@ -302,22 +419,31 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
               ),
             ),
 
-            const SizedBox(height: 12),
+            SizedBox(height: compact ? 8 : 12),
 
             SizedBox(
               width: double.infinity,
+              height: compact ? 50 : 56,
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                label: const Text(
+                icon: Icon(
+                  Icons.delete,
+                  color: Colors.red,
+                  size: compact ? 19 : 22,
+                ),
+                label: Text(
                   "Delete Expense",
-                  style: TextStyle(color: Colors.red),
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: compact ? 13 : 15,
+                  ),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Colors.red),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(compact ? 15 : 18),
+                  ),
                 ),
-                onPressed: () {
-                  _confirmDelete();
-                },
+                onPressed: _confirmDelete,
               ),
             ),
           ],
