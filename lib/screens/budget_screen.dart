@@ -228,23 +228,46 @@ class BudgetScreenState extends State<BudgetScreen>
     super.build(context);
 
     final compact = ResponsiveHelper.useCompactLayout(context);
-
     final landscape = ResponsiveHelper.isLandscape(context);
 
     final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
-
     final spacing = ResponsiveHelper.spacing(context);
 
     final cardPadding = ResponsiveHelper.cardPadding(context);
 
-    final horizontalPadding = compact
-        ? 14.0
-        : landscape
-        ? 28.0
-        : 20.0;
-
     final network = context.watch<ConnectivityProvider>();
 
+    return AppScaffold(
+      appBar: const AdaptiveAppBar(title: null),
+
+      floatingActionButton: state.isLoading || state.budget <= 0
+          ? null
+          : BudgetFAB(
+              hasBudget: state.budget > 0,
+              onPressed: showCreateBudgetDialog,
+            ),
+
+      body: _buildBody(
+        context,
+        compact: compact,
+        landscape: landscape,
+        sectionSpacing: sectionSpacing,
+        spacing: spacing,
+        cardPadding: cardPadding,
+        network: network,
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context, {
+    required bool compact,
+    required bool landscape,
+    required double sectionSpacing,
+    required double spacing,
+    required double cardPadding,
+    required ConnectivityProvider network,
+  }) {
     if (state.isLoading) {
       return const BudgetLoadingSkeleton();
     }
@@ -262,75 +285,77 @@ class BudgetScreenState extends State<BudgetScreen>
       );
     }
 
-    return AppScaffold(
-      appBar: const AdaptiveAppBar(title: null),
+    final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
 
-      floatingActionButton: BudgetFAB(
-        hasBudget: state.budget > 0,
-        onPressed: showCreateBudgetDialog,
-      ),
+    return RefreshIndicator(
+      onRefresh: refreshBudgetData,
+      child: SingleChildScrollView(
+        key: const PageStorageKey("budget"),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          compact ? 8 : 12,
+          horizontalPadding,
+          compact ? 90 : 100,
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: ResponsiveHelper.contentMaxWidth(context),
+              minWidth: 0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const BudgetHeader(),
 
-      body: RefreshIndicator(
-        onRefresh: refreshBudgetData,
+                SizedBox(height: compact ? 10 : 14),
 
-        child: SingleChildScrollView(
-          key: const PageStorageKey("budget"),
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
+                BudgetStatsGrid(
+                  spent: state.spent,
+                  remaining: remainingAmount,
+                  percentageUsed: percentageUsed,
+                  daysRemaining: daysRemaining,
+                  statusColor: statusColor,
+                ),
 
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            compact ? 8 : 12,
-            horizontalPadding,
-            compact ? 90 : 100,
-          ),
+                SizedBox(height: sectionSpacing),
 
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const BudgetHeader(),
+                BudgetStatusBar(
+                  statusText: statusText,
+                  statusColor: statusColor,
+                ),
 
-              SizedBox(height: compact ? 10 : 14),
+                SizedBox(height: sectionSpacing),
 
-              BudgetStatsGrid(
-                spent: state.spent,
-                remaining: remainingAmount,
-                percentageUsed: percentageUsed,
-                daysRemaining: daysRemaining,
-                statusColor: statusColor,
-              ),
+                const BudgetSectionHeader(
+                  title: "Monthly Budget Overview",
+                  subtitle:
+                      "Track your monthly spending and stay within budget",
+                ),
 
-              SizedBox(height: sectionSpacing),
+                SizedBox(height: compact ? 10 : spacing),
 
-              BudgetStatusBar(statusText: statusText, statusColor: statusColor),
+                _buildOverviewSection(
+                  context,
+                  compact: compact,
+                  landscape: landscape,
+                  sectionSpacing: sectionSpacing,
+                ),
 
-              SizedBox(height: sectionSpacing),
+                SizedBox(height: sectionSpacing),
 
-              const BudgetSectionHeader(
-                title: "Monthly Budget Overview",
-                subtitle: "Track your monthly spending and stay within budget",
-              ),
-
-              SizedBox(height: compact ? 10 : spacing),
-
-              _buildOverviewSection(
-                context,
-                compact: compact,
-                landscape: landscape,
-                sectionSpacing: sectionSpacing,
-              ),
-
-              SizedBox(height: sectionSpacing),
-
-              _buildAnalyticsSection(
-                context,
-                compact: compact,
-                landscape: landscape,
-                sectionSpacing: sectionSpacing,
-                cardPadding: cardPadding,
-              ),
-            ],
+                _buildAnalyticsSection(
+                  context,
+                  compact: compact,
+                  landscape: landscape,
+                  sectionSpacing: sectionSpacing,
+                  cardPadding: cardPadding,
+                ),
+              ],
+            ),
           ),
         ),
       ),

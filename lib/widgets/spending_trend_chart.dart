@@ -7,8 +7,13 @@ import '../../utils/responsive_helper.dart';
 
 class SpendingTrendChart extends StatelessWidget {
   final Map<String, double> dailySpending;
+  final double height;
 
-  const SpendingTrendChart({super.key, required this.dailySpending});
+  const SpendingTrendChart({
+    super.key,
+    required this.dailySpending,
+    required this.height,
+  });
 
   static const List<String> _days = [
     'Mon',
@@ -25,10 +30,10 @@ class SpendingTrendChart extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final isCompact = ResponsiveHelper.useCompactLayout(context);
-    final isLandscape = ResponsiveHelper.useDenseVerticalLayout(context);
-    final isTablet = ResponsiveHelper.isTablet(context);
-    final isDesktop = ResponsiveHelper.isDesktop(context);
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.useDenseVerticalLayout(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
 
     final primaryColor = colorScheme.primary;
 
@@ -44,48 +49,35 @@ class SpendingTrendChart extends StatelessWidget {
 
     final highestIndex = _highestSpendingIndex(spots);
 
-    final chartHeight = isDesktop
-        ? 300.0
-        : isTablet
-        ? 270.0
-        : isLandscape
-        ? 155.0
-        : 235.0;
-
-    final horizontalPadding = isDesktop
+    final horizontalPadding = desktop
         ? 16.0
-        : isTablet
+        : tablet
         ? 14.0
-        : isCompact
+        : compact
         ? 8.0
         : 10.0;
 
-    final lineWidth = isCompact ? 3.0 : 3.5;
-    final dotRadius = isCompact ? 3.5 : 4.5;
+    final lineWidth = compact ? 3.0 : 3.5;
+    final dotRadius = compact ? 3.5 : 4.5;
 
     final chartMaxY = _calculateMaxY(maxSpending);
     final interval = _calculateInterval(chartMaxY);
 
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 1100),
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 900),
       curve: Curves.easeOutCubic,
       builder: (context, animation, child) {
-        return Opacity(
-          opacity: animation,
-          child: Transform.translate(
-            offset: Offset(0, 14 * (1 - animation)),
-            child: child,
-          ),
-        );
+        return Opacity(opacity: animation, child: child);
       },
-      child: SizedBox(
-        height: chartHeight,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: 8,
-          ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: landscape ? 4 : 8,
+        ),
+        child: SizedBox(
+          height: height,
+          width: double.infinity,
           child: LineChart(
             LineChartData(
               minX: 0,
@@ -101,7 +93,7 @@ class SpendingTrendChart extends StatelessWidget {
                 horizontalInterval: interval,
                 getDrawingHorizontalLine: (value) {
                   return FlLine(
-                    color: theme.dividerColor.withOpacity(0.16),
+                    color: theme.dividerColor.withOpacity(.16),
                     strokeWidth: 1,
                     dashArray: [5, 5],
                   );
@@ -122,7 +114,7 @@ class SpendingTrendChart extends StatelessWidget {
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: isCompact ? 24 : 30,
+                    reservedSize: compact ? 24 : 30,
                     interval: 1,
                     getTitlesWidget: (value, meta) {
                       final index = value.toInt();
@@ -134,17 +126,17 @@ class SpendingTrendChart extends StatelessWidget {
                       final isHighest = index == highestIndex;
 
                       return Padding(
-                        padding: EdgeInsets.only(top: isCompact ? 6 : 9),
+                        padding: EdgeInsets.only(top: compact ? 6 : 9),
                         child: Text(
                           _days[index],
                           style: TextStyle(
-                            fontSize: isCompact ? 10 : 11.5,
+                            fontSize: compact ? 10 : 11.5,
                             fontWeight: isHighest
                                 ? FontWeight.w700
                                 : FontWeight.w500,
                             color: isHighest
                                 ? primaryColor
-                                : colorScheme.onSurface.withOpacity(0.58),
+                                : colorScheme.onSurface.withOpacity(.58),
                           ),
                         ),
                       );
@@ -155,15 +147,15 @@ class SpendingTrendChart extends StatelessWidget {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: isCompact ? 36 : 48,
+                    reservedSize: compact ? 36 : 48,
                     interval: interval,
                     getTitlesWidget: (value, meta) {
                       return Text(
                         _formatAxisAmount(value),
                         style: TextStyle(
-                          fontSize: isCompact ? 9 : 10.5,
+                          fontSize: compact ? 9 : 10.5,
                           fontWeight: FontWeight.w500,
-                          color: colorScheme.onSurface.withOpacity(0.5),
+                          color: colorScheme.onSurface.withOpacity(.5),
                         ),
                       );
                     },
@@ -174,7 +166,6 @@ class SpendingTrendChart extends StatelessWidget {
               lineTouchData: LineTouchData(
                 enabled: true,
                 handleBuiltInTouches: true,
-
                 touchSpotThreshold: 24,
 
                 getTouchedSpotIndicator:
@@ -182,7 +173,7 @@ class SpendingTrendChart extends StatelessWidget {
                       return spotIndexes.map((index) {
                         return TouchedSpotIndicatorData(
                           FlLine(
-                            color: primaryColor.withOpacity(0.35),
+                            color: primaryColor.withOpacity(.35),
                             strokeWidth: 1.5,
                             dashArray: [4, 4],
                           ),
@@ -227,7 +218,7 @@ class SpendingTrendChart extends StatelessWidget {
                       return LineTooltipItem(
                         '$day\n',
                         TextStyle(
-                          color: colorScheme.onInverseSurface.withOpacity(0.7),
+                          color: colorScheme.onInverseSurface.withOpacity(.7),
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),
@@ -250,15 +241,11 @@ class SpendingTrendChart extends StatelessWidget {
               lineBarsData: [
                 LineChartBarData(
                   spots: spots,
-
                   isCurved: true,
-                  curveSmoothness: 0.28,
-
+                  curveSmoothness: .28,
                   barWidth: lineWidth,
                   color: primaryColor,
-
                   preventCurveOverShooting: true,
-
                   isStrokeCapRound: true,
                   isStrokeJoinRound: true,
 
@@ -282,9 +269,9 @@ class SpendingTrendChart extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        primaryColor.withOpacity(0.20),
-                        primaryColor.withOpacity(0.06),
-                        primaryColor.withOpacity(0.01),
+                        primaryColor.withOpacity(.20),
+                        primaryColor.withOpacity(.06),
+                        primaryColor.withOpacity(.01),
                       ],
                     ),
                   ),
@@ -346,7 +333,9 @@ class SpendingTrendChart extends StatelessWidget {
   }
 
   static int _highestSpendingIndex(List<FlSpot> spots) {
-    if (spots.isEmpty) return -1;
+    if (spots.isEmpty) {
+      return -1;
+    }
 
     var highestIndex = 0;
 

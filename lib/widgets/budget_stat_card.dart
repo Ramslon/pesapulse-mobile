@@ -19,11 +19,8 @@ class BudgetStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = ResponsiveHelper.useCompactLayout(context);
-
     final landscape = ResponsiveHelper.isLandscape(context);
-
     final tablet = ResponsiveHelper.isTablet(context);
-
     final desktop = ResponsiveHelper.isDesktop(context);
 
     final padding = _padding(
@@ -87,8 +84,8 @@ class BudgetStatCard extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(padding),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.max,
             children: [
               CircleAvatar(
                 radius: iconRadius,
@@ -109,22 +106,19 @@ class BudgetStatCard extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
 
-              Expanded(
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      value,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontSize: valueSize,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              // No Expanded here.
+              // The grid already gives this card a finite height.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: valueSize,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),

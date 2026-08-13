@@ -154,255 +154,253 @@ class BudgetLoadingSkeleton extends StatelessWidget {
       desktop: desktop,
     );
 
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: landscape ? 12 : 20,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: contentMaxWidth),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ─────────────────────────────
-                  // Page header
-                  // ─────────────────────────────
-                  skeleton(
-                    context: context,
-                    width: desktop
-                        ? 280
-                        : tablet
-                        ? 240
-                        : 220,
-                    height: landscape ? 26 : 32,
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: landscape ? 12 : 20,
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentMaxWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ─────────────────────────────
+                // Page header
+                // ─────────────────────────────
+                skeleton(
+                  context: context,
+                  width: desktop
+                      ? 280
+                      : tablet
+                      ? 240
+                      : 220,
+                  height: landscape ? 26 : 32,
+                ),
+
+                SizedBox(height: landscape ? 6 : 10),
+
+                skeleton(
+                  context: context,
+                  width: 180,
+                  height: landscape ? 14 : 18,
+                ),
+
+                SizedBox(height: sectionSpacing),
+
+                // ─────────────────────────────
+                // Statistics grid
+                // ─────────────────────────────
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: statColumns,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  childAspectRatio: _statCardAspectRatio(
+                    context,
+                    columns: statColumns,
                   ),
-
-                  SizedBox(height: landscape ? 6 : 10),
-
-                  skeleton(
-                    context: context,
-                    width: 180,
-                    height: landscape ? 14 : 18,
+                  children: List.generate(
+                    4,
+                    (_) => statCardSkeleton(context: context),
                   ),
+                ),
 
-                  SizedBox(height: sectionSpacing),
+                SizedBox(height: sectionSpacing),
 
-                  // ─────────────────────────────
-                  // Statistics grid
-                  // ─────────────────────────────
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: statColumns,
-                    crossAxisSpacing: spacing,
-                    mainAxisSpacing: spacing,
-                    childAspectRatio: _statCardAspectRatio(
-                      context,
-                      columns: statColumns,
-                    ),
-                    children: List.generate(
-                      4,
-                      (_) => statCardSkeleton(context: context),
-                    ),
-                  ),
+                // ─────────────────────────────
+                // Budget status
+                // ─────────────────────────────
+                skeleton(
+                  context: context,
+                  height: landscape ? 80 : 110,
+                  radius: BorderRadius.circular(18),
+                ),
 
-                  SizedBox(height: sectionSpacing),
+                SizedBox(height: sectionSpacing),
 
-                  // ─────────────────────────────
-                  // Budget status
-                  // ─────────────────────────────
-                  skeleton(
-                    context: context,
-                    height: landscape ? 80 : 110,
-                    radius: BorderRadius.circular(18),
-                  ),
+                // ─────────────────────────────
+                // Budget overview
+                // ─────────────────────────────
+                skeleton(
+                  context: context,
+                  height: landscape
+                      ? 260
+                      : tablet
+                      ? 380
+                      : 420,
+                  radius: BorderRadius.circular(20),
+                ),
 
-                  SizedBox(height: sectionSpacing),
+                SizedBox(height: sectionSpacing),
 
-                  // ─────────────────────────────
-                  // Budget overview
-                  // ─────────────────────────────
-                  skeleton(
-                    context: context,
-                    height: landscape
-                        ? 260
-                        : tablet
-                        ? 380
-                        : 420,
-                    radius: BorderRadius.circular(20),
-                  ),
+                // ─────────────────────────────
+                // Budget breakdown
+                // ─────────────────────────────
+                skeleton(
+                  context: context,
+                  width: desktop ? 230 : 200,
+                  height: landscape ? 24 : 28,
+                ),
 
-                  SizedBox(height: sectionSpacing),
+                const SizedBox(height: 8),
 
-                  // ─────────────────────────────
-                  // Budget breakdown
-                  // ─────────────────────────────
-                  skeleton(
-                    context: context,
-                    width: desktop ? 230 : 200,
-                    height: landscape ? 24 : 28,
-                  ),
+                skeleton(
+                  context: context,
+                  width: 180,
+                  height: landscape ? 14 : 18,
+                ),
 
-                  const SizedBox(height: 8),
+                SizedBox(height: spacing),
 
-                  skeleton(
-                    context: context,
-                    width: 180,
-                    height: landscape ? 14 : 18,
-                  ),
+                skeleton(
+                  context: context,
+                  height: chartHeight,
+                  radius: BorderRadius.circular(20),
+                ),
 
-                  SizedBox(height: spacing),
+                SizedBox(height: sectionSpacing),
 
-                  skeleton(
-                    context: context,
-                    height: chartHeight,
-                    radius: BorderRadius.circular(20),
-                  ),
+                // ─────────────────────────────
+                // Financial health
+                // ─────────────────────────────
+                skeleton(
+                  context: context,
+                  width: desktop ? 230 : 200,
+                  height: landscape ? 24 : 28,
+                ),
 
-                  SizedBox(height: sectionSpacing),
+                const SizedBox(height: 8),
 
-                  // ─────────────────────────────
-                  // Financial health
-                  // ─────────────────────────────
-                  skeleton(
-                    context: context,
-                    width: desktop ? 230 : 200,
-                    height: landscape ? 24 : 28,
-                  ),
+                skeleton(
+                  context: context,
+                  width: 180,
+                  height: landscape ? 14 : 18,
+                ),
 
-                  const SizedBox(height: 8),
+                SizedBox(height: spacing),
 
-                  skeleton(
-                    context: context,
-                    width: 180,
-                    height: landscape ? 14 : 18,
-                  ),
+                skeleton(
+                  context: context,
+                  height: landscape
+                      ? 260
+                      : tablet
+                      ? 380
+                      : 420,
+                  radius: BorderRadius.circular(20),
+                ),
 
-                  SizedBox(height: spacing),
+                SizedBox(height: sectionSpacing),
 
-                  skeleton(
-                    context: context,
-                    height: landscape
-                        ? 260
-                        : tablet
-                        ? 380
-                        : 420,
-                    radius: BorderRadius.circular(20),
-                  ),
+                // ─────────────────────────────
+                // Spending analytics
+                // ─────────────────────────────
+                skeleton(
+                  context: context,
+                  width: desktop ? 230 : 200,
+                  height: landscape ? 24 : 28,
+                ),
 
-                  SizedBox(height: sectionSpacing),
+                const SizedBox(height: 8),
 
-                  // ─────────────────────────────
-                  // Spending analytics
-                  // ─────────────────────────────
-                  skeleton(
-                    context: context,
-                    width: desktop ? 230 : 200,
-                    height: landscape ? 24 : 28,
-                  ),
+                skeleton(
+                  context: context,
+                  width: 180,
+                  height: landscape ? 14 : 18,
+                ),
 
-                  const SizedBox(height: 8),
+                SizedBox(height: spacing),
 
-                  skeleton(
-                    context: context,
-                    width: 180,
-                    height: landscape ? 14 : 18,
-                  ),
+                skeleton(
+                  context: context,
+                  height: chartHeight,
+                  radius: BorderRadius.circular(20),
+                ),
 
-                  SizedBox(height: spacing),
+                SizedBox(height: spacing),
 
-                  skeleton(
-                    context: context,
-                    height: chartHeight,
-                    radius: BorderRadius.circular(20),
-                  ),
-
-                  SizedBox(height: spacing),
-
-                  // Analytics cards
-                  if (desktop || tablet)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: analyticsCardSkeleton(
-                            context: context,
-                            height: analyticsHeight,
-                          ),
+                // Analytics cards
+                if (desktop || tablet)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: analyticsCardSkeleton(
+                          context: context,
+                          height: analyticsHeight,
                         ),
-                        SizedBox(width: spacing),
-                        Expanded(
-                          child: analyticsCardSkeleton(
-                            context: context,
-                            height: analyticsHeight,
-                          ),
+                      ),
+                      SizedBox(width: spacing),
+                      Expanded(
+                        child: analyticsCardSkeleton(
+                          context: context,
+                          height: analyticsHeight,
                         ),
-                        SizedBox(width: spacing),
-                        Expanded(
-                          child: analyticsCardSkeleton(
-                            context: context,
-                            height: analyticsHeight,
-                          ),
+                      ),
+                      SizedBox(width: spacing),
+                      Expanded(
+                        child: analyticsCardSkeleton(
+                          context: context,
+                          height: analyticsHeight,
                         ),
-                      ],
-                    )
-                  else ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: analyticsCardSkeleton(
-                            context: context,
-                            height: analyticsHeight,
-                          ),
+                      ),
+                    ],
+                  )
+                else ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: analyticsCardSkeleton(
+                          context: context,
+                          height: analyticsHeight,
                         ),
-                        SizedBox(width: spacing),
-                        Expanded(
-                          child: analyticsCardSkeleton(
-                            context: context,
-                            height: analyticsHeight,
-                          ),
+                      ),
+                      SizedBox(width: spacing),
+                      Expanded(
+                        child: analyticsCardSkeleton(
+                          context: context,
+                          height: analyticsHeight,
                         ),
-                      ],
-                    ),
-
-                    SizedBox(height: spacing),
-
-                    analyticsCardSkeleton(
-                      context: context,
-                      height: analyticsHeight,
-                    ),
-                  ],
-
-                  SizedBox(height: sectionSpacing),
-
-                  // ─────────────────────────────
-                  // Bottom sections
-                  // ─────────────────────────────
-                  skeleton(
-                    context: context,
-                    height: landscape ? 180 : 260,
-                    radius: BorderRadius.circular(20),
+                      ),
+                    ],
                   ),
 
                   SizedBox(height: spacing),
 
-                  skeleton(
+                  analyticsCardSkeleton(
                     context: context,
-                    height: landscape ? 120 : 170,
-                    radius: BorderRadius.circular(18),
-                  ),
-
-                  SizedBox(height: spacing),
-
-                  skeleton(
-                    context: context,
-                    height: landscape ? 90 : 120,
-                    radius: BorderRadius.circular(18),
+                    height: analyticsHeight,
                   ),
                 ],
-              ),
+
+                SizedBox(height: sectionSpacing),
+
+                // ─────────────────────────────
+                // Bottom sections
+                // ─────────────────────────────
+                skeleton(
+                  context: context,
+                  height: landscape ? 180 : 260,
+                  radius: BorderRadius.circular(20),
+                ),
+
+                SizedBox(height: spacing),
+
+                skeleton(
+                  context: context,
+                  height: landscape ? 120 : 170,
+                  radius: BorderRadius.circular(18),
+                ),
+
+                SizedBox(height: spacing),
+
+                skeleton(
+                  context: context,
+                  height: landscape ? 90 : 120,
+                  radius: BorderRadius.circular(18),
+                ),
+              ],
             ),
           ),
         ),

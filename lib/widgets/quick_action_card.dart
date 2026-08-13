@@ -57,43 +57,41 @@ class QuickActionCard extends StatelessWidget {
         ? 10.0
         : 12.0;
 
-    return Expanded(
+    return Card(
+      elevation: 2,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            vertical: cardPadding,
+            horizontal: horizontalPadding,
           ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              vertical: cardPadding,
-              horizontal: horizontalPadding,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: iconRadius,
-                  backgroundColor: color.withOpacity(.12),
-                  child: Icon(icon, color: color, size: iconSize),
-                ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: iconRadius,
+                backgroundColor: color.withOpacity(.12),
+                child: Icon(icon, color: color, size: iconSize),
+              ),
 
-                SizedBox(height: spacing),
+              SizedBox(height: spacing),
 
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: titleFontSize,
-                  ),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: titleFontSize,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

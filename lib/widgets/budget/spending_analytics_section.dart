@@ -113,8 +113,10 @@ class SpendingAnalyticsSection extends StatelessWidget {
 
                         SizedBox(
                           height: chartHeight,
+                          width: double.infinity,
                           child: SpendingTrendChart(
                             dailySpending: dailySpending,
+                            height: chartHeight,
                           ),
                         ),
                       ],
@@ -255,11 +257,12 @@ class SpendingAnalyticsSection extends StatelessWidget {
       color: colorScheme.primary,
     );
 
-    // Tablet and desktop:
-    // three cards in one row.
+    // ─────────────────────────────────────────
+    // TABLET / DESKTOP
+    // ─────────────────────────────────────────
+
     if (desktop || tablet) {
       return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
             child: SizedBox(height: cardHeight, child: highestDayCard),
@@ -280,33 +283,25 @@ class SpendingAnalyticsSection extends StatelessWidget {
       );
     }
 
-    // Mobile:
-    // two cards on the first row,
-    // projection card below.
+    // ─────────────────────────────────────────
+    // MOBILE
+    // ─────────────────────────────────────────
+
     return Column(
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: SizedBox(height: cardHeight, child: highestDayCard),
-            ),
+            Expanded(child: highestDayCard),
 
             SizedBox(width: spacing),
 
-            Expanded(
-              child: SizedBox(height: cardHeight, child: averageCard),
-            ),
+            Expanded(child: averageCard),
           ],
         ),
 
         SizedBox(height: spacing),
 
-        SizedBox(
-          width: double.infinity,
-          height: cardHeight,
-          child: projectionCard,
-        ),
+        SizedBox(width: double.infinity, child: projectionCard),
       ],
     );
   }

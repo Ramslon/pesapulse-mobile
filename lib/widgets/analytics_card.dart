@@ -21,157 +21,383 @@ class AnalyticsCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final isTablet = ResponsiveHelper.isTablet(context);
-    final isDesktop = ResponsiveHelper.isDesktop(context);
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // LayoutBuilder handles the actual space available to the card,
-        // while ResponsiveHelper handles device-level responsiveness.
-        final compact =
-            constraints.maxHeight < 120 ||
-            ResponsiveHelper.useDenseVerticalLayout(context);
+        final hasBoundedHeight = constraints.hasBoundedHeight;
+        final hasBoundedWidth = constraints.hasBoundedWidth;
 
-        final veryCompact = constraints.maxHeight < 95;
+        final width = hasBoundedWidth
+            ? constraints.maxWidth
+            : ResponsiveHelper.width(context);
 
-        final padding = veryCompact
-            ? 10.0
-            : compact
-            ? 12.0
-            : isDesktop
+        // ─────────────────────────────────────
+        // Responsive sizing
+        // ─────────────────────────────────────
+
+        final veryNarrow = width < 155;
+        final narrow = width < 190;
+
+        final effectiveCompact = compact || landscape || veryNarrow || narrow;
+
+        final padding = _calculatePadding(
+          compact: effectiveCompact,
+          tablet: tablet,
+          desktop: desktop,
+          veryNarrow: veryNarrow,
+        );
+
+        final iconBoxSize = _calculateIconBoxSize(
+          compact: effectiveCompact,
+          tablet: tablet,
+          desktop: desktop,
+          veryNarrow: veryNarrow,
+        );
+
+        final iconSize = _calculateIconSize(
+          compact: effectiveCompact,
+          tablet: tablet,
+          desktop: desktop,
+          veryNarrow: veryNarrow,
+        );
+
+        final titleSize = _calculateTitleSize(
+          compact: effectiveCompact,
+          tablet: tablet,
+          desktop: desktop,
+          veryNarrow: veryNarrow,
+        );
+
+        final valueSize = _calculateValueSize(
+          compact: effectiveCompact,
+          tablet: tablet,
+          desktop: desktop,
+          veryNarrow: veryNarrow,
+        );
+
+        final spacing = _calculateSpacing(
+          compact: effectiveCompact,
+          desktop: desktop,
+          veryNarrow: veryNarrow,
+        );
+
+        final radius = desktop
+            ? 22.0
+            : tablet
             ? 20.0
-            : isTablet
-            ? 18.0
-            : 16.0;
-
-        final iconBox = veryCompact
-            ? 28.0
-            : compact
-            ? 34.0
-            : isDesktop
-            ? 44.0
-            : 40.0;
-
-        final iconSize = veryCompact
+            : effectiveCompact
             ? 16.0
-            : compact
-            ? 18.0
-            : isDesktop
-            ? 25.0
-            : 22.0;
+            : 20.0;
 
-        final titleSize = veryCompact
-            ? 10.0
-            : compact
-            ? 11.0
-            : isDesktop
-            ? 14.0
-            : isTablet
-            ? 13.5
-            : 13.0;
+        final dividerHeight = veryNarrow
+            ? 5.0
+            : effectiveCompact
+            ? 8.0
+            : 12.0;
 
-        final valueSize = veryCompact
-            ? 14.0
-            : compact
-            ? 15.0
-            : isDesktop
-            ? 20.0
-            : isTablet
-            ? 19.0
-            : 18.0;
+        final cardContent = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ─────────────────────────────────
+            // Icon
+            // ─────────────────────────────────
+            Container(
+              width: iconBoxSize,
+              height: iconBoxSize,
+              decoration: BoxDecoration(
+                color: color.withOpacity(.12),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(icon, color: color, size: iconSize),
+            ),
 
-        final radius = compact ? 16.0 : 20.0;
+            SizedBox(height: spacing),
+
+            // ─────────────────────────────────
+            // Title
+            // ─────────────────────────────────
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withOpacity(.65),
+                fontWeight: FontWeight.w600,
+                fontSize: titleSize,
+                letterSpacing: .1,
+                height: 1.1,
+              ),
+            ),
+
+            // ─────────────────────────────────
+            // Divider
+            // ─────────────────────────────────
+            Divider(
+              color: colorScheme.onSurface.withOpacity(.08),
+              thickness: .8,
+              height: dividerHeight,
+            ),
+
+            // ─────────────────────────────────
+            // Amount
+            // ─────────────────────────────────
+            _buildValue(
+              context,
+              theme,
+              valueSize: valueSize,
+              hasBoundedHeight: hasBoundedHeight,
+            ),
+          ],
+        );
 
         return Card(
-          elevation: compact ? 1 : 2,
-          shadowColor: color.withOpacity(0.12),
-          surfaceTintColor: color.withOpacity(0.025),
+          elevation: effectiveCompact ? 1 : 2,
+          shadowColor: color.withOpacity(.12),
+          surfaceTintColor: color.withOpacity(.025),
+          margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius),
           ),
-          child: Padding(
-            padding: EdgeInsets.all(padding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: iconBox,
-                  height: iconBox,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: color, size: iconSize),
-                ),
-
-                SizedBox(
-                  height: veryCompact
-                      ? 4
-                      : compact
-                      ? 7
-                      : 10,
-                ),
-
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(0.65),
-                    fontWeight: FontWeight.w600,
-                    fontSize: titleSize,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-
-                Divider(
-                  color: colorScheme.onSurface.withOpacity(0.08),
-                  thickness: 0.8,
-                  height: veryCompact
-                      ? 8
-                      : compact
-                      ? 11
-                      : 16,
-                ),
-
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0, end: 1),
-                      duration: const Duration(milliseconds: 800),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, animation, child) {
-                        return Opacity(
-                          opacity: animation,
-                          child: Transform.translate(
-                            offset: Offset(0, 8 * (1 - animation)),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          value,
-                          maxLines: 1,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: valueSize,
-                            height: 1.15,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: Padding(padding: EdgeInsets.all(padding), child: cardContent),
         );
       },
     );
+  }
+
+  // ─────────────────────────────────────────
+  // VALUE
+  // ─────────────────────────────────────────
+
+  Widget _buildValue(
+    BuildContext context,
+    ThemeData theme, {
+    required double valueSize,
+    required bool hasBoundedHeight,
+  }) {
+    final valueWidget = TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOutCubic,
+      builder: (context, animation, child) {
+        return Opacity(
+          opacity: animation,
+          child: Transform.translate(
+            offset: Offset(0, 6 * (1 - animation)),
+            child: child,
+          ),
+        );
+      },
+      child: SizedBox(
+        width: double.infinity,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            maxLines: 1,
+            softWrap: false,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: valueSize,
+              height: 1.1,
+              letterSpacing: -.25,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // If the card has a fixed height, allow the
+    // amount to consume only the remaining space.
+    //
+    // This prevents bottom overflow on tablet/desktop
+    // cards that have an explicit height.
+    if (hasBoundedHeight) {
+      return Flexible(
+        fit: FlexFit.loose,
+        child: Align(alignment: Alignment.bottomLeft, child: valueWidget),
+      );
+    }
+
+    // On mobile the card may have natural height.
+    //
+    // Do NOT use Expanded/Flexible here because the
+    // card can be inside an unbounded-height Column.
+    return Align(alignment: Alignment.centerLeft, child: valueWidget);
+  }
+
+  // ─────────────────────────────────────────
+  // PADDING
+  // ─────────────────────────────────────────
+
+  double _calculatePadding({
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+    required bool veryNarrow,
+  }) {
+    if (veryNarrow) {
+      return 10;
+    }
+
+    if (desktop) {
+      return 18;
+    }
+
+    if (tablet) {
+      return 16;
+    }
+
+    if (compact) {
+      return 12;
+    }
+
+    return 15;
+  }
+
+  // ─────────────────────────────────────────
+  // ICON BOX
+  // ─────────────────────────────────────────
+
+  double _calculateIconBoxSize({
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+    required bool veryNarrow,
+  }) {
+    if (veryNarrow) {
+      return 28;
+    }
+
+    if (desktop) {
+      return 44;
+    }
+
+    if (tablet) {
+      return 40;
+    }
+
+    if (compact) {
+      return 32;
+    }
+
+    return 38;
+  }
+
+  // ─────────────────────────────────────────
+  // ICON
+  // ─────────────────────────────────────────
+
+  double _calculateIconSize({
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+    required bool veryNarrow,
+  }) {
+    if (veryNarrow) {
+      return 15;
+    }
+
+    if (desktop) {
+      return 24;
+    }
+
+    if (tablet) {
+      return 22;
+    }
+
+    if (compact) {
+      return 17;
+    }
+
+    return 20;
+  }
+
+  // ─────────────────────────────────────────
+  // TITLE
+  // ─────────────────────────────────────────
+
+  double _calculateTitleSize({
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+    required bool veryNarrow,
+  }) {
+    if (veryNarrow) {
+      return 9.5;
+    }
+
+    if (desktop) {
+      return 14;
+    }
+
+    if (tablet) {
+      return 13;
+    }
+
+    if (compact) {
+      return 10.5;
+    }
+
+    return 12;
+  }
+
+  // ─────────────────────────────────────────
+  // VALUE
+  // ─────────────────────────────────────────
+
+  double _calculateValueSize({
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+    required bool veryNarrow,
+  }) {
+    if (veryNarrow) {
+      return 12;
+    }
+
+    if (desktop) {
+      return 20;
+    }
+
+    if (tablet) {
+      return 18;
+    }
+
+    if (compact) {
+      return 14;
+    }
+
+    return 17;
+  }
+
+  // ─────────────────────────────────────────
+  // SPACING
+  // ─────────────────────────────────────────
+
+  double _calculateSpacing({
+    required bool compact,
+    required bool desktop,
+    required bool veryNarrow,
+  }) {
+    if (veryNarrow) {
+      return 5;
+    }
+
+    if (desktop) {
+      return 9;
+    }
+
+    if (compact) {
+      return 6;
+    }
+
+    return 8;
   }
 }

@@ -118,9 +118,16 @@ class BudgetCategoryTile extends StatelessWidget {
             SizedBox(width: compact ? 7 : 10),
 
             // Amount
-            Text(
-              "KES ${formatter.format(amount)}",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
+            Flexible(
+              child: Text(
+                "KES ${formatter.format(amount)}",
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: fontSize,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

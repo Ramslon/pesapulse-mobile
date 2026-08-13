@@ -109,7 +109,7 @@ class BudgetBreakdownCard extends StatelessWidget {
 
         SizedBox(height: compact ? 14 : 18),
 
-        ..._buildCategoryTiles(context),
+        Column(children: _buildCategoryTiles(context)),
       ],
     );
   }
