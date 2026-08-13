@@ -57,7 +57,6 @@ class RecentExpenseTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final compact = ResponsiveHelper.useCompactLayout(context);
     final landscape = ResponsiveHelper.isLandscape(context);
-    final spacing = ResponsiveHelper.spacing(context);
 
     final category = expense['category'] ?? 'Other';
     final color = categoryColor(category);

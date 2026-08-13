@@ -13,7 +13,7 @@ class ExpenseScreen extends StatefulWidget {
 class _ExpenseScreenState extends State<ExpenseScreen> {
   final GlobalKey<ExpenseListContentState> _expenseListKey = GlobalKey();
 
-  void _handleAddExpense() async {
+  Future<void> _handleAddExpense() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
@@ -28,11 +28,11 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
-        heroTag: "expenseFab",
+        heroTag: 'expenseFab',
         elevation: 4,
         icon: const Icon(Icons.receipt_long_outlined),
         label: const Text(
-          "New Expense",
+          'New Expense',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         onPressed: _handleAddExpense,

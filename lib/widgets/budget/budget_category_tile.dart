@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../utils/responsive_helper.dart';
+
 class BudgetCategoryTile extends StatelessWidget {
   final String category;
   final double amount;
@@ -19,53 +21,106 @@ class BudgetCategoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final formatter = NumberFormat("#,##0");
 
-    final percentage = totalSpent == 0 ? 0 : (amount / totalSpent) * 100;
-    final compact = MediaQuery.of(context).orientation == Orientation.landscape;
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final tablet = ResponsiveHelper.isTablet(context);
+
+    final desktop = ResponsiveHelper.isDesktop(context);
+
+    final landscape = ResponsiveHelper.isLandscape(context);
+
+    final percentage = totalSpent <= 0 ? 0.0 : (amount / totalSpent) * 100;
+
+    final horizontalPadding = compact
+        ? 10.0
+        : tablet
+        ? 14.0
+        : desktop
+        ? 16.0
+        : 14.0;
+
+    final verticalPadding = compact
+        ? 9.0
+        : landscape
+        ? 9.0
+        : tablet
+        ? 11.0
+        : 12.0;
+
+    final fontSize = compact
+        ? 13.0
+        : tablet
+        ? 14.0
+        : desktop
+        ? 15.0
+        : 15.0;
+
+    final categorySpacing = compact ? 8.0 : 12.0;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: compact ? 8 : 10),
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 10 : 14,
-          vertical: compact ? 8 : 12,
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
         ),
         decoration: BoxDecoration(
           color: color.withOpacity(.08),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(compact ? 12 : 14),
+          border: Border.all(color: color.withOpacity(.08)),
         ),
         child: Row(
           children: [
-            CircleAvatar(radius: compact ? 5 : 7, backgroundColor: color),
+            // Category indicator
+            Container(
+              width: compact ? 10 : 12,
+              height: compact ? 10 : 12,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
 
-            SizedBox(width: compact ? 8 : 14),
+            SizedBox(width: categorySpacing),
 
+            // Category name
             Expanded(
               child: Text(
                 category,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: compact ? 13 : 15,
+                  fontSize: fontSize,
                 ),
               ),
             ),
 
-            Text(
-              "${percentage.toStringAsFixed(0)}%",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: compact ? 13 : 15,
+            const SizedBox(width: 8),
+
+            // Percentage
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 7 : 9,
+                vertical: compact ? 4 : 5,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                "${percentage.toStringAsFixed(0)}%",
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: compact ? 12 : 13,
+                ),
               ),
             ),
 
-            SizedBox(width: compact ? 6 : 10),
+            SizedBox(width: compact ? 7 : 10),
 
+            // Amount
             Text(
               "KES ${formatter.format(amount)}",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: compact ? 13 : 15,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
             ),
           ],
         ),

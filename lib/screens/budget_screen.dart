@@ -299,7 +299,6 @@ class BudgetScreenState extends State<BudgetScreen>
                 percentageUsed: percentageUsed,
                 daysRemaining: daysRemaining,
                 statusColor: statusColor,
-                isLandscape: landscape,
               ),
 
               SizedBox(height: sectionSpacing),
@@ -350,13 +349,11 @@ class BudgetScreenState extends State<BudgetScreen>
       remaining: remainingAmount,
       percentageUsed: percentageUsed,
       statusColor: statusColor,
-      isLandscape: landscape,
     );
 
     final breakdownCard = BudgetBreakdownCard(
       categoryTotals: state.categoryTotals,
       totalSpent: state.spent,
-      isLandscape: landscape,
     );
 
     if (landscape) {

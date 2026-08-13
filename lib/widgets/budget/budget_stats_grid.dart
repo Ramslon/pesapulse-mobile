@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../budget_stat_card.dart';
 import '../../features/budget/utils/budget_calculator.dart';
+import '../../utils/responsive_helper.dart';
 
 class BudgetStatsGrid extends StatelessWidget {
   final double spent;
@@ -10,8 +11,6 @@ class BudgetStatsGrid extends StatelessWidget {
   final int daysRemaining;
   final Color statusColor;
 
-  final bool isLandscape;
-
   const BudgetStatsGrid({
     super.key,
     required this.spent,
@@ -19,60 +18,113 @@ class BudgetStatsGrid extends StatelessWidget {
     required this.percentageUsed,
     required this.daysRemaining,
     required this.statusColor,
-    required this.isLandscape,
   });
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
     final colorScheme = Theme.of(context).colorScheme;
 
-    final spacing = isLandscape ? 10.0 : screenWidth * 0.04;
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final landscape = ResponsiveHelper.isLandscape(context);
+
+    final tablet = ResponsiveHelper.isTablet(context);
+
+    final desktop = ResponsiveHelper.isDesktop(context);
+
+    final spacing = ResponsiveHelper.spacing(context);
+
+    final columns = ResponsiveHelper.gridColumns(
+      context,
+      mobilePortrait: 2,
+      mobileLandscape: 4,
+      tabletPortrait: 4,
+      tabletLandscape: 4,
+      desktop: 4,
+    );
+
+    final childAspectRatio = _childAspectRatio(
+      context,
+      columns: columns,
+      compact: compact,
+      landscape: landscape,
+      tablet: tablet,
+      desktop: desktop,
+    );
 
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: columns,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: spacing,
       mainAxisSpacing: spacing,
-      childAspectRatio: isLandscape
-          ? 2.0
-          : screenWidth < 360
-          ? 1.15
-          : screenWidth < 430
-          ? 1.25
-          : 1.35,
+      childAspectRatio: childAspectRatio,
       children: [
         BudgetStatCard(
           icon: Icons.trending_up,
           title: "Spent",
           value: BudgetCalculator.formatCurrency(spent),
           color: colorScheme.primary,
-          isLandscape: isLandscape,
         ),
+
         BudgetStatCard(
           icon: Icons.savings,
           title: "Remaining",
           value: BudgetCalculator.formatCurrency(remaining),
           color: colorScheme.primary,
-          isLandscape: isLandscape,
         ),
+
         BudgetStatCard(
           icon: Icons.pie_chart,
           title: "Usage",
           value: "${percentageUsed.toStringAsFixed(0)}%",
           color: statusColor,
-          isLandscape: isLandscape,
         ),
+
         BudgetStatCard(
           icon: Icons.calendar_today,
           title: "Days Left",
           value: "$daysRemaining",
           color: colorScheme.primary,
-          isLandscape: isLandscape,
         ),
       ],
     );
+  }
+
+  double _childAspectRatio(
+    BuildContext context, {
+    required int columns,
+    required bool compact,
+    required bool landscape,
+    required bool tablet,
+    required bool desktop,
+  }) {
+    if (desktop) {
+      return 2.0;
+    }
+
+    if (tablet) {
+      return landscape ? 2.1 : 1.6;
+    }
+
+    if (landscape) {
+      return 1.8;
+    }
+
+    if (compact) {
+      final width = ResponsiveHelper.width(context);
+
+      if (width < 360) {
+        return 1.12;
+      }
+
+      if (width < 430) {
+        return 1.22;
+      }
+
+      return 1.32;
+    }
+
+    return 1.35;
   }
 }

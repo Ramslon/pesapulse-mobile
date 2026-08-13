@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../utils/responsive_helper.dart';
 import '../financial_health_card.dart';
 import 'budget_section_header.dart';
 
@@ -29,15 +31,44 @@ class FinancialHealthSection extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final compact = MediaQuery.of(context).orientation == Orientation.landscape;
+    final compact = ResponsiveHelper.useCompactLayout(context);
 
-    final smallSpacing = compact ? 4.0 : 8.0;
-    final sectionSpacing = compact ? 12.0 : 20.0;
+    final tablet = ResponsiveHelper.isTablet(context);
+
+    final desktop = ResponsiveHelper.isDesktop(context);
+
+    final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
+
+    final spacing = ResponsiveHelper.spacing(context);
+
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
+    final descriptionSize = _descriptionSize(
+      compact: compact,
+      tablet: tablet,
+      desktop: desktop,
+    );
+
+    final percentageSize = _percentageSize(
+      compact: compact,
+      tablet: tablet,
+      desktop: desktop,
+    );
+
+    final progressHeight = _progressHeight(
+      compact: compact,
+      tablet: tablet,
+      desktop: desktop,
+    );
+
+    final progressValue = budget > 0 ? (spent / budget).clamp(0.0, 1.0) : 0.0;
+
+    final progressColor = _progressColor(context, percentageUsed);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const BudgetSectionHeader(
+        BudgetSectionHeader(
           title: "Financial Health",
           subtitle: "Your overall money management score",
         ),
@@ -57,69 +88,177 @@ class FinancialHealthSection extends StatelessWidget {
           ),
         ),
 
-        SizedBox(height: smallSpacing),
+        SizedBox(height: spacing),
 
-        Text(
-          "This score is calculated using your budget usage, spending consistency, and savings potential.",
-          style: TextStyle(
-            color: colorScheme.onSurface.withOpacity(0.7),
-            fontSize: compact ? 12 : 14,
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(cardPadding),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withOpacity(.45),
+            borderRadius: BorderRadius.circular(compact ? 14 : 18),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                size: compact ? 19 : 21,
+                color: colorScheme.primary,
+              ),
+
+              SizedBox(width: spacing),
+
+              Expanded(
+                child: Text(
+                  "This score is calculated using your budget usage, "
+                  "spending consistency, and savings potential.",
+                  style: TextStyle(
+                    color: colorScheme.onSurface.withOpacity(.7),
+                    fontSize: descriptionSize,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+
         SizedBox(height: sectionSpacing),
 
-        Text(
-          "${percentageUsed.toStringAsFixed(1)}% Used",
-          textAlign: TextAlign.center,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              "Budget Usage",
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: percentageSize,
+              ),
+            ),
+
+            Text(
+              "${percentageUsed.toStringAsFixed(1)}% Used",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: percentageSize,
+                color: progressColor,
+              ),
+            ),
+          ],
         ),
 
-        SizedBox(height: smallSpacing),
+        SizedBox(height: spacing),
 
-        LinearProgressIndicator(
-          value: budget > 0 ? (spent / budget).clamp(0.0, 1.0) : 0,
-
-          color: percentageUsed >= 100
-              ? colorScheme.primary
-              : percentageUsed >= 80
-              ? colorScheme.primary
-              : colorScheme.primary,
-          minHeight: compact ? 6 : 10,
-          borderRadius: BorderRadius.circular(10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: progressValue),
+            duration: const Duration(milliseconds: 1000),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return LinearProgressIndicator(
+                value: value,
+                minHeight: progressHeight,
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                color: progressColor,
+              );
+            },
+          ),
         ),
-        const SizedBox(height: 12),
+
+        SizedBox(height: sectionSpacing),
+
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 0, end: 1),
           duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeOut,
           builder: (context, opacity, child) {
             return Opacity(opacity: opacity, child: child);
           },
           child: budgetAlert,
         ),
 
-        if (categoryAdvice.isNotEmpty)
-          Card(
-            margin: const EdgeInsets.only(top: 20),
-            child: Padding(
-              padding: EdgeInsets.all(compact ? 12 : 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.lightbulb),
-                  SizedBox(width: compact ? 8 : 10),
-                  Expanded(
-                    child: Text(
-                      categoryAdvice,
-                      style: TextStyle(
-                        fontSize: compact ? 12 : 14,
-                        height: 1.3,
-                      ),
-                    ),
+        if (categoryAdvice.isNotEmpty) ...[
+          SizedBox(height: sectionSpacing),
+
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(cardPadding),
+            decoration: BoxDecoration(
+              color: Colors.amber.withOpacity(.08),
+              borderRadius: BorderRadius.circular(compact ? 14 : 18),
+              border: Border.all(color: Colors.amber.withOpacity(.18)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.lightbulb_outline_rounded,
+                  color: Colors.amber.shade800,
+                  size: compact ? 20 : 23,
+                ),
+
+                SizedBox(width: spacing),
+
+                Expanded(
+                  child: Text(
+                    categoryAdvice,
+                    style: TextStyle(fontSize: descriptionSize, height: 1.4),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        ],
       ],
     );
+  }
+
+  Color _progressColor(BuildContext context, double percentage) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (percentage >= 100) {
+      return colorScheme.error;
+    }
+
+    if (percentage >= 80) {
+      return Colors.orange;
+    }
+
+    return Colors.green;
+  }
+
+  double _descriptionSize({
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+  }) {
+    if (desktop) return 14;
+    if (tablet) return 14;
+    if (compact) return 12;
+    return 14;
+  }
+
+  double _percentageSize({
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+  }) {
+    if (desktop) return 15;
+    if (tablet) return 15;
+    if (compact) return 13;
+    return 14;
+  }
+
+  double _progressHeight({
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+  }) {
+    if (desktop) return 10;
+    if (tablet) return 10;
+    if (compact) return 7;
+    return 9;
   }
 }
