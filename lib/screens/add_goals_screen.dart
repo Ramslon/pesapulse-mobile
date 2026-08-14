@@ -425,7 +425,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
                 textInputAction: TextInputAction.next,
               ),
 
-              SizedBox(height: compact ? 8 : 12),
+              SizedBox(height: compact ? 10 : 14),
 
               buildInputField(
                 controller: amountController,
@@ -439,7 +439,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
                 onSubmitted: saveGoal,
               ),
 
-              SizedBox(height: compact ? 8 : 12),
+              SizedBox(height: compact ? 10 : 14),
 
               SizedBox(
                 width: double.infinity,
