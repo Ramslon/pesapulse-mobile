@@ -1,7 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+
 import '../fade_slide_animation.dart';
-import '/utils/analytics_layout_helper.dart';
+import '../../utils/responsive_helper.dart';
+import '../../utils/analytics_layout_helper.dart';
 
 class GoalStatusChart extends StatefulWidget {
   final int completedGoals;
@@ -35,29 +37,34 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
     }
   }
 
-  List<PieChartSectionData> _getSections(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    final baseRadius = screenWidth >= 1200
-        ? 85.0
-        : screenWidth >= 900
-        ? 78.0
-        : screenWidth >= 600
-        ? 70.0
-        : 62.0;
-
-    final titleFontSize = screenWidth >= 900
-        ? 12.0
-        : screenWidth >= 600
-        ? 11.5
-        : 11.0;
-
+  List<PieChartSectionData> _getSections(
+    BuildContext context, {
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+  }) {
     final completed = widget.completedGoals;
     final active = widget.activeGoals;
 
     if (completed <= 0 && active <= 0) {
       return [];
     }
+
+    final baseRadius = desktop
+        ? 85.0
+        : tablet
+        ? 72.0
+        : compact
+        ? 55.0
+        : 64.0;
+
+    final titleFontSize = desktop
+        ? 12.0
+        : tablet
+        ? 11.5
+        : compact
+        ? 9.5
+        : 11.0;
 
     final sections = <PieChartSectionData>[];
 
@@ -69,7 +76,7 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
           color: Colors.green.shade600,
           value: completed.toDouble(),
           title: 'Completed\n$completed',
-          radius: isSelected ? baseRadius + 8 : baseRadius,
+          radius: isSelected ? baseRadius + 7 : baseRadius,
           titleStyle: TextStyle(
             fontSize: isSelected ? titleFontSize + 1 : titleFontSize,
             fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
@@ -91,7 +98,7 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
           color: Colors.orange.shade600,
           value: active.toDouble(),
           title: 'Active\n$active',
-          radius: isSelected ? baseRadius + 8 : baseRadius,
+          radius: isSelected ? baseRadius + 7 : baseRadius,
           titleStyle: TextStyle(
             fontSize: isSelected ? titleFontSize + 1 : titleFontSize,
             fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
@@ -156,39 +163,50 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final iconSize = compact ? 28.0 : 32.0;
+    final containerSize = compact ? 56.0 : 64.0;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 64,
-              height: 64,
+              width: containerSize,
+              height: containerSize,
               decoration: BoxDecoration(
                 color: colorScheme.primary.withOpacity(.10),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.flag_outlined,
-                size: 32,
+                size: iconSize,
                 color: colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
+
+            SizedBox(height: ResponsiveHelper.spacing(context)),
+
+            Text(
               'No goals yet',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
+
             const SizedBox(height: 5),
+
             Text(
               'Create a goal to start tracking your progress.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withOpacity(.60),
                 height: 1.35,
               ),
             ),
@@ -202,52 +220,71 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
     BuildContext context,
     Map<String, dynamic> selectedStatus,
   ) {
+    final theme = Theme.of(context);
     final color = selectedStatus['color'] as Color;
     final icon = selectedStatus['icon'] as IconData;
+
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final padding = ResponsiveHelper.cardPadding(context);
 
     return Card(
       elevation: 1,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(compact ? 14 : 16),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(padding),
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: compact ? 36 : 42,
+              height: compact ? 36 : 42,
               decoration: BoxDecoration(
                 color: color.withOpacity(.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 22),
+              child: Icon(icon, color: color, size: compact ? 19 : 22),
             ),
-            const SizedBox(width: 12),
+
+            SizedBox(width: ResponsiveHelper.spacing(context)),
+
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     selectedStatus['name'] as String,
-                    style: const TextStyle(
-                      fontSize: 14,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+
                   const SizedBox(height: 3),
+
                   Text(
                     '${selectedStatus['value']} goals',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(.60),
+                    ),
                   ),
                 ],
               ),
             ),
-            Text(
-              '${(selectedStatus['percentage'] as double).toStringAsFixed(1)}%',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: color,
+
+            const SizedBox(width: 8),
+
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${(selectedStatus['percentage'] as double).toStringAsFixed(1)}%',
+                style: TextStyle(
+                  fontSize: compact ? 16 : 18,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
           ],
@@ -258,20 +295,35 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final theme = Theme.of(context);
 
-    final selectedStatus = _getSelectedStatus();
-    final sections = _getSections(context);
-
-    final cardPadding = screenWidth >= 900
-        ? 16.0
-        : screenWidth >= 600
-        ? 14.0
-        : 12.0;
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
 
     final chartWidth = AnalyticsLayoutHelper.maxChartWidth(context);
 
-    final centerSpaceRadius = (widget.chartHeight * 0.12).clamp(30.0, 55.0);
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
+    final centerSpaceRadius =
+        (widget.chartHeight *
+                (compact
+                    ? 0.10
+                    : tablet
+                    ? 0.12
+                    : 0.12))
+            .clamp(compact ? 26.0 : 30.0, desktop ? 55.0 : 50.0);
+
+    final selectedStatus = _getSelectedStatus();
+
+    final sections = _getSections(
+      context,
+      compact: compact,
+      tablet: tablet,
+      desktop: desktop,
+    );
+
+    final summarySpacing = ResponsiveHelper.spacing(context);
 
     return FadeSlideAnimation(
       delay: 200,
@@ -284,7 +336,7 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
                 elevation: 2,
                 margin: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(compact ? 16 : 20),
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(cardPadding),
@@ -297,10 +349,8 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
                             PieChartData(
                               sections: sections,
                               centerSpaceRadius: centerSpaceRadius,
-                              sectionsSpace: 3,
-                              centerSpaceColor: Theme.of(
-                                context,
-                              ).colorScheme.surface,
+                              sectionsSpace: compact ? 2 : 3,
+                              centerSpaceColor: theme.colorScheme.surface,
                               pieTouchData: PieTouchData(
                                 touchCallback:
                                     (
@@ -337,19 +387,23 @@ class _GoalStatusChartState extends State<GoalStatusChart> {
           ),
 
           if (selectedStatus != null) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: summarySpacing),
             _buildSelectedStatusCard(context, selectedStatus),
           ],
 
-          const SizedBox(height: 12),
+          SizedBox(height: summarySpacing),
 
           Text(
             widget.totalGoals == 0
                 ? 'No goals created yet'
                 : '${widget.completedGoals} of ${widget.totalGoals} goals completed',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: screenWidth >= 900 ? 17 : 15,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontSize: compact
+                  ? 14
+                  : tablet
+                  ? 16
+                  : 15,
               fontWeight: FontWeight.w700,
             ),
           ),

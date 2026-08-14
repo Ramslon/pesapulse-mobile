@@ -26,40 +26,51 @@ class BudgetLoadingSkeleton extends StatelessWidget {
   Widget statCardSkeleton({required BuildContext context}) {
     final compact = ResponsiveHelper.useCompactLayout(context);
     final landscape = ResponsiveHelper.isLandscape(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
+
+    final padding = desktop
+        ? 18.0
+        : tablet
+        ? 16.0
+        : landscape
+        ? 10.0
+        : compact
+        ? 14.0
+        : 18.0;
+
+    final iconSize = desktop
+        ? 36.0
+        : tablet
+        ? 34.0
+        : landscape
+        ? 28.0
+        : 36.0;
 
     return Container(
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Theme.of(
           context,
         ).colorScheme.surfaceContainerHighest.withOpacity(.65),
         borderRadius: BorderRadius.circular(compact ? 16 : 20),
       ),
-      padding: EdgeInsets.all(
-        landscape
-            ? 10
-            : compact
-            ? 14
-            : 18,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           skeleton(
             context: context,
-            width: landscape ? 28 : 36,
-            height: landscape ? 28 : 36,
+            width: iconSize,
+            height: iconSize,
             radius: BorderRadius.circular(20),
           ),
-
-          SizedBox(height: landscape ? 8 : 12),
 
           skeleton(
             context: context,
             width: landscape ? 70 : 90,
             height: landscape ? 10 : 13,
           ),
-
-          const Spacer(),
 
           skeleton(
             context: context,
@@ -76,41 +87,41 @@ class BudgetLoadingSkeleton extends StatelessWidget {
     required double height,
   }) {
     final theme = Theme.of(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+
+    final padding = desktop
+        ? 20.0
+        : tablet
+        ? 18.0
+        : landscape
+        ? 12.0
+        : 18.0;
+
+    final iconSize = landscape ? 30.0 : 42.0;
 
     return Container(
       height: height,
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withOpacity(.65),
         borderRadius: BorderRadius.circular(20),
       ),
-      padding: ResponsiveHelper.isLandscape(context)
-          ? const EdgeInsets.all(12)
-          : const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           skeleton(
             context: context,
-            width: ResponsiveHelper.isLandscape(context) ? 30 : 42,
-            height: ResponsiveHelper.isLandscape(context) ? 30 : 42,
+            width: iconSize,
+            height: iconSize,
             radius: BorderRadius.circular(30),
           ),
 
-          SizedBox(height: ResponsiveHelper.isLandscape(context) ? 8 : 12),
+          skeleton(context: context, width: 110, height: landscape ? 11 : 14),
 
-          skeleton(
-            context: context,
-            width: 110,
-            height: ResponsiveHelper.isLandscape(context) ? 11 : 14,
-          ),
-
-          const Spacer(),
-
-          skeleton(
-            context: context,
-            width: 140,
-            height: ResponsiveHelper.isLandscape(context) ? 17 : 22,
-          ),
+          skeleton(context: context, width: 140, height: landscape ? 17 : 22),
         ],
       ),
     );
@@ -138,6 +149,13 @@ class BudgetLoadingSkeleton extends StatelessWidget {
       tabletPortrait: 4,
       tabletLandscape: 4,
       desktop: 4,
+    );
+
+    final statCardHeight = _statCardHeight(
+      compact: compact,
+      landscape: landscape,
+      tablet: tablet,
+      desktop: desktop,
     );
 
     final chartHeight = _chartHeight(
@@ -192,15 +210,14 @@ class BudgetLoadingSkeleton extends StatelessWidget {
                 // ─────────────────────────────
                 // Statistics grid
                 // ─────────────────────────────
-                GridView.count(
+                GridView(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: statColumns,
-                  crossAxisSpacing: spacing,
-                  mainAxisSpacing: spacing,
-                  childAspectRatio: _statCardAspectRatio(
-                    context,
-                    columns: statColumns,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: statColumns,
+                    crossAxisSpacing: spacing,
+                    mainAxisSpacing: spacing,
+                    mainAxisExtent: statCardHeight,
                   ),
                   children: List.generate(
                     4,
@@ -321,9 +338,12 @@ class BudgetLoadingSkeleton extends StatelessWidget {
 
                 SizedBox(height: spacing),
 
+                // ─────────────────────────────
                 // Analytics cards
+                // ─────────────────────────────
                 if (desktop || tablet)
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: analyticsCardSkeleton(
@@ -331,14 +351,18 @@ class BudgetLoadingSkeleton extends StatelessWidget {
                           height: analyticsHeight,
                         ),
                       ),
+
                       SizedBox(width: spacing),
+
                       Expanded(
                         child: analyticsCardSkeleton(
                           context: context,
                           height: analyticsHeight,
                         ),
                       ),
+
                       SizedBox(width: spacing),
+
                       Expanded(
                         child: analyticsCardSkeleton(
                           context: context,
@@ -349,6 +373,7 @@ class BudgetLoadingSkeleton extends StatelessWidget {
                   )
                 else ...[
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: analyticsCardSkeleton(
@@ -356,7 +381,9 @@ class BudgetLoadingSkeleton extends StatelessWidget {
                           height: analyticsHeight,
                         ),
                       ),
+
                       SizedBox(width: spacing),
+
                       Expanded(
                         child: analyticsCardSkeleton(
                           context: context,
@@ -408,24 +435,29 @@ class BudgetLoadingSkeleton extends StatelessWidget {
     );
   }
 
-  double _statCardAspectRatio(BuildContext context, {required int columns}) {
-    final landscape = ResponsiveHelper.isLandscape(context);
-    final desktop = ResponsiveHelper.isDesktop(context);
-    final tablet = ResponsiveHelper.isTablet(context);
-
+  double _statCardHeight({
+    required bool compact,
+    required bool landscape,
+    required bool tablet,
+    required bool desktop,
+  }) {
     if (desktop) {
-      return 1.9;
+      return 145;
     }
 
     if (tablet) {
-      return landscape ? 1.8 : 1.5;
+      return landscape ? 125 : 145;
     }
 
     if (landscape) {
-      return 2.0;
+      return 105;
     }
 
-    return columns == 2 ? 1.35 : 1.5;
+    if (compact) {
+      return 125;
+    }
+
+    return 140;
   }
 
   double _chartHeight({

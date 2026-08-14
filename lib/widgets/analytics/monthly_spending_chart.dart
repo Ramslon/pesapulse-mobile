@@ -1,7 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+
 import '../fade_slide_animation.dart';
-import '/utils/analytics_layout_helper.dart';
+import '../../utils/responsive_helper.dart';
+import '../../utils/analytics_layout_helper.dart';
 
 class MonthlySpendingChart extends StatefulWidget {
   final Map<String, double> monthlyTotals;
@@ -129,19 +131,24 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     return value.toStringAsFixed(0);
   }
 
-  List<BarChartGroupData> _getMonthlyBars(BuildContext context) {
+  List<BarChartGroupData> _getMonthlyBars(
+    BuildContext context, {
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+  }) {
     final entries = _validEntries;
     final colorScheme = Theme.of(context).colorScheme;
 
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    final barWidth = screenWidth >= 1200
+    final barWidth = desktop
         ? 22.0
-        : screenWidth >= 900
-        ? 20.0
-        : screenWidth >= 600
-        ? 18.0
+        : tablet
+        ? 19.0
+        : compact
+        ? 13.0
         : 16.0;
+
+    final barsSpace = compact ? 2.0 : 4.0;
 
     return entries.asMap().entries.map((item) {
       final index = item.key;
@@ -151,16 +158,16 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
 
       return BarChartGroupData(
         x: index,
-        barsSpace: 4,
+        barsSpace: barsSpace,
         showingTooltipIndicators: const [],
         barRods: [
           BarChartRodData(
             toY: entry.value,
-            width: isSelected ? barWidth + 5 : barWidth,
+            width: isSelected ? barWidth + 4 : barWidth,
             color: isSelected
                 ? colorScheme.primary
                 : colorScheme.primary.withOpacity(.72),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(compact ? 4 : 6),
             backDrawRodData: BackgroundBarChartRodData(
               show: true,
               toY: _maxSpending * 1.05,
@@ -187,39 +194,53 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+    final spacing = ResponsiveHelper.spacing(context);
+
+    final iconContainerSize = compact ? 56.0 : 64.0;
+    final iconSize = compact ? 28.0 : 32.0;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(cardPadding),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 64,
-              height: 64,
+              width: iconContainerSize,
+              height: iconContainerSize,
               decoration: BoxDecoration(
                 color: colorScheme.primary.withOpacity(.10),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.show_chart_rounded,
-                size: 32,
+                size: iconSize,
                 color: colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
+
+            SizedBox(height: spacing),
+
+            Text(
               'No monthly spending data',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
+
             const SizedBox(height: 5),
+
             Text(
               'Add expenses to start seeing your spending trend.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withOpacity(.60),
                 height: 1.35,
               ),
             ),
@@ -233,7 +254,12 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     BuildContext context,
     MapEntry<String, double> selected,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+    final spacing = ResponsiveHelper.spacing(context);
 
     final percentage = _totalSpending == 0
         ? 0.0
@@ -242,14 +268,16 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     return Card(
       elevation: 1,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(compact ? 14 : 16),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(cardPadding),
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: compact ? 36 : 42,
+              height: compact ? 36 : 42,
               decoration: BoxDecoration(
                 color: colorScheme.primary.withOpacity(.12),
                 shape: BoxShape.circle,
@@ -257,11 +285,11 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
               child: Icon(
                 Icons.calendar_month_rounded,
                 color: colorScheme.primary,
-                size: 21,
+                size: compact ? 19 : 21,
               ),
             ),
 
-            const SizedBox(width: 12),
+            SizedBox(width: spacing),
 
             Expanded(
               child: Column(
@@ -269,15 +297,22 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                 children: [
                   Text(
                     _monthFullLabel(selected.key),
-                    style: const TextStyle(
-                      fontSize: 14,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+
                   const SizedBox(height: 3),
+
                   Text(
                     '${percentage.toStringAsFixed(1)}% of displayed spending',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface.withOpacity(.60),
+                    ),
                   ),
                 ],
               ),
@@ -285,12 +320,19 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
 
             const SizedBox(width: 8),
 
-            Text(
-              'KES ${selected.value.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: colorScheme.primary,
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'KES ${selected.value.toStringAsFixed(2)}',
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: compact ? 14 : 16,
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.primary,
+                  ),
+                ),
               ),
             ),
           ],
@@ -304,13 +346,34 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     final validEntries = _validEntries;
     final selected = _selectedEntry;
 
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
+
     final chartWidth = AnalyticsLayoutHelper.maxChartWidth(context);
 
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    final cardPadding = screenWidth >= 900 ? 16.0 : 12.0;
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+    final spacing = ResponsiveHelper.spacing(context);
 
     final colorScheme = Theme.of(context).colorScheme;
+
+    final axisFontSize = desktop
+        ? 11.0
+        : tablet
+        ? 10.5
+        : compact
+        ? 9.0
+        : 10.0;
+
+    final leftReservedSize = desktop
+        ? 52.0
+        : tablet
+        ? 50.0
+        : compact
+        ? 42.0
+        : 46.0;
+
+    final bottomReservedSize = compact ? 26.0 : 30.0;
 
     if (validEntries.isEmpty) {
       return FadeSlideAnimation(
@@ -322,7 +385,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
               elevation: 2,
               margin: EdgeInsets.zero,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(compact ? 16 : 20),
               ),
               child: SizedBox(
                 height: widget.chartHeight,
@@ -348,7 +411,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                 elevation: 2,
                 margin: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(compact ? 16 : 20),
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(cardPadding),
@@ -360,7 +423,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                         minY: 0,
                         maxY: maxY,
                         alignment: BarChartAlignment.spaceAround,
-                        groupsSpace: 10,
+                        groupsSpace: compact ? 5 : 10,
 
                         gridData: FlGridData(
                           show: true,
@@ -376,7 +439,12 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
 
                         borderData: FlBorderData(show: false),
 
-                        barGroups: _getMonthlyBars(context),
+                        barGroups: _getMonthlyBars(
+                          context,
+                          compact: compact,
+                          tablet: tablet,
+                          desktop: desktop,
+                        ),
 
                         barTouchData: BarTouchData(
                           enabled: true,
@@ -384,9 +452,9 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                           touchTooltipData: BarTouchTooltipData(
                             getTooltipColor: (_) => colorScheme.inverseSurface,
 
-                            tooltipPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
+                            tooltipPadding: EdgeInsets.symmetric(
+                              horizontal: compact ? 9 : 12,
+                              vertical: compact ? 6 : 8,
                             ),
 
                             tooltipMargin: 8,
@@ -408,7 +476,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                                 TextStyle(
                                   color: colorScheme.onInverseSurface,
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 13,
+                                  fontSize: compact ? 11 : 13,
                                 ),
                                 children: [
                                   TextSpan(
@@ -416,7 +484,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                                         'KES ${actualValue.toStringAsFixed(2)}',
                                     style: TextStyle(
                                       color: colorScheme.onInverseSurface,
-                                      fontSize: 12,
+                                      fontSize: compact ? 10 : 12,
                                     ),
                                   ),
                                 ],
@@ -469,13 +537,13 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                           leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
-                              reservedSize: 46,
+                              reservedSize: leftReservedSize,
                               interval: maxY / 4,
                               getTitlesWidget: (value, meta) {
                                 return Text(
                                   _formatAxisValue(value),
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: axisFontSize,
                                     color: colorScheme.onSurfaceVariant,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -488,7 +556,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                             sideTitles: SideTitles(
                               showTitles: true,
                               interval: 1,
-                              reservedSize: 30,
+                              reservedSize: bottomReservedSize,
                               getTitlesWidget: (value, meta) {
                                 final index = value.toInt();
 
@@ -503,7 +571,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                                   child: Text(
                                     _monthLabel(monthKey),
                                     style: TextStyle(
-                                      fontSize: screenWidth >= 900 ? 11 : 10,
+                                      fontSize: axisFontSize,
                                       fontWeight: FontWeight.w600,
                                       color: colorScheme.onSurfaceVariant,
                                     ),
@@ -522,18 +590,22 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
           ),
 
           if (selected != null) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: spacing),
             _buildSelectedMonthCard(context, selected),
           ],
 
-          const SizedBox(height: 12),
+          SizedBox(height: spacing),
 
           Text(
             'Total displayed spending: '
             'KES ${_totalSpending.toStringAsFixed(2)}',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: screenWidth >= 900 ? 16 : 14,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              fontSize: compact
+                  ? 13
+                  : tablet
+                  ? 16
+                  : 14,
               fontWeight: FontWeight.w700,
               color: colorScheme.onSurface,
             ),

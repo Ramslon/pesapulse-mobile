@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '/utils/responsive_helper.dart';
+
 class AnalyticsSectionHeader extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -57,25 +59,50 @@ class AnalyticsSectionHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = _sectionColors(context);
 
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+
+    final iconSize = isMobile
+        ? 20.0
+        : isTablet
+        ? 21.0
+        : 22.0;
+
+    final iconContainerSize = isMobile
+        ? 38.0
+        : isTablet
+        ? 40.0
+        : 42.0;
+
+    final titleFontSize = isMobile
+        ? 17.0
+        : isTablet
+        ? 19.0
+        : 20.0;
+
+    final spacing = ResponsiveHelper.spacing(context);
+
     return Row(
       children: [
         Container(
-          width: 42,
-          height: 42,
+          width: iconContainerSize,
+          height: iconContainerSize,
           decoration: BoxDecoration(
             color: colors.backgroundColor,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: colors.color, size: 22),
+          child: Icon(icon, color: colors.color, size: iconSize),
         ),
 
-        const SizedBox(width: 12),
+        SizedBox(width: spacing),
 
         Expanded(
           child: Text(
             title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontSize: 20,
+              fontSize: titleFontSize,
               fontWeight: FontWeight.bold,
             ),
           ),

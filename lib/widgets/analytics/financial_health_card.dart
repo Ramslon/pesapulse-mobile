@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../fade_slide_animation.dart';
+import '../../utils/responsive_helper.dart';
 
 class FinancialHealthCard extends StatelessWidget {
   final double healthScore;
@@ -22,16 +23,34 @@ class FinancialHealthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final score = healthScore.clamp(0.0, 100.0);
-    final screenWidth = MediaQuery.of(context).size.width;
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final dense = ResponsiveHelper.useDenseVerticalLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
 
-    final scoreSize = screenWidth < 400 ? 36.0 : 42.0;
+    final spacing = ResponsiveHelper.spacing(context);
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
+    final score = healthScore.clamp(0.0, 100.0);
+
+    final radius = desktop
+        ? 28.0
+        : compact
+        ? 18.0
+        : 24.0;
+
+    final padding = desktop
+        ? math.max(cardPadding, 24.0)
+        : compact
+        ? math.min(cardPadding, 16.0)
+        : cardPadding;
 
     return FadeSlideAnimation(
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(radius),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -40,230 +59,455 @@ class FinancialHealthCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: color.withOpacity(0.20),
-              blurRadius: 18,
+              blurRadius: desktop ? 22 : 18,
               offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Padding(
-          padding: EdgeInsets.all(screenWidth < 400 ? 18 : 22),
+          padding: EdgeInsets.all(padding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.16),
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.white.withOpacity(0.18)),
-                    ),
-                    child: Icon(icon, color: Colors.white, size: 25),
-                  ),
-
-                  const SizedBox(width: 13),
-
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Financial Health',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            height: 1.15,
-                          ),
-                        ),
-                        SizedBox(height: 3),
-                        Text(
-                          'Your current financial wellbeing',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Status badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 11,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.16),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.16)),
-                    ),
-                    child: Text(
-                      healthStatus,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+              _buildHeader(
+                context,
+                compact: compact,
+                desktop: desktop,
+                spacing: spacing,
               ),
 
-              const SizedBox(height: 24),
-
-              // Score section
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 108,
-                    height: 108,
-                    child: TweenAnimationBuilder<double>(
-                      duration: const Duration(milliseconds: 1000),
-                      curve: Curves.easeOutCubic,
-                      tween: Tween<double>(begin: 0, end: score / 100),
-                      builder: (context, value, child) {
-                        return CustomPaint(
-                          painter: _HealthScorePainter(
-                            progress: value,
-                            color: Colors.white,
-                            trackColor: Colors.white.withOpacity(0.14),
-                            strokeWidth: 9,
-                          ),
-                          child: Center(
-                            child: TweenAnimationBuilder<double>(
-                              duration: const Duration(milliseconds: 900),
-                              curve: Curves.easeOutCubic,
-                              tween: Tween<double>(begin: 0, end: score),
-                              builder: (_, animatedScore, __) {
-                                return Text(
-                                  animatedScore.toStringAsFixed(0),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: scoreSize,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(width: 20),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Health Score',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-
-                        const SizedBox(height: 5),
-
-                        Text(
-                          '${score.toStringAsFixed(0)} / 100',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          _scoreDescription(score),
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12.5,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              SizedBox(
+                height: desktop
+                    ? 26
+                    : compact
+                    ? 18
+                    : 24,
               ),
 
-              const SizedBox(height: 22),
+              _buildScoreSection(
+                context,
+                score: score,
+                compact: compact,
+                dense: dense,
+                landscape: landscape,
+                tablet: tablet,
+                desktop: desktop,
+                spacing: spacing,
+              ),
 
-              // Recommendation section
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: Colors.white.withOpacity(0.10)),
+              SizedBox(
+                height: desktop
+                    ? 26
+                    : compact
+                    ? 18
+                    : 22,
+              ),
+
+              _buildRecommendation(
+                context,
+                compact: compact,
+                desktop: desktop,
+                spacing: spacing,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context, {
+    required bool compact,
+    required bool desktop,
+    required double spacing,
+  }) {
+    final iconBox = desktop
+        ? 52.0
+        : compact
+        ? 38.0
+        : 46.0;
+
+    final iconSize = desktop
+        ? 27.0
+        : compact
+        ? 20.0
+        : 25.0;
+
+    final titleSize = desktop
+        ? 21.0
+        : compact
+        ? 16.0
+        : 20.0;
+
+    final subtitleSize = desktop
+        ? 13.0
+        : compact
+        ? 10.5
+        : 12.5;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: iconBox,
+          height: iconBox,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.16),
+            borderRadius: BorderRadius.circular(compact ? 11 : 15),
+            border: Border.all(color: Colors.white.withOpacity(0.18)),
+          ),
+          child: Icon(icon, color: Colors.white, size: iconSize),
+        ),
+
+        SizedBox(width: spacing),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Financial Health',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.bold,
+                  height: 1.15,
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.lightbulb_outline_rounded,
-                        color: Colors.white,
-                        size: 19,
-                      ),
-                    ),
+              ),
 
-                    const SizedBox(width: 11),
+              const SizedBox(height: 3),
 
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Recommendation',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          Text(
-                            recommendation.isEmpty
-                                ? 'Keep monitoring your spending and financial goals.'
-                                : recommendation,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13.5,
-                              height: 1.45,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              Text(
+                'Your current financial wellbeing',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: subtitleSize,
+                  height: 1.25,
                 ),
               ),
             ],
           ),
         ),
+
+        SizedBox(width: compact ? 6 : 10),
+
+        Flexible(
+          flex: 0,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: compact ? 90 : 130),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 8 : 11,
+                vertical: compact ? 5 : 6,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.16),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.16)),
+              ),
+              child: Text(
+                healthStatus,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: compact ? 10 : 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScoreSection(
+    BuildContext context, {
+    required double score,
+    required bool compact,
+    required bool dense,
+    required bool landscape,
+    required bool tablet,
+    required bool desktop,
+    required double spacing,
+  }) {
+    final scoreCircleSize = desktop
+        ? 126.0
+        : tablet
+        ? 116.0
+        : compact
+        ? 88.0
+        : landscape
+        ? 96.0
+        : 108.0;
+
+    final scoreSize = desktop
+        ? 46.0
+        : compact
+        ? 30.0
+        : 42.0;
+
+    final strokeWidth = compact ? 7.0 : 9.0;
+
+    // On very narrow compact screens, vertical layout gives
+    // the score enough room and prevents text from being squeezed.
+    final stackScoreContent = compact && !landscape;
+
+    if (stackScoreContent) {
+      return Column(
+        children: [
+          Center(
+            child: _buildScoreCircle(
+              score: score,
+              size: scoreCircleSize,
+              scoreSize: scoreSize,
+              strokeWidth: strokeWidth,
+            ),
+          ),
+
+          SizedBox(height: spacing),
+
+          _buildScoreInformation(
+            context,
+            score: score,
+            compact: compact,
+            desktop: desktop,
+            centered: true,
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildScoreCircle(
+          score: score,
+          size: scoreCircleSize,
+          scoreSize: scoreSize,
+          strokeWidth: strokeWidth,
+        ),
+
+        SizedBox(
+          width: desktop
+              ? 24
+              : compact
+              ? 12
+              : 20,
+        ),
+
+        Expanded(
+          child: _buildScoreInformation(
+            context,
+            score: score,
+            compact: compact,
+            desktop: desktop,
+            centered: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScoreCircle({
+    required double score,
+    required double size,
+    required double scoreSize,
+    required double strokeWidth,
+  }) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 1000),
+        curve: Curves.easeOutCubic,
+        tween: Tween<double>(begin: 0, end: score / 100),
+        builder: (context, value, child) {
+          return CustomPaint(
+            painter: _HealthScorePainter(
+              progress: value,
+              color: Colors.white,
+              trackColor: Colors.white.withOpacity(0.14),
+              strokeWidth: strokeWidth,
+            ),
+            child: Center(
+              child: TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 900),
+                curve: Curves.easeOutCubic,
+                tween: Tween<double>(begin: 0, end: score),
+                builder: (_, animatedScore, __) {
+                  return FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      animatedScore.toStringAsFixed(0),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: scoreSize,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildScoreInformation(
+    BuildContext context, {
+    required double score,
+    required bool compact,
+    required bool desktop,
+    required bool centered,
+  }) {
+    final labelSize = desktop
+        ? 14.0
+        : compact
+        ? 11.0
+        : 13.0;
+
+    final valueSize = desktop
+        ? 21.0
+        : compact
+        ? 16.0
+        : 18.0;
+
+    final descriptionSize = desktop
+        ? 13.5
+        : compact
+        ? 11.0
+        : 12.5;
+
+    return Column(
+      crossAxisAlignment: centered
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Health Score',
+          textAlign: centered ? TextAlign.center : TextAlign.start,
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: labelSize,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+
+        const SizedBox(height: 5),
+
+        Text(
+          '${score.toStringAsFixed(0)} / 100',
+          textAlign: centered ? TextAlign.center : TextAlign.start,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: valueSize,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        Text(
+          _scoreDescription(score),
+          textAlign: centered ? TextAlign.center : TextAlign.start,
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: descriptionSize,
+            height: 1.35,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecommendation(
+    BuildContext context, {
+    required bool compact,
+    required bool desktop,
+    required double spacing,
+  }) {
+    final iconBox = compact ? 30.0 : 34.0;
+    final iconSize = compact ? 17.0 : 19.0;
+
+    final titleSize = desktop
+        ? 14.0
+        : compact
+        ? 11.0
+        : 13.0;
+
+    final recommendationSize = desktop
+        ? 14.0
+        : compact
+        ? 11.5
+        : 13.5;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(compact ? 11 : 15),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(compact ? 14 : 17),
+        border: Border.all(color: Colors.white.withOpacity(0.10)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: iconBox,
+            height: iconBox,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.lightbulb_outline_rounded,
+              color: Colors.white,
+              size: iconSize,
+            ),
+          ),
+
+          SizedBox(width: spacing),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Recommendation',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                Text(
+                  recommendation.isEmpty
+                      ? 'Keep monitoring your spending and financial goals.'
+                      : recommendation,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: recommendationSize,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

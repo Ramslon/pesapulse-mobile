@@ -88,40 +88,4 @@ class BudgetStatsGrid extends StatelessWidget {
       },
     );
   }
-
-  double _childAspectRatio(
-    BuildContext context, {
-    required bool compact,
-    required bool landscape,
-    required bool tablet,
-    required bool desktop,
-  }) {
-    if (desktop) {
-      return 2.2;
-    }
-
-    if (tablet) {
-      return landscape ? 2.4 : 1.8;
-    }
-
-    if (landscape) {
-      return 2.0;
-    }
-
-    if (compact) {
-      final width = ResponsiveHelper.width(context);
-
-      if (width < 360) {
-        return 1.20;
-      }
-
-      if (width < 430) {
-        return 1.30;
-      }
-
-      return 1.40;
-    }
-
-    return 1.45;
-  }
 }

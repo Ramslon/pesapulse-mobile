@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/connectivity_provider.dart';
 
 import '../widgets/analytics_loading_skeleton.dart';
@@ -33,7 +34,7 @@ import '../models/analytics_summary.dart';
 import '../models/analytics_period.dart';
 
 import '../utils/analytics_theme_helper.dart';
-import '../utils/analytics_layout_helper.dart';
+import '../utils/responsive_helper.dart';
 
 import '../repositories/analytics_repository.dart';
 
@@ -89,7 +90,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       isGuest = guest;
     });
 
-    // Guests do not need analytics data.
     if (guest) {
       setState(() {
         isLoading = false;
@@ -97,7 +97,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       return;
     }
 
-    // Registered users continue loading analytics.
     await _loadAnalytics();
   }
 
@@ -109,7 +108,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     if (!mounted) return;
 
-    // Device has gone offline.
     if (!isOnline) {
       if (!_isOffline) {
         setState(() {
@@ -120,14 +118,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       return;
     }
 
-    // Device is online again.
     if (_isOffline) {
       setState(() {
         _isOffline = false;
       });
     }
 
-    // Only refresh on a genuine offline -> online transition.
     if (wasOnline == false && isOnline) {
       if (isGuest == true) {
         return;
@@ -144,7 +140,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   @override
   void dispose() {
     _network.removeListener(_onConnectivityChanged);
-
     super.dispose();
   }
 
@@ -289,19 +284,71 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final sectionSpacing = AnalyticsLayoutHelper.sectionSpacing(context);
+    // ─────────────────────────────────────────
+    // Responsive configuration
+    // ─────────────────────────────────────────
 
-    final chartHeight = AnalyticsLayoutHelper.chartHeight(context);
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
 
-    final contentPadding = AnalyticsLayoutHelper.contentPadding(context);
+    final screenWidth = ResponsiveHelper.width(context);
 
-    final smallSpacing = AnalyticsLayoutHelper.smallSpacing(context);
-    // Session state / analytics are still being determined.
+    final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
+    final spacing = ResponsiveHelper.spacing(context);
+
+    final contentPadding = _contentPadding(
+      compact: compact,
+      landscape: landscape,
+      tablet: tablet,
+      desktop: desktop,
+      screenWidth: screenWidth,
+    );
+
+    final chartHeight = _chartHeight(
+      compact: compact,
+      landscape: landscape,
+      tablet: tablet,
+      desktop: desktop,
+    );
+
+    final maxContentWidth = _maxContentWidth(
+      screenWidth: screenWidth,
+      tablet: tablet,
+      desktop: desktop,
+    );
+
+    final maxChartWidth = _maxChartWidth(
+      screenWidth: screenWidth,
+      tablet: tablet,
+      desktop: desktop,
+    );
+
+    final internalSpacing = _internalSpacing(
+      compact: compact,
+      landscape: landscape,
+      tablet: tablet,
+      desktop: desktop,
+    );
+
+    final largeSectionSpacing = _largeSectionSpacing(
+      sectionSpacing: sectionSpacing,
+      compact: compact,
+    );
+
+    // ─────────────────────────────────────────
+    // Loading
+    // ─────────────────────────────────────────
+
     if (isGuest == null || (isLoading && summary == null)) {
       return const AnalyticsLoadingSkeleton();
     }
 
-    // Guest users don't need an AnalyticsSummary.
+    // ─────────────────────────────────────────
+    // Guest
+    // ─────────────────────────────────────────
+
     if (isGuest!) {
       return AppScaffold(
         showOfflineBanner: _isOffline,
@@ -312,7 +359,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     final analytics = summary;
 
-    // Registered user but no analytics data could be loaded.
+    // ─────────────────────────────────────────
+    // No analytics
+    // ─────────────────────────────────────────
+
     if (analytics == null) {
       return AppScaffold(
         showOfflineBanner: _isOffline,
@@ -327,6 +377,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             : buildEmptyState(context, EmptyStateType.analyticsNoData),
       );
     }
+
     final hasNoData =
         analytics.expenses.isEmpty &&
         analytics.totalGoals == 0 &&
@@ -337,6 +388,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         (analytics.expenses.isEmpty ||
             analytics.totalGoals == 0 ||
             reports.isEmpty);
+
+    // ─────────────────────────────────────────
+    // Main screen
+    // ─────────────────────────────────────────
+
     return AppScaffold(
       showOfflineBanner: _isOffline,
       appBar: const AdaptiveAppBar(title: null),
@@ -345,24 +401,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           : RefreshIndicator(
               onRefresh: _refreshAnalytics,
               child: SingleChildScrollView(
-                key: const PageStorageKey("analytics"),
-
+                key: const PageStorageKey('analytics'),
                 padding: EdgeInsets.all(contentPadding),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: AnalyticsLayoutHelper.maxContentWidth(context),
-                    ),
+                    constraints: BoxConstraints(maxWidth: maxContentWidth),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-
                       children: [
+                        // ─────────────────────────────
+                        // Refresh progress
+                        // ─────────────────────────────
                         if (isRefreshingAnalytics)
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 8),
-                            child: LinearProgressIndicator(minHeight: 2),
+                          Padding(
+                            padding: EdgeInsets.only(bottom: spacing),
+                            child: const LinearProgressIndicator(minHeight: 2),
                           ),
 
+                        // ─────────────────────────────
+                        // Refresh error
+                        // ─────────────────────────────
                         AnalyticsRefreshErrorBanner(
                           error: _analyticsError,
                           isOffline: _isOffline,
@@ -370,19 +428,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           onRetry: _retryAnalytics,
                         ),
 
-                        SizedBox(height: smallSpacing),
+                        SizedBox(height: spacing),
 
+                        // ─────────────────────────────
+                        // Partial data
+                        // ─────────────────────────────
                         if (hasPartialData)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
+                            padding: EdgeInsets.only(bottom: spacing),
                             child: buildEmptyState(
                               context,
                               EmptyStateType.analyticsInProgress,
                             ),
                           ),
 
-                        SizedBox(height: smallSpacing),
+                        SizedBox(height: spacing),
 
+                        // ─────────────────────────────
+                        // Period selector
+                        // ─────────────────────────────
                         AnalyticsPeriodSelector(
                           selectedPeriod: selectedPeriod,
                           isDisabled:
@@ -401,13 +465,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           },
                         ),
 
-                        SizedBox(height: smallSpacing),
+                        SizedBox(height: spacing),
 
+                        // ─────────────────────────────
+                        // Overview
+                        // ─────────────────────────────
                         AnalyticsOverviewCard(
                           totalSpending: analytics.totalSpending,
                         ),
+
                         SizedBox(height: sectionSpacing),
 
+                        // ─────────────────────────────
+                        // Statistics
+                        // ─────────────────────────────
                         AnalyticsStatsGrid(
                           totalGoals: analytics.totalGoals,
                           completedGoals: analytics.completedGoals,
@@ -416,6 +487,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         ),
 
                         SizedBox(height: sectionSpacing),
+
+                        // ─────────────────────────────
+                        // Financial health
+                        // ─────────────────────────────
                         FinancialHealthCard(
                           healthScore: analytics.healthScore,
                           healthStatus: analytics.healthStatus,
@@ -428,10 +503,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             analytics.healthStatus,
                           ),
                         ),
-                        const SizedBox(
-                          height: AnalyticsLayoutHelper.cardSpacing,
-                        ),
 
+                        SizedBox(height: internalSpacing),
+
+                        // ─────────────────────────────
+                        // Recommendation
+                        // ─────────────────────────────
                         FadeSlideAnimation(
                           delay: 100,
                           child: RecommendationCard(
@@ -442,21 +519,23 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             budgetUsage: analytics.budgetUsage,
                           ),
                         ),
+
                         SizedBox(height: sectionSpacing),
 
+                        // ─────────────────────────────
+                        // Category breakdown
+                        // ─────────────────────────────
                         const AnalyticsSectionHeader(
                           icon: Icons.pie_chart_outline_rounded,
-                          title: "Category Breakdown",
+                          title: 'Category Breakdown',
                         ),
 
-                        SizedBox(height: smallSpacing),
+                        SizedBox(height: spacing),
 
                         Center(
                           child: ConstrainedBox(
                             constraints: BoxConstraints(
-                              maxWidth: AnalyticsLayoutHelper.maxChartWidth(
-                                context,
-                              ),
+                              maxWidth: maxChartWidth,
                             ),
                             child: analytics.categoryTotals.isEmpty
                                 ? buildEmptyState(
@@ -470,20 +549,23 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                                   ),
                           ),
                         ),
-                        SizedBox(height: sectionSpacing * 1.2),
 
+                        SizedBox(height: largeSectionSpacing),
+
+                        // ─────────────────────────────
+                        // Goal status
+                        // ─────────────────────────────
                         const AnalyticsSectionHeader(
                           icon: Icons.flag_outlined,
-                          title: "Goal Status",
+                          title: 'Goal Status',
                         ),
-                        SizedBox(height: smallSpacing),
+
+                        SizedBox(height: spacing),
 
                         Center(
                           child: ConstrainedBox(
                             constraints: BoxConstraints(
-                              maxWidth: AnalyticsLayoutHelper.maxChartWidth(
-                                context,
-                              ),
+                              maxWidth: maxChartWidth,
                             ),
                             child: GoalStatusChart(
                               completedGoals: analytics.completedGoals,
@@ -494,16 +576,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           ),
                         ),
 
-                        SizedBox(height: sectionSpacing * 1.2),
+                        SizedBox(height: largeSectionSpacing),
 
+                        // ─────────────────────────────
+                        // Monthly spending
+                        // ─────────────────────────────
                         const AnalyticsSectionHeader(
                           icon: Icons.show_chart_rounded,
-                          title: "Monthly Spending Trend",
+                          title: 'Monthly Spending Trend',
                         ),
 
-                        const SizedBox(
-                          height: AnalyticsLayoutHelper.cardSpacing,
-                        ),
+                        SizedBox(height: internalSpacing),
 
                         MonthlySpendingChart(
                           monthlyTotals: analytics.monthlyTotals,
@@ -511,31 +594,37 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           chartHeight: chartHeight,
                         ),
 
-                        SizedBox(height: sectionSpacing * 1.2),
+                        SizedBox(height: largeSectionSpacing),
 
+                        // ─────────────────────────────
+                        // Smart insights
+                        // ─────────────────────────────
                         const AnalyticsSectionHeader(
                           icon: Icons.lightbulb_outline_rounded,
-                          title: "Smart Insights",
+                          title: 'Smart Insights',
                         ),
 
-                        SizedBox(height: smallSpacing),
+                        SizedBox(height: spacing),
 
                         SmartInsightsCard(insights: analytics.insights),
-                        SizedBox(height: sectionSpacing * 1.2),
 
+                        SizedBox(height: largeSectionSpacing),
+
+                        // ─────────────────────────────
+                        // Reports
+                        // ─────────────────────────────
                         const AnalyticsSectionHeader(
                           icon: Icons.description_outlined,
-                          title: "Reports Center",
+                          title: 'Reports Center',
                         ),
 
-                        SizedBox(height: smallSpacing),
+                        SizedBox(height: spacing),
 
                         ExportReportsSection(
                           isGuest: isGuest!,
                           onGuestTap: () async {
                             await GuestDialogService.requireAccount(context);
                           },
-
                           onExportPdf: () {
                             return AnalyticsExportService.exportPdf(
                               context: context,
@@ -543,7 +632,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                               onReportsUpdated: loadReports,
                             );
                           },
-
                           onExportCsv: () {
                             return AnalyticsExportService.exportCsv(
                               context: context,
@@ -552,38 +640,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             );
                           },
                         ),
-                        SizedBox(height: smallSpacing),
 
-                        const SizedBox(height: 10),
+                        SizedBox(height: spacing),
 
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.folder_outlined,
-                              size: 18,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              reports.length == 1
-                                  ? '1 report generated'
-                                  : '${reports.length} reports generated',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: AnalyticsLayoutHelper.internalSpacing),
+                        // ─────────────────────────────
+                        // Reports count
+                        // ─────────────────────────────
+                        _buildReportsCount(context, spacing: spacing),
 
+                        SizedBox(height: internalSpacing),
+
+                        // ─────────────────────────────
+                        // Reports center
+                        // ─────────────────────────────
                         ReportsCenterCard(
                           reports: reports,
-
                           onShare: shareExistingReport,
-
                           onPreview: previewReport,
-
                           onDelete: deleteReport,
-
                           onClearHistory: () async {
                             final result =
                                 await ReportManagerService.clearHistory();
@@ -602,5 +676,172 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               ),
             ),
     );
+  }
+
+  // ───────────────────────────────────────────
+  // Reports count
+  // ───────────────────────────────────────────
+
+  Widget _buildReportsCount(BuildContext context, {required double spacing}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.folder_outlined, size: 18, color: colorScheme.primary),
+        SizedBox(width: spacing),
+        Flexible(
+          child: Text(
+            reports.length == 1
+                ? '1 report generated'
+                : '${reports.length} reports generated',
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ───────────────────────────────────────────
+  // Content padding
+  // ───────────────────────────────────────────
+
+  double _contentPadding({
+    required bool compact,
+    required bool landscape,
+    required bool tablet,
+    required bool desktop,
+    required double screenWidth,
+  }) {
+    if (desktop) {
+      return 28;
+    }
+
+    if (tablet) {
+      return landscape ? 20 : 24;
+    }
+
+    if (landscape) {
+      return 14;
+    }
+
+    if (compact) {
+      return screenWidth < 360 ? 10 : 12;
+    }
+
+    return 16;
+  }
+
+  // ───────────────────────────────────────────
+  // Chart height
+  // ───────────────────────────────────────────
+
+  double _chartHeight({
+    required bool compact,
+    required bool landscape,
+    required bool tablet,
+    required bool desktop,
+  }) {
+    if (desktop) {
+      return 300;
+    }
+
+    if (tablet) {
+      return landscape ? 220 : 270;
+    }
+
+    if (landscape) {
+      return 170;
+    }
+
+    if (compact) {
+      return 220;
+    }
+
+    return 250;
+  }
+
+  // ───────────────────────────────────────────
+  // Maximum content width
+  // ───────────────────────────────────────────
+
+  double _maxContentWidth({
+    required double screenWidth,
+    required bool tablet,
+    required bool desktop,
+  }) {
+    if (desktop) {
+      return 1200;
+    }
+
+    if (tablet) {
+      return 1050;
+    }
+
+    return screenWidth;
+  }
+
+  // ───────────────────────────────────────────
+  // Maximum chart width
+  // ───────────────────────────────────────────
+
+  double _maxChartWidth({
+    required double screenWidth,
+    required bool tablet,
+    required bool desktop,
+  }) {
+    if (desktop) {
+      return 850;
+    }
+
+    if (tablet) {
+      return 760;
+    }
+
+    return screenWidth;
+  }
+
+  // ───────────────────────────────────────────
+  // Internal spacing
+  // ───────────────────────────────────────────
+
+  double _internalSpacing({
+    required bool compact,
+    required bool landscape,
+    required bool tablet,
+    required bool desktop,
+  }) {
+    if (desktop) {
+      return 18;
+    }
+
+    if (tablet) {
+      return 16;
+    }
+
+    if (landscape) {
+      return 10;
+    }
+
+    if (compact) {
+      return 12;
+    }
+
+    return 14;
+  }
+
+  // ───────────────────────────────────────────
+  // Large section spacing
+  // ───────────────────────────────────────────
+
+  double _largeSectionSpacing({
+    required double sectionSpacing,
+    required bool compact,
+  }) {
+    return compact ? sectionSpacing : sectionSpacing * 1.15;
   }
 }

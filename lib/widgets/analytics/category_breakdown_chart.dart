@@ -1,6 +1,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+
 import '../fade_slide_animation.dart';
+import '../../utils/responsive_helper.dart';
 import '/utils/analytics_layout_helper.dart';
 
 class CategoryBreakdownChart extends StatefulWidget {
@@ -39,28 +41,28 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
     return _validEntries.fold<double>(0, (sum, entry) => sum + entry.value);
   }
 
-  List<PieChartSectionData> _getSections(BuildContext context) {
+  List<PieChartSectionData> _getSections(
+    BuildContext context, {
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+    required bool landscape,
+  }) {
     final entries = _validEntries;
 
     if (entries.isEmpty) {
       return [];
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    final baseRadius = screenWidth >= 1200
+    final baseRadius = desktop
         ? 92.0
-        : screenWidth >= 900
-        ? 84.0
-        : screenWidth >= 600
-        ? 76.0
+        : tablet
+        ? 80.0
+        : compact
+        ? 54.0
+        : landscape
+        ? 58.0
         : 66.0;
-
-    final titleFontSize = screenWidth >= 900
-        ? 11.5
-        : screenWidth >= 600
-        ? 11.0
-        : 10.0;
 
     return entries.asMap().entries.map((item) {
       final index = item.key;
@@ -72,22 +74,16 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
         color: _colors[index % _colors.length],
         value: entry.value,
 
-        // Keep the chart clean. Details appear in the center/selected card.
+        // Keep the chart clean.
         title: '',
 
-        radius: isTouched ? baseRadius + 8 : baseRadius,
-
-        titleStyle: TextStyle(
-          fontSize: titleFontSize,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
+        radius: isTouched ? baseRadius + (compact ? 5 : 8) : baseRadius,
 
         badgeWidget: isTouched
             ? _CategoryBadge(name: entry.key, amount: entry.value)
             : null,
 
-        badgePositionPercentageOffset: 1.25,
+        badgePositionPercentageOffset: compact ? 1.15 : 1.25,
       );
     }).toList();
   }
@@ -119,21 +115,70 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
 
     final selectedCategory = _getSelectedCategory();
 
-    final cardPadding = screenWidth >= 900
-        ? 18.0
-        : screenWidth >= 600
-        ? 16.0
-        : 14.0;
-
     final chartWidth = AnalyticsLayoutHelper.maxChartWidth(context);
 
-    final centerSpaceRadius = (widget.chartHeight * 0.15).clamp(34.0, 58.0);
+    final cardPadding = desktop
+        ? 20.0
+        : tablet
+        ? 18.0
+        : compact
+        ? 10.0
+        : landscape
+        ? 12.0
+        : 14.0;
 
-    final sections = _getSections(context);
+    final centerSpaceRadius = desktop
+        ? 58.0
+        : tablet
+        ? 52.0
+        : compact
+        ? 34.0
+        : landscape
+        ? 38.0
+        : 46.0;
+
+    final centerIconSize = desktop
+        ? 28.0
+        : tablet
+        ? 26.0
+        : compact
+        ? 18.0
+        : landscape
+        ? 20.0
+        : 24.0;
+
+    final centerTitleSize = desktop
+        ? 13.0
+        : tablet
+        ? 12.0
+        : compact
+        ? 9.0
+        : 11.0;
+
+    final centerAmountSize = desktop
+        ? 20.0
+        : tablet
+        ? 19.0
+        : compact
+        ? 14.0
+        : landscape
+        ? 15.0
+        : 18.0;
+
+    final sections = _getSections(
+      context,
+      compact: compact,
+      tablet: tablet,
+      desktop: desktop,
+      landscape: landscape,
+    );
 
     return FadeSlideAnimation(
       delay: 200,
@@ -143,10 +188,11 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: chartWidth),
               child: Card(
-                elevation: 2,
+                elevation: compact ? 1 : 2,
                 shadowColor: Colors.black.withOpacity(.08),
+                margin: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(compact ? 15 : 20),
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(cardPadding),
@@ -154,10 +200,13 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
                     height: widget.chartHeight,
                     width: double.infinity,
                     child: sections.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Text(
                               'No category spending data',
-                              style: TextStyle(fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontSize: compact ? 11 : 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           )
                         : Stack(
@@ -167,9 +216,8 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
                                 PieChartData(
                                   sections: sections,
                                   centerSpaceRadius: centerSpaceRadius,
-                                  sectionsSpace: 4,
+                                  sectionsSpace: compact ? 2 : 4,
                                   startDegreeOffset: -90,
-
                                   pieTouchData: PieTouchData(
                                     touchCallback:
                                         (
@@ -207,37 +255,43 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
                                 swapAnimationCurve: Curves.easeOutCubic,
                               ),
 
+                              // ─────────────────────────────────
+                              // Center information
+                              // ─────────────────────────────────
                               IgnorePointer(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
                                       Icons.pie_chart_rounded,
-                                      size: 24,
+                                      size: centerIconSize,
                                       color: Theme.of(
                                         context,
                                       ).colorScheme.primary,
                                     ),
 
-                                    const SizedBox(height: 6),
+                                    SizedBox(height: compact ? 3 : 6),
 
                                     Text(
                                       'Total Spending',
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: centerTitleSize,
                                         color: Colors.grey.shade300,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
 
-                                    const SizedBox(height: 3),
+                                    SizedBox(height: compact ? 2 : 3),
 
-                                    Text(
-                                      'KES ${_totalSpending.toStringAsFixed(0)}',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        'KES ${_totalSpending.toStringAsFixed(0)}',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: centerAmountSize,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -252,7 +306,7 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
           ),
 
           if (selectedCategory != null) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: ResponsiveHelper.spacing(context)),
 
             _SelectedCategoryCard(
               name: selectedCategory['name'] as String,
@@ -267,6 +321,10 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
   }
 }
 
+// ─────────────────────────────────────────────────────
+// Category badge
+// ─────────────────────────────────────────────────────
+
 class _CategoryBadge extends StatelessWidget {
   final String name;
   final double amount;
@@ -275,15 +333,24 @@ class _CategoryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final maxWidth = compact ? 90.0 : 130.0;
+    final horizontalPadding = compact ? 6.0 : 8.0;
+    final verticalPadding = compact ? 4.0 : 6.0;
+
     return Material(
-      elevation: 3,
-      borderRadius: BorderRadius.circular(10),
+      elevation: compact ? 2 : 3,
+      borderRadius: BorderRadius.circular(compact ? 7 : 10),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 130),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(compact ? 7 : 10),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -292,12 +359,23 @@ class _CategoryBadge extends StatelessWidget {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: compact ? 9 : 11,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              'KES ${amount.toStringAsFixed(0)}',
-              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+
+            SizedBox(height: compact ? 1 : 2),
+
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'KES ${amount.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontSize: compact ? 8 : 10,
+                  color: Colors.grey.shade600,
+                ),
+              ),
             ),
           ],
         ),
@@ -305,6 +383,10 @@ class _CategoryBadge extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────
+// Selected category card
+// ─────────────────────────────────────────────────────
 
 class _SelectedCategoryCard extends StatelessWidget {
   final String name;
@@ -321,61 +403,130 @@ class _SelectedCategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+    final tablet = ResponsiveHelper.isTablet(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
+
+    final padding = desktop
+        ? 18.0
+        : tablet
+        ? 16.0
+        : compact
+        ? 9.0
+        : landscape
+        ? 11.0
+        : 14.0;
+
+    final indicatorWidth = compact ? 8.0 : 12.0;
+
+    final indicatorHeight = compact ? 34.0 : 42.0;
+
+    final titleSize = desktop
+        ? 16.0
+        : tablet
+        ? 15.0
+        : compact
+        ? 11.0
+        : landscape
+        ? 12.0
+        : 16.0;
+
+    final amountSize = desktop
+        ? 13.0
+        : tablet
+        ? 12.5
+        : compact
+        ? 9.0
+        : 13.0;
+
+    final percentageSize = desktop
+        ? 14.0
+        : tablet
+        ? 13.0
+        : compact
+        ? 10.0
+        : landscape
+        ? 11.0
+        : 14.0;
+
     return Card(
-      elevation: 1,
+      elevation: compact ? 1 : 1,
       shadowColor: Colors.black.withOpacity(.06),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(compact ? 12 : 16),
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: padding, vertical: padding),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 12,
-              height: 42,
+              width: indicatorWidth,
+              height: indicatorHeight,
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
 
-            const SizedBox(width: 12),
+            SizedBox(width: compact ? 8 : 12),
 
-            Flexible(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: titleSize,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
 
-                  const SizedBox(height: 4),
+                  SizedBox(height: compact ? 2 : 4),
 
                   Text(
                     'KES ${amount.toStringAsFixed(0)} spent',
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: amountSize,
+                      color: colorScheme.onSurface.withOpacity(.60),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: color.withOpacity(.10),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${percentage.toStringAsFixed(1)}%',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+            SizedBox(width: compact ? 6 : 10),
+
+            // Percentage badge
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 7 : 12,
+                  vertical: compact ? 5 : 7,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${percentage.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: percentageSize,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
