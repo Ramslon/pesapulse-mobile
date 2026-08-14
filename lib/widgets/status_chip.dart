@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/responsive_helper.dart';
+
 class StatusChip extends StatelessWidget {
   final String text;
   final Color color;
@@ -14,12 +16,15 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.of(context).orientation == Orientation.landscape;
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+
+    final isCompact = compact || landscape;
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 10 : 14,
-        vertical: compact ? 5 : 8,
+        horizontal: isCompact ? 10 : 14,
+        vertical: isCompact ? 5 : 8,
       ),
       decoration: BoxDecoration(
         color: color.withOpacity(.12),
@@ -29,9 +34,9 @@ class StatusChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: compact ? 14 : 16, color: color),
+          Icon(icon, size: isCompact ? 14 : 16, color: color),
 
-          SizedBox(width: compact ? 4 : 6),
+          SizedBox(width: isCompact ? 4 : 6),
 
           Flexible(
             child: Text(
@@ -41,7 +46,7 @@ class StatusChip extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.w700,
-                fontSize: compact ? 11 : 13,
+                fontSize: isCompact ? 11 : 13,
               ),
             ),
           ),

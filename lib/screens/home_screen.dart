@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import 'dashboard_screen.dart';
 import 'expense_list_content.dart';
-
-import '../repositories/settings_repository.dart';
-import '../repositories/financial_insights_repository.dart';
-
-import '../providers/theme_provider.dart';
-import 'package:provider/provider.dart';
-
 import 'settings_screen.dart';
 import 'analytics_screen.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
 
-import 'package:flutter/services.dart';
+import '../repositories/settings_repository.dart';
+import '../repositories/financial_insights_repository.dart';
+
+import '../providers/theme_provider.dart';
 import '../services/session_service.dart';
+
+import '../../utils/responsive_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,15 +27,45 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
 
-  final isGuest = false;
-
   final FinancialInsightsRepository _financialInsightsRepository =
       FinancialInsightsRepository();
 
-  final GlobalKey<ExpenseListContentState> expenseKey = GlobalKey();
-  final GlobalKey<BudgetScreenState> budgetKey = GlobalKey();
+  final GlobalKey<ExpenseListContentState> expenseKey =
+      GlobalKey<ExpenseListContentState>();
 
-  late List<Widget> screens;
+  final GlobalKey<BudgetScreenState> budgetKey = GlobalKey<BudgetScreenState>();
+
+  late final List<Widget> screens;
+
+  String budgetStatus = 'healthy';
+
+  final List<String> titles = const [
+    'Dashboard',
+    'Expenses',
+    'Budget',
+    'Analytics',
+    'Goals',
+    'Settings',
+  ];
+
+  final List<IconData> icons = const [
+    Icons.dashboard_rounded,
+    Icons.receipt_long_rounded,
+    Icons.account_balance_wallet_rounded,
+    Icons.bar_chart_rounded,
+    Icons.flag_rounded,
+    Icons.settings_rounded,
+  ];
+
+  /// Each section gets its own identity color.
+  final List<Color> navigationColors = const [
+    Colors.indigo,
+    Colors.green,
+    Colors.blue,
+    Colors.teal,
+    Colors.amber,
+    Colors.deepPurple,
+  ];
 
   @override
   void initState() {
@@ -49,52 +79,24 @@ class _HomeScreenState extends State<HomeScreen> {
       const GoalsScreen(),
       const SettingsScreen(),
     ];
-    /*
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      //  Only show message if user is guest
-      if (SessionService.isGuest) {
-        AuthMessageHelper.showSuccess(context, "You’re now in Guest Mode");
-      }
-    });   */
 
     _syncPreferences();
     loadBudgetStatus();
   }
 
-  final List<String> titles = const [
-    'Dashboard',
-    'Expenses',
-    'Budget',
-    'Analytics',
-    'Goals',
-    'Settings',
-  ];
+  Color get currentNavigationColor {
+    return navigationColors[currentIndex];
+  }
 
-  final List<IconData> icons = const [
-    Icons.dashboard,
-
-    Icons.receipt_long,
-
-    Icons.account_balance_wallet,
-
-    Icons.bar_chart,
-
-    Icons.flag,
-
-    Icons.settings,
-  ];
-
-  String budgetStatus = "healthy";
-
-  Color? getBudgetBadgeColor() {
+  Color getBudgetBadgeColor() {
     switch (budgetStatus) {
-      case "warning":
+      case 'warning':
         return Colors.orange;
 
-      case "overspent":
+      case 'overspent':
         return Colors.deepOrange;
 
-      case "critical":
+      case 'critical':
         return Colors.red;
 
       default:
@@ -102,46 +104,219 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ─────────────────────────────────────────────
+  // Navigation icon
+  // ─────────────────────────────────────────────
+
   Widget buildNavIcon({
+    required BuildContext context,
     required IconData icon,
-    Color? badgeColor,
+    required Color color,
     bool selected = false,
+    Color? badgeColor,
   }) {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
+    final desktop = ResponsiveHelper.isDesktop(context);
+
+    final containerSize = desktop
+        ? 44.0
+        : landscape
+        ? 34.0
+        : compact
+        ? 36.0
+        : 40.0;
+
+    final iconSize = desktop
+        ? 25.0
+        : landscape
+        ? 20.0
+        : compact
+        ? 21.0
+        : 23.0;
+
     return Stack(
       clipBehavior: Clip.none,
+      alignment: Alignment.center,
       children: [
-        Container(
-          width: 38,
-          height: 38,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          width: containerSize,
+          height: containerSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: selected
-                ? Colors.green.withOpacity(.12)
-                : Colors.transparent,
+            color: selected ? color.withOpacity(.13) : Colors.transparent,
           ),
           child: Icon(
             icon,
-            color: selected ? Colors.green : Colors.grey,
-            size: selected ? 26 : 24,
+            color: selected ? color : color.withOpacity(.58),
+            size: selected ? iconSize + 1 : iconSize,
           ),
         ),
 
         if (badgeColor != null)
           Positioned(
-            right: 2,
-            top: 2,
+            right: 1,
+            top: 1,
             child: Container(
-              width: 9,
-              height: 9,
+              width: compact ? 8 : 9,
+              height: compact ? 8 : 9,
               decoration: BoxDecoration(
                 color: badgeColor,
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.surface,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
       ],
     );
   }
+
+  // ─────────────────────────────────────────────
+  // Navigation destinations
+  // ─────────────────────────────────────────────
+
+  List<NavigationDestination> _navigationDestinations(BuildContext context) {
+    final budgetColor = navigationColors[2];
+
+    return [
+      NavigationDestination(
+        icon: Tooltip(
+          message: 'Dashboard',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.dashboard_outlined,
+            color: navigationColors[0],
+          ),
+        ),
+        selectedIcon: Tooltip(
+          message: 'Dashboard',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.dashboard_rounded,
+            color: navigationColors[0],
+            selected: true,
+          ),
+        ),
+        label: 'Dashboard',
+      ),
+
+      NavigationDestination(
+        icon: Tooltip(
+          message: 'Expenses',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.receipt_long_outlined,
+            color: navigationColors[1],
+          ),
+        ),
+        selectedIcon: Tooltip(
+          message: 'Expenses',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.receipt_long_rounded,
+            color: navigationColors[1],
+            selected: true,
+          ),
+        ),
+        label: 'Expenses',
+      ),
+
+      NavigationDestination(
+        icon: Tooltip(
+          message: 'Budget',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.account_balance_wallet_outlined,
+            color: budgetColor,
+            badgeColor: getBudgetBadgeColor(),
+          ),
+        ),
+        selectedIcon: Tooltip(
+          message: 'Budget',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.account_balance_wallet_rounded,
+            color: budgetColor,
+            badgeColor: getBudgetBadgeColor(),
+            selected: true,
+          ),
+        ),
+        label: 'Budget',
+      ),
+
+      NavigationDestination(
+        icon: Tooltip(
+          message: 'Analytics',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.bar_chart_outlined,
+            color: navigationColors[3],
+          ),
+        ),
+        selectedIcon: Tooltip(
+          message: 'Analytics',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.bar_chart_rounded,
+            color: navigationColors[3],
+            selected: true,
+          ),
+        ),
+        label: 'Analytics',
+      ),
+
+      NavigationDestination(
+        icon: Tooltip(
+          message: 'Goals',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.flag_outlined,
+            color: navigationColors[4],
+          ),
+        ),
+        selectedIcon: Tooltip(
+          message: 'Goals',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.flag_rounded,
+            color: navigationColors[4],
+            selected: true,
+          ),
+        ),
+        label: 'Goals',
+      ),
+
+      NavigationDestination(
+        icon: Tooltip(
+          message: 'Settings',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.settings_outlined,
+            color: navigationColors[5],
+          ),
+        ),
+        selectedIcon: Tooltip(
+          message: 'Settings',
+          child: buildNavIcon(
+            context: context,
+            icon: Icons.settings_rounded,
+            color: navigationColors[5],
+            selected: true,
+          ),
+        ),
+        label: 'Settings',
+      ),
+    ];
+  }
+
+  // ─────────────────────────────────────────────
+  // Preferences
+  // ─────────────────────────────────────────────
 
   Future<void> _syncPreferences() async {
     if (await SessionService.isGuest()) {
@@ -151,8 +326,10 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await SettingsRepository().syncPreferencesFromBackend();
     } catch (e) {
-      debugPrint("Settings sync failed: $e");
+      debugPrint('Settings sync failed: $e');
     }
+
+    if (!mounted) return;
 
     try {
       await Provider.of<ThemeProvider>(
@@ -160,9 +337,13 @@ class _HomeScreenState extends State<HomeScreen> {
         listen: false,
       ).syncWithBackend();
     } catch (e) {
-      debugPrint("Theme sync failed: $e");
+      debugPrint('Theme sync failed: $e');
     }
   }
+
+  // ─────────────────────────────────────────────
+  // Budget status
+  // ─────────────────────────────────────────────
 
   Future<void> loadBudgetStatus() async {
     try {
@@ -171,178 +352,243 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
 
       setState(() {
-        budgetStatus = insights["budget_status"] ?? "healthy";
+        budgetStatus = insights['budget_status'] ?? 'healthy';
       });
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
-        budgetStatus = "healthy";
+        budgetStatus = 'healthy';
       });
     }
   }
 
-  List<NavigationDestination> get _navigationDestinations => [
-    // Dashboard
-    NavigationDestination(
-      icon: Tooltip(
-        message: "Dashboard",
-        child: buildNavIcon(icon: Icons.dashboard_outlined),
-      ),
-      selectedIcon: Tooltip(
-        message: "Dashboard",
-        child: buildNavIcon(icon: Icons.dashboard, selected: true),
-      ),
-      label: "Dashboard",
-    ),
+  // ─────────────────────────────────────────────
+  // Navigation
+  // ─────────────────────────────────────────────
 
-    // Expenses
-    NavigationDestination(
-      icon: Tooltip(
-        message: "Expenses",
-        child: buildNavIcon(icon: Icons.receipt_long_outlined),
-      ),
-      selectedIcon: Tooltip(
-        message: "Expenses",
-        child: buildNavIcon(icon: Icons.receipt_long, selected: true),
-      ),
-      label: "Expenses",
-    ),
+  Future<void> _onNavigationChanged(int index) async {
+    if (index == currentIndex) {
+      return;
+    }
 
-    // Budget
-    NavigationDestination(
-      icon: Tooltip(
-        message: "Budget",
-        child: buildNavIcon(
-          icon: Icons.account_balance_wallet_outlined,
-          badgeColor: getBudgetBadgeColor(),
-        ),
-      ),
-      selectedIcon: Tooltip(
-        message: "Budget",
-        child: buildNavIcon(
-          icon: Icons.account_balance_wallet,
-          badgeColor: getBudgetBadgeColor(),
-          selected: true,
-        ),
-      ),
-      label: "Budget",
-    ),
-    NavigationDestination(
-      icon: Tooltip(
-        message: "Analytics",
+    HapticFeedback.lightImpact();
 
-        child: buildNavIcon(icon: Icons.bar_chart_outlined),
-      ),
+    setState(() {
+      currentIndex = index;
+    });
 
-      selectedIcon: Tooltip(
-        message: "Analytics",
-        child: buildNavIcon(icon: Icons.bar_chart, selected: true),
-      ),
-      label: "Analytics",
-    ),
+    if (index == 2) {
+      budgetKey.currentState?.refreshBudget();
+    }
 
-    NavigationDestination(
-      icon: Tooltip(
-        message: "Goals",
-        child: buildNavIcon(icon: Icons.flag_outlined),
-      ),
-      selectedIcon: Tooltip(
-        message: "Goals",
-        child: buildNavIcon(icon: Icons.flag, selected: true),
-      ),
-      label: "Goals",
-    ),
+    // Optional:
+    //
+    // if (index == 1) {
+    //   expenseKey.currentState?.refreshExpenses();
+    // }
+  }
 
-    NavigationDestination(
-      icon: Tooltip(
-        message: "Settings",
-        child: buildNavIcon(icon: Icons.settings_outlined),
-      ),
-      selectedIcon: Tooltip(
-        message: "Settings",
-        child: buildNavIcon(icon: Icons.settings, selected: true),
-      ),
-      label: "Settings",
-    ),
-  ];
+  // ─────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final landscape = ResponsiveHelper.isLandscape(context);
+
+    final tablet = ResponsiveHelper.isTablet(context);
+
+    final desktop = ResponsiveHelper.isDesktop(context);
+
+    final navHeight = landscape
+        ? 62.0
+        : compact
+        ? 68.0
+        : desktop
+        ? 78.0
+        : tablet
+        ? 74.0
+        : 72.0;
+
+    final navHorizontalPadding = landscape
+        ? 6.0
+        : compact
+        ? 7.0
+        : desktop
+        ? 18.0
+        : 8.0;
+
+    final navBottomPadding = landscape
+        ? 5.0
+        : compact
+        ? 7.0
+        : 10.0;
+
+    final navRadius = landscape
+        ? 22.0
+        : compact
+        ? 24.0
+        : 28.0;
+
+    final appBarTitleSize = landscape
+        ? 17.0
+        : compact
+        ? 18.0
+        : desktop
+        ? 22.0
+        : 20.0;
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
+
+      // ─────────────────────────────────────────
+      // App bar
+      // ─────────────────────────────────────────
       appBar: AppBar(
         centerTitle: true,
         automaticallyImplyLeading: false,
+
         title: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+
           transitionBuilder: (child, animation) {
-            return FadeTransition(opacity: animation, child: child);
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, .12),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
           },
+
           child: Row(
             key: ValueKey(currentIndex),
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icons[currentIndex]),
-              const SizedBox(width: 10),
+              Container(
+                width: landscape
+                    ? 32
+                    : compact
+                    ? 34
+                    : 38,
+                height: landscape
+                    ? 32
+                    : compact
+                    ? 34
+                    : 38,
+                decoration: BoxDecoration(
+                  color: currentNavigationColor.withOpacity(.11),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icons[currentIndex],
+                  color: currentNavigationColor,
+                  size: landscape
+                      ? 18
+                      : compact
+                      ? 19
+                      : 21,
+                ),
+              ),
+
+              SizedBox(
+                width: landscape
+                    ? 7
+                    : compact
+                    ? 8
+                    : 10,
+              ),
+
               Text(
                 titles[currentIndex],
-                style: TextStyle(
-                  fontSize: isLandscape ? 18 : 20,
-                  fontWeight: FontWeight.w600,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: appBarTitleSize,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ],
           ),
         ),
-
-        actions: const [],
       ),
 
+      // ─────────────────────────────────────────
+      // Screen content
+      // ─────────────────────────────────────────
       body: IndexedStack(index: currentIndex, children: screens),
 
+      // ─────────────────────────────────────────
+      // Bottom navigation
+      // ─────────────────────────────────────────
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
           padding: EdgeInsets.fromLTRB(
-            isLandscape ? 6 : 8,
+            navHorizontalPadding,
             0,
-            isLandscape ? 6 : 8,
-            isLandscape ? 6 : 10,
+            navHorizontalPadding,
+            navBottomPadding,
           ),
           child: Material(
-            elevation: 6,
-            borderRadius: BorderRadius.circular(28),
+            elevation: 8,
+            shadowColor: Colors.black.withOpacity(.18),
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(navRadius),
+
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(28),
-              child: NavigationBar(
-                animationDuration: const Duration(milliseconds: 300),
-                selectedIndex: currentIndex,
+              borderRadius: BorderRadius.circular(navRadius),
 
-                onDestinationSelected: (index) async {
-                  if (index == currentIndex) return;
-                  HapticFeedback.lightImpact();
+              child: NavigationBarTheme(
+                data: NavigationBarThemeData(
+                  height: navHeight,
 
-                  setState(() {
-                    currentIndex = index;
-                  });
+                  backgroundColor: colorScheme.surface,
 
-                  // if (index == 1) {
-                  // expenseKey.currentState?.refreshExpenses();
-                  //}
-                  if (index == 2) {
-                    budgetKey.currentState?.refreshBudget();
-                  }
-                },
+                  indicatorColor: currentNavigationColor.withOpacity(.12),
 
-                height: isLandscape ? 60 : 72,
+                  elevation: 0,
 
-                labelBehavior: isLandscape
-                    ? NavigationDestinationLabelBehavior.alwaysHide
-                    : NavigationDestinationLabelBehavior.onlyShowSelected,
-                destinations: _navigationDestinations,
+                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                    final selected = states.contains(WidgetState.selected);
+
+                    return TextStyle(
+                      fontSize: compact
+                          ? 10
+                          : landscape
+                          ? 10
+                          : 11,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected
+                          ? currentNavigationColor
+                          : colorScheme.onSurface.withOpacity(.58),
+                    );
+                  }),
+                ),
+
+                child: NavigationBar(
+                  animationDuration: const Duration(milliseconds: 300),
+
+                  selectedIndex: currentIndex,
+
+                  onDestinationSelected: _onNavigationChanged,
+
+                  labelBehavior: landscape || compact
+                      ? NavigationDestinationLabelBehavior.alwaysHide
+                      : NavigationDestinationLabelBehavior.onlyShowSelected,
+
+                  destinations: _navigationDestinations(context),
+                ),
               ),
             ),
           ),

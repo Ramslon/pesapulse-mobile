@@ -30,6 +30,7 @@ class AnalyticsStatsGrid extends StatelessWidget {
     required double spacing,
     required double radius,
     required bool compact,
+    required bool landscape,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -77,7 +78,7 @@ class AnalyticsStatsGrid extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 5),
+            SizedBox(height: landscape ? 3 : 5),
 
             // ─────────────────────────────────────
             // Title
@@ -109,72 +110,93 @@ class AnalyticsStatsGrid extends StatelessWidget {
 
     final spacing = ResponsiveHelper.spacing(context);
 
+    // ─────────────────────────────────────────────
+    // Responsive card height
+    // ─────────────────────────────────────────────
     final cardHeight = desktop
         ? 155.0
         : tablet
-        ? (landscape ? 135.0 : 145.0)
+        ? (landscape ? 118.0 : 145.0)
         : landscape
-        ? 105.0
+        ? 104.0
         : compact
         ? 105.0
         : 125.0;
 
+    // ─────────────────────────────────────────────
+    // Responsive padding
+    // ─────────────────────────────────────────────
     final cardPadding = desktop
         ? 22.0
         : tablet
-        ? 18.0
+        ? (landscape ? 10.0 : 18.0)
+        : landscape
+        ? 8.0
         : compact
         ? 10.0
-        : landscape
-        ? 12.0
         : 16.0;
 
+    // ─────────────────────────────────────────────
+    // Responsive icon
+    // ─────────────────────────────────────────────
     final iconBoxSize = desktop
         ? 50.0
         : tablet
-        ? 46.0
+        ? (landscape ? 38.0 : 46.0)
+        : landscape
+        ? 30.0
         : compact
         ? 32.0
-        : landscape
-        ? 36.0
         : 44.0;
 
     final iconSize = desktop
         ? 27.0
         : tablet
-        ? 25.0
+        ? (landscape ? 21.0 : 25.0)
+        : landscape
+        ? 17.0
         : compact
         ? 17.0
-        : landscape
-        ? 19.0
         : 23.0;
 
+    // ─────────────────────────────────────────────
+    // Responsive value text
+    // ─────────────────────────────────────────────
     final valueSize = desktop
         ? 28.0
         : tablet
-        ? 25.0
+        ? (landscape ? 21.0 : 25.0)
+        : landscape
+        ? 17.0
         : compact
         ? 18.0
-        : landscape
-        ? 19.0
         : 22.0;
 
+    // ─────────────────────────────────────────────
+    // Responsive title
+    // ─────────────────────────────────────────────
     final titleSize = desktop
         ? 14.0
         : tablet
-        ? 13.0
+        ? (landscape ? 11.0 : 13.0)
+        : landscape
+        ? 9.5
         : compact
         ? 10.0
-        : landscape
-        ? 10.5
         : 12.0;
 
     final cardRadius = compact ? 15.0 : 22.0;
 
-    final iconSpacing = compact
-        ? 7.0
+    // Keep vertical spacing small in landscape
+    // to prevent card content from overflowing.
+    final iconSpacing = desktop
+        ? 12.0
+        : tablet
+        ? (landscape ? 5.0 : 12.0)
         : landscape
-        ? 8.0
+        ? 5.0
+        : compact
+        ? 7.0
         : 12.0;
 
     return Column(
@@ -185,6 +207,7 @@ class AnalyticsStatsGrid extends StatelessWidget {
         SizedBox(
           height: cardHeight,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: _buildStatCard(
@@ -201,6 +224,7 @@ class AnalyticsStatsGrid extends StatelessWidget {
                   spacing: iconSpacing,
                   radius: cardRadius,
                   compact: compact,
+                  landscape: landscape,
                 ),
               ),
 
@@ -221,6 +245,7 @@ class AnalyticsStatsGrid extends StatelessWidget {
                   spacing: iconSpacing,
                   radius: cardRadius,
                   compact: compact,
+                  landscape: landscape,
                 ),
               ),
             ],
@@ -235,6 +260,7 @@ class AnalyticsStatsGrid extends StatelessWidget {
         SizedBox(
           height: cardHeight,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: _buildStatCard(
@@ -251,6 +277,7 @@ class AnalyticsStatsGrid extends StatelessWidget {
                   spacing: iconSpacing,
                   radius: cardRadius,
                   compact: compact,
+                  landscape: landscape,
                 ),
               ),
 
@@ -271,6 +298,7 @@ class AnalyticsStatsGrid extends StatelessWidget {
                   spacing: iconSpacing,
                   radius: cardRadius,
                   compact: compact,
+                  landscape: landscape,
                 ),
               ),
             ],

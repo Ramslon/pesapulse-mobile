@@ -425,7 +425,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
                 textInputAction: TextInputAction.next,
               ),
 
-              SizedBox(height: compact ? 2 : 4),
+              SizedBox(height: compact ? 8 : 12),
 
               buildInputField(
                 controller: amountController,
