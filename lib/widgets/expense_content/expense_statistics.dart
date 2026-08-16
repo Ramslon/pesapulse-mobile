@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/responsive_helper.dart';
+import '../../core/utils/currency_formatter.dart';
 
 class ExpenseStatistics extends StatelessWidget {
   final int categoryCount;
@@ -34,7 +35,7 @@ class ExpenseStatistics extends StatelessWidget {
           child: _buildMiniStat(
             context,
             title: "Highest",
-            value: "KES ${_formatAmount(highestExpense)}",
+            value: CurrencyFormatter.format(highestExpense),
             valueFontSize: compact ? 12 : 15,
             titleFontSize: compact ? 10 : 12,
           ),
@@ -44,7 +45,7 @@ class ExpenseStatistics extends StatelessWidget {
           child: _buildMiniStat(
             context,
             title: "Average",
-            value: "KES ${_formatAmount(averageExpense)}",
+            value: CurrencyFormatter.format(averageExpense),
             valueFontSize: compact ? 12 : 15,
             titleFontSize: compact ? 10 : 12,
           ),
@@ -89,11 +90,5 @@ class ExpenseStatistics extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _formatAmount(double amount) {
-    return amount
-        .toStringAsFixed(2)
-        .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => ',');
   }
 }

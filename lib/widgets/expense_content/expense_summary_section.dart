@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../utils/responsive_helper.dart';
+import '../../core/utils/currency_formatter.dart';
 
 import '../../widgets/expense_content/expense_statistics.dart';
 
@@ -26,8 +26,6 @@ class ExpenseSummarySection extends StatelessWidget {
     final compact = ResponsiveHelper.useCompactLayout(context);
     final cardPadding = ResponsiveHelper.cardPadding(context);
     final spacing = ResponsiveHelper.spacing(context);
-
-    final currencyFormatter = NumberFormat("#,##0.00");
 
     final primaryColor = Theme.of(context).colorScheme.primary;
     final surfaceColor = Theme.of(context).colorScheme.surface;
@@ -71,7 +69,7 @@ class ExpenseSummarySection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "KES ${currencyFormatter.format(totalAmount)}",
+                      CurrencyFormatter.format(totalAmount),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

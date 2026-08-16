@@ -6,6 +6,7 @@ import '../repositories/expense_repository.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
 import '../utils/responsive_helper.dart';
+import '../core/utils/currency_formatter.dart';
 
 class ExpenseDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> expense;
@@ -18,8 +19,6 @@ class ExpenseDetailsScreen extends StatefulWidget {
 
 class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
   Map<String, dynamic> get expense => widget.expense;
-
-  final NumberFormat currencyFormatter = NumberFormat("#,##0.00");
 
   final ExpenseRepository repository = ExpenseRepository();
 
@@ -281,7 +280,7 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
               tween: Tween(begin: 0, end: amount),
               builder: (context, value, child) {
                 return Text(
-                  "KES ${currencyFormatter.format(value)}",
+                  CurrencyFormatter.format(value),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,

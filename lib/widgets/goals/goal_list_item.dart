@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import '../../models/goal.dart';
 import '../../controllers/goals_controller.dart';
@@ -12,7 +13,7 @@ import 'add_savings_dialog.dart';
 class GoalListItem extends StatelessWidget {
   final Goal goal;
   final GoalsController goalsController;
-  final NumberFormat currency;
+  final String Function(num) currency;
 
   const GoalListItem({
     super.key,
@@ -245,7 +246,7 @@ class GoalListItem extends StatelessWidget {
           target: goal.targetAmount,
           saved: goal.savedAmount,
           percentage: goal.percentage,
-          currency: currency,
+          currency: CurrencyFormatter.format,
 
           insight: goalsController.insights[goal.id] as Map<String, dynamic>?,
 

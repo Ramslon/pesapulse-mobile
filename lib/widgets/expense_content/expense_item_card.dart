@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../screens/expense_details_screen.dart';
 import '../../utils/responsive_helper.dart';
+import '../../core/utils/currency_formatter.dart';
 
 class ExpenseItemCard extends StatelessWidget {
   final Map<String, dynamic> expense;
   final String searchQuery;
 
-  final NumberFormat currencyFormatter;
+  final String Function(num) currencyFormatter;
 
   final Future<void> Function()? onEdit;
   final Future<void> Function()? onDelete;
@@ -328,7 +328,7 @@ class ExpenseItemCard extends StatelessWidget {
         ConstrainedBox(
           constraints: BoxConstraints(maxWidth: compact ? 105 : 150),
           child: Text(
-            "KES ${currencyFormatter.format(amount)}",
+            CurrencyFormatter.format(amount),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.end,

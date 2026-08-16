@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import '../services/sync_events.dart';
 import '../services/goals_service.dart';
@@ -191,7 +192,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                     (goal) => GoalListItem(
                       goal: goal,
                       goalsController: goalsController,
-                      currency: currency,
+                      currency: CurrencyFormatter.format,
                     ),
                   ),
                 ],

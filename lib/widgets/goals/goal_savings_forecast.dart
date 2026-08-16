@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import '../fade_slide_animation.dart';
 import 'forecast_metric.dart';
@@ -7,7 +7,7 @@ import '../../utils/responsive_helper.dart';
 
 class GoalSavingsForecast extends StatelessWidget {
   final Map<String, dynamic>? forecast;
-  final NumberFormat currency;
+  final String Function(num) currency;
   final bool isCompleted;
   final VoidCallback onAddSavings;
 
@@ -229,7 +229,7 @@ class GoalSavingsForecast extends StatelessWidget {
                       Expanded(
                         child: ForecastMetric(
                           title: 'Daily saving',
-                          value: currency.format(
+                          value: CurrencyFormatter.format(
                             _amount('recommended_daily_saving'),
                           ),
                           icon: Icons.savings_outlined,
@@ -244,7 +244,7 @@ class GoalSavingsForecast extends StatelessWidget {
                   // Monthly saving
                   ForecastMetric(
                     title: 'Recommended monthly saving',
-                    value: currency.format(
+                    value: CurrencyFormatter.format(
                       _amount('recommended_monthly_saving'),
                     ),
                     icon: Icons.account_balance_wallet_outlined,

@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import '../fade_slide_animation.dart';
 import '../../utils/responsive_helper.dart';
@@ -325,7 +326,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
                 child: Text(
-                  'KES ${selected.value.toStringAsFixed(2)}',
+                  CurrencyFormatter.format(selected.value),
                   maxLines: 1,
                   style: TextStyle(
                     fontSize: compact ? 14 : 16,

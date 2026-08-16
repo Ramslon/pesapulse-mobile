@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 import 'package:provider/provider.dart';
 
 import '../services/sync_events.dart';
@@ -21,12 +22,6 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
   bool isLoading = true;
 
   List archivedGoals = [];
-
-  final currency = NumberFormat.currency(
-    locale: 'en_KE',
-    symbol: 'KES ',
-    decimalDigits: 0,
-  );
 
   final GoalsRepository goalsRepository = GoalsRepository();
 
@@ -328,7 +323,7 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
             // Amount
             // ─────────────────────────────────────
             Text(
-              currency.format(saved),
+              CurrencyFormatter.format(saved),
               style: TextStyle(
                 fontSize: compact ? 25 : 30,
                 fontWeight: FontWeight.bold,
@@ -338,7 +333,7 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
             SizedBox(height: compact ? 5 : 6),
 
             Text(
-              "Saved of ${currency.format(target)} target",
+              "Saved of ${CurrencyFormatter.format(target)} target",
               style: TextStyle(
                 color: Colors.grey.shade600,
                 fontSize: compact ? 12 : 14,
@@ -348,7 +343,7 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
             if (extra > 0) ...[
               SizedBox(height: compact ? 5 : 6),
               Text(
-                "🎉 Exceeded target by ${currency.format(extra)}",
+                "🎉 Exceeded target by ${CurrencyFormatter.format(extra)}",
                 style: TextStyle(
                   color: Colors.green,
                   fontWeight: FontWeight.bold,

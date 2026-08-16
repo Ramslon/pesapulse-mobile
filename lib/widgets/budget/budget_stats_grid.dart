@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import '../budget_stat_card.dart';
-import '../../features/budget/utils/budget_calculator.dart';
 import '../../utils/responsive_helper.dart';
 
 class BudgetStatsGrid extends StatelessWidget {
@@ -49,7 +49,7 @@ class BudgetStatsGrid extends StatelessWidget {
               child: BudgetStatCard(
                 icon: Icons.trending_up,
                 title: "Spent",
-                value: BudgetCalculator.formatCurrency(spent),
+                value: CurrencyFormatter.format(spent),
                 color: colorScheme.primary,
               ),
             ),
@@ -59,7 +59,7 @@ class BudgetStatsGrid extends StatelessWidget {
               child: BudgetStatCard(
                 icon: Icons.savings,
                 title: "Remaining",
-                value: BudgetCalculator.formatCurrency(remaining),
+                value: CurrencyFormatter.format(remaining),
                 color: colorScheme.primary,
               ),
             ),

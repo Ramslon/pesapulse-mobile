@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import '../../utils/responsive_helper.dart';
 
@@ -182,7 +183,7 @@ class AnalyticsOverviewCard extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'KES ${value.toStringAsFixed(2)}',
+                      CurrencyFormatter.format(value),
                       maxLines: 1,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontSize: amountSize,

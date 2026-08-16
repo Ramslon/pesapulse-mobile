@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../services/sync_service.dart';
 
@@ -22,6 +21,7 @@ import '../utils/responsive_helper.dart';
 import '../utils/expense_filters.dart';
 import '../utils/expense_date_utils.dart';
 import '../utils/expense_search_utils.dart';
+import '../core/utils/currency_formatter.dart';
 
 import '../screens/add_expense_screen.dart';
 
@@ -40,8 +40,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
   List<Map<String, dynamic>> filteredExpenses = [];
 
   final ExpenseController expenseController = ExpenseController();
-
-  final NumberFormat currencyFormatter = NumberFormat("#,##0.00");
 
   String selectedDateFilter = 'All';
 
@@ -591,7 +589,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
       sections: sections,
       filteredExpenses: filteredExpenses,
       searchQuery: searchController.text,
-      currencyFormatter: currencyFormatter,
+      currencyFormatter: CurrencyFormatter.format,
       hasActiveFilters: hasActiveFilters,
       isGuest: isGuest,
 

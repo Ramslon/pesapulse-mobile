@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import 'package:pesapulse_mobile/models/goal.dart';
 import 'package:pesapulse_mobile/utils/responsive_helper.dart';
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import 'package:pesapulse_mobile/widgets/goals/goal_insights.dart';
 import 'package:pesapulse_mobile/widgets/goals/goal_savings_forecast.dart';
@@ -13,10 +15,11 @@ class GoalCard extends StatelessWidget {
   final double target;
   final double saved;
   final double percentage;
-  final NumberFormat currency;
 
   final VoidCallback onDelete;
   final VoidCallback onAddSavings;
+
+  final String Function(num) currency;
 
   final Map<String, dynamic>? insight;
   final Map<String, dynamic>? forecast;
@@ -29,9 +32,10 @@ class GoalCard extends StatelessWidget {
     required this.target,
     required this.saved,
     required this.percentage,
-    required this.currency,
+
     required this.onDelete,
     required this.onAddSavings,
+    required this.currency,
     required this.insight,
     required this.forecast,
     required this.onArchive,
@@ -217,7 +221,7 @@ class GoalCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          currency.format(saved),
+                          CurrencyFormatter.format(saved),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.headlineSmall?.copyWith(
@@ -236,7 +240,7 @@ class GoalCard extends StatelessWidget {
                   SizedBox(height: 5 * verticalScale),
 
                   Text(
-                    'of ${currency.format(target)} target',
+                    'of ${CurrencyFormatter.format(target)} target',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -263,7 +267,10 @@ class GoalCard extends StatelessWidget {
 
               SizedBox(height: 8 * verticalScale),
 
-              GoalInsights(insight: insight, currency: currency),
+              GoalInsights(
+                insight: insight,
+                currency: CurrencyFormatter.format,
+              ),
 
               SizedBox(height: 14 * verticalScale),
             ],
@@ -282,7 +289,7 @@ class GoalCard extends StatelessWidget {
 
             GoalSavingsForecast(
               forecast: forecast,
-              currency: currency,
+              currency: CurrencyFormatter.format,
               isCompleted: isCompleted,
               onAddSavings: onAddSavings,
             ),

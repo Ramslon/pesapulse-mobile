@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../utils/responsive_helper.dart';
+import '../../core/utils/currency_formatter.dart';
 
 class BudgetCategoryTile extends StatelessWidget {
   final String category;
@@ -19,8 +19,6 @@ class BudgetCategoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = NumberFormat("#,##0");
-
     final compact = ResponsiveHelper.useCompactLayout(context);
 
     final tablet = ResponsiveHelper.isTablet(context);
@@ -120,7 +118,7 @@ class BudgetCategoryTile extends StatelessWidget {
             // Amount
             Flexible(
               child: Text(
-                "KES ${formatter.format(amount)}",
+                CurrencyFormatter.format(amount),
                 textAlign: TextAlign.end,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,

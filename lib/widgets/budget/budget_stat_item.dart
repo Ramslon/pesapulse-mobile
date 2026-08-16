@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../utils/responsive_helper.dart';
+import '../../core/utils/currency_formatter.dart';
 
 class BudgetStatItem extends StatelessWidget {
   final IconData icon;
@@ -21,8 +21,6 @@ class BudgetStatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = NumberFormat("#,##0");
-
     final compact = ResponsiveHelper.useCompactLayout(context);
 
     final tablet = ResponsiveHelper.isTablet(context);
@@ -96,7 +94,7 @@ class BudgetStatItem extends StatelessWidget {
             return FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                "KES ${formatter.format(value)}",
+                CurrencyFormatter.format(value),
                 maxLines: 1,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,

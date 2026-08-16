@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import '../fade_slide_animation.dart';
 import '../../utils/responsive_helper.dart';
 
 class GoalInsights extends StatelessWidget {
   final Map<String, dynamic>? insight;
-  final NumberFormat currency;
+  final String Function(num) currency;
 
   const GoalInsights({
     super.key,
@@ -173,7 +174,7 @@ class GoalInsights extends StatelessWidget {
                 Expanded(
                   child: _InsightMetric(
                     title: 'Remaining',
-                    value: currency.format(remainingAmount),
+                    value: CurrencyFormatter.format(remainingAmount),
                     icon: Icons.account_balance_wallet_outlined,
                     color: insightColor,
                     iconSize: metricIconSize,
@@ -203,7 +204,7 @@ class GoalInsights extends StatelessWidget {
             // ─────────────────────────────────────────
             _InsightMetric(
               title: 'Monthly needed',
-              value: currency.format(monthlyNeeded),
+              value: CurrencyFormatter.format(monthlyNeeded),
               icon: Icons.savings_outlined,
               color: insightColor,
               iconSize: metricIconSize,

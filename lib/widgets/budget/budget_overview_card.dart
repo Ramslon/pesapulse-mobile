@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../utils/responsive_helper.dart';
+import '../../core/utils/currency_formatter.dart';
 import 'budget_stat_item.dart';
 import 'budget_progress_gauge.dart';
 
@@ -32,8 +32,6 @@ class BudgetOverviewCard extends StatelessWidget {
     final desktop = ResponsiveHelper.isDesktop(context);
 
     final landscape = ResponsiveHelper.isLandscape(context);
-
-    final currencyFormatter = NumberFormat("#,##0");
 
     // Responsive card padding.
     final cardPadding = ResponsiveHelper.cardPadding(context);
@@ -88,7 +86,7 @@ class BudgetOverviewCard extends StatelessWidget {
                 return FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    "KES ${currencyFormatter.format(value)}",
+                    CurrencyFormatter.format(value),
                     style: TextStyle(
                       fontSize: amountFont,
                       fontWeight: FontWeight.bold,

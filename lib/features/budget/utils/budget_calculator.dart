@@ -6,6 +6,7 @@ class BudgetCalculator {
     required double spent,
   }) {
     if (budget <= 0) return 0;
+
     return (spent / budget) * 100;
   }
 
@@ -56,18 +57,5 @@ class BudgetCalculator {
       default:
         return 'Unknown';
     }
-  }
-
-  static String formatAmount(double value) {
-    return value
-        .toStringAsFixed(0)
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        );
-  }
-
-  static String formatCurrency(double value) {
-    return "KES ${formatAmount(value)}";
   }
 }

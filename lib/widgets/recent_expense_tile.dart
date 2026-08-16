@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+
 import 'package:pesapulse_mobile/screens/expense_details_screen.dart';
 
 import '../utils/responsive_helper.dart';
+import '../core/utils/currency_formatter.dart';
 
 class RecentExpenseTile extends StatelessWidget {
   final Map<String, dynamic> expense;
 
-  RecentExpenseTile({super.key, required this.expense});
-
-  final NumberFormat currencyFormatter = NumberFormat("#,##0.00");
+  const RecentExpenseTile({super.key, required this.expense});
 
   Color categoryColor(String category) {
     switch (category.toLowerCase()) {
@@ -211,7 +210,7 @@ class RecentExpenseTile extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
                 child: Text(
-                  "KES ${currencyFormatter.format(amount)}",
+                  CurrencyFormatter.format(amount),
                   maxLines: 1,
                   style: TextStyle(
                     fontSize: amountFontSize,

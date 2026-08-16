@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import '../fade_slide_animation.dart';
 import '../../utils/responsive_helper.dart';
@@ -276,7 +277,7 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
                                       'Total Spending',
                                       style: TextStyle(
                                         fontSize: centerTitleSize,
-                                        color: Colors.grey.shade300,
+                                        color: Colors.grey.shade600,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -286,7 +287,9 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart> {
                                     FittedBox(
                                       fit: BoxFit.scaleDown,
                                       child: Text(
-                                        'KES ${_totalSpending.toStringAsFixed(0)}',
+                                        CurrencyFormatter.format(
+                                          _totalSpending,
+                                        ),
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontSize: centerAmountSize,
@@ -370,7 +373,7 @@ class _CategoryBadge extends StatelessWidget {
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                'KES ${amount.toStringAsFixed(0)}',
+                CurrencyFormatter.format(amount),
                 style: TextStyle(
                   fontSize: compact ? 8 : 10,
                   color: Colors.grey.shade600,
@@ -494,7 +497,7 @@ class _SelectedCategoryCard extends StatelessWidget {
                   SizedBox(height: compact ? 2 : 4),
 
                   Text(
-                    'KES ${amount.toStringAsFixed(0)} spent',
+                    CurrencyFormatter.format(amount),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../../core/utils/currency_formatter.dart';
 
 import '../../utils/responsive_helper.dart';
 import '../../widgets/empty_state_helper.dart';
@@ -13,12 +13,13 @@ class ExpenseListSection extends StatelessWidget {
   final List filteredExpenses;
 
   final String searchQuery;
-  final NumberFormat currencyFormatter;
 
   final bool hasActiveFilters;
   final bool isGuest;
 
   final VoidCallback onClearFilters;
+
+  final String Function(num) currencyFormatter;
 
   final Future<void> Function() onRefresh;
 
@@ -31,10 +32,10 @@ class ExpenseListSection extends StatelessWidget {
     required this.sections,
     required this.filteredExpenses,
     required this.searchQuery,
-    required this.currencyFormatter,
     required this.hasActiveFilters,
     required this.isGuest,
     required this.onClearFilters,
+    required this.currencyFormatter,
     required this.onRefresh,
     required this.onEdit,
     required this.onDelete,
@@ -79,7 +80,7 @@ class ExpenseListSection extends StatelessWidget {
                 (expense) => ExpenseItemCard(
                   expense: expense,
                   searchQuery: searchQuery,
-                  currencyFormatter: currencyFormatter,
+                  currencyFormatter: CurrencyFormatter.format,
 
                   onEdit: () => onEdit(expense),
 

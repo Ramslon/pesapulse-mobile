@@ -7,6 +7,7 @@ import '../widgets/app/app_scaffold.dart';
 import '../repositories/expense_repository.dart';
 import '../services/sync_service.dart';
 import '../utils/responsive_helper.dart';
+import '../core/utils/currency_formatter.dart';
 
 class EditExpenseScreen extends StatefulWidget {
   final Map expense;
@@ -279,7 +280,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
             const SizedBox(height: 8),
 
             Text(
-              "KES ${amount.toStringAsFixed(0)}",
+              CurrencyFormatter.format(amount),
               style: TextStyle(
                 fontSize: amountFontSize,
                 fontWeight: FontWeight.bold,

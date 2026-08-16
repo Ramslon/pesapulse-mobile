@@ -17,6 +17,7 @@ import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/responsive_helper.dart';
+import '../core/utils/currency_formatter.dart';
 
 List<Map<String, dynamic>> _decodeExpenses(dynamic raw) {
   return List<Map<String, dynamic>>.from(raw);
@@ -383,7 +384,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 child: DashboardCard(
                   title: "Budget",
                   subtitle: getBudgetSubtitle(),
-                  value: "KES ${currentBudget.toStringAsFixed(0)}",
+                  value: CurrencyFormatter.format(currentBudget),
                   icon: Icons.savings,
                   iconColor: getBudgetColor(),
                 ),
@@ -417,7 +418,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 child: DashboardCard(
                   title: "Remaining",
                   subtitle: "Budget Left",
-                  value: "KES ${remainingBudget.toStringAsFixed(0)}",
+                  value: CurrencyFormatter.format(remainingBudget),
                   icon: Icons.account_balance,
                   iconColor: remainingBudget >= 0 ? Colors.green : Colors.red,
                 ),
@@ -504,12 +505,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                     children: [
                       _budgetItem(
                         "Budget",
-                        "KES ${currentBudget.toStringAsFixed(0)}",
+                        CurrencyFormatter.format(currentBudget),
                         Colors.blue,
                       ),
                       _budgetItem(
                         "Spent",
-                        "KES ${spentThisMonth.toStringAsFixed(0)}",
+                        CurrencyFormatter.format(spentThisMonth),
                         Colors.orange,
                       ),
                     ],
@@ -521,7 +522,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     children: [
                       _budgetItem(
                         "Remaining",
-                        "KES ${remainingBudget.toStringAsFixed(0)}",
+                        CurrencyFormatter.format(remainingBudget),
                         remainingBudget >= 0 ? Colors.green : Colors.red,
                       ),
                     ],
@@ -534,17 +535,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                 children: [
                   _budgetItem(
                     "Budget",
-                    "KES ${currentBudget.toStringAsFixed(0)}",
+                    CurrencyFormatter.format(currentBudget),
                     Colors.blue,
                   ),
                   _budgetItem(
                     "Spent",
-                    "KES ${spentThisMonth.toStringAsFixed(0)}",
+                    CurrencyFormatter.format(spentThisMonth),
                     Colors.orange,
                   ),
                   _budgetItem(
                     "Remaining",
-                    "KES ${remainingBudget.toStringAsFixed(0)}",
+                    CurrencyFormatter.format(remainingBudget),
                     remainingBudget >= 0 ? Colors.green : Colors.red,
                   ),
                 ],
