@@ -53,7 +53,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         await Future.delayed(const Duration(milliseconds: 700));
 
-        await SessionService.loginUser(response["user"]["id"].toString());
+        await SessionService.loginUser(
+          response["user"]["id"].toString(),
+          response["token"],
+        );
 
         Navigator.pop(context, true);
       } else {

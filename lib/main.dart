@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'services/notification_service.dart';
+import 'services/sync_service.dart';
 import 'screens/splash_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
 import '../providers/connectivity_provider.dart';
 import 'theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +15,7 @@ void main() async {
 
   await NotificationService.init();
 
+  // Start automatic synchronization listener.
   SyncService.instance.startListening();
 
   runApp(

@@ -20,12 +20,12 @@ class SessionService {
     await prefs.remove("owner_id");
   }
 
-  static Future<void> loginUser(String ownerId) async {
+  static Future<void> loginUser(String ownerId, String token) async {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setBool(_guestKey, false);
-
     await prefs.setString("owner_id", ownerId);
+    await prefs.setString("token", token);
   }
 
   static Future<bool> isGuest() async {

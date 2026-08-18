@@ -134,8 +134,6 @@ class _AuthenticatedSyncCard extends StatelessWidget {
   });
 
   Future<void> _syncNow(BuildContext context) async {
-    network.setSyncing(true);
-
     try {
       await SyncService.instance.syncPendingOperations();
 
@@ -150,8 +148,6 @@ class _AuthenticatedSyncCard extends StatelessWidget {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Sync failed: $e')));
-    } finally {
-      network.setSyncing(false);
     }
   }
 

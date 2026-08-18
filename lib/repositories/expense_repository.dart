@@ -94,6 +94,25 @@ class ExpenseRepository extends BaseRepository {
     };
 
     try {
+      // Deduplication check
+      final existingServerId = await findDuplicateOnServer(expense);
+
+      if (existingServerId != null) {
+        expense["id"] = existingServerId.toString();
+        expense["server_id"] = existingServerId.toString();
+
+        expense["is_synced"] = "1";
+        expense["is_deleted"] = "0";
+
+        await database.insert(
+          "expenses",
+          expense,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        return;
+      }
+
+      // No duplicate found → create normally
       final response = await ApiService.addExpense(
         title,
         amount,
@@ -113,10 +132,8 @@ class ExpenseRepository extends BaseRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (_) {
-      // Offline
-
+      // Offline fallback
       final id = await database.insert("expenses", expense);
-
       await database.insert("sync_queue", {
         "owner_id": ownerId,
         "table_name": "expenses",
@@ -124,7 +141,6 @@ class ExpenseRepository extends BaseRepository {
         "operation": "create",
         "payload": jsonEncode(expense),
       });
-
       await SyncService.instance.getPendingChanges();
     }
   }
@@ -140,6 +156,26 @@ class ExpenseRepository extends BaseRepository {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
+    // Deduplication check
+    final existingServerId = await findDuplicateOnServer({
+      "title": title,
+      "amount": amount,
+      "category": category,
+      "expense_date": expenseDate,
+    });
+
+    if (existingServerId != null) {
+      // Update local record with serverId instead of creating duplicate
+      await database.update(
+        "expenses",
+        {"owner_id": ownerId, "server_id": existingServerId, "is_synced": 1},
+        where: "id=? AND owner_id=?",
+        whereArgs: [localId, ownerId],
+      );
+      return;
+    }
+
+    // No duplicate found → create normally
     final response = await ApiService.addExpense(
       title,
       amount,
@@ -319,5 +355,36 @@ class ExpenseRepository extends BaseRepository {
       where: "id=? AND owner_id=?",
       whereArgs: [localId, ownerId],
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getExpensesFromServer({
+    String? title,
+    String? amount,
+    String? category,
+    String? expenseDate,
+  }) async {
+    final response = await ApiService.getExpenses(page: 1);
+    final allExpenses = List<Map<String, dynamic>>.from(response["data"]);
+
+    return allExpenses.where((exp) {
+      return (title == null || exp["title"] == title) &&
+          (amount == null || exp["amount"].toString() == amount) &&
+          (category == null || exp["category"] == category) &&
+          (expenseDate == null || exp["expense_date"] == expenseDate);
+    }).toList();
+  }
+
+  Future<int?> findDuplicateOnServer(Map<String, dynamic> payload) async {
+    final existing = await getExpensesFromServer(
+      title: payload["title"],
+      amount: payload["amount"].toString(),
+      category: payload["category"],
+      expenseDate: payload["expense_date"],
+    );
+
+    if (existing.isNotEmpty) {
+      return existing.first["id"] as int?;
+    }
+    return null;
   }
 }

@@ -95,6 +95,49 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<Map<String, dynamic>> migrateGuestData({
+    required String ownerId,
+    required Map<String, dynamic> data,
+  }) async {
+    final token = await getToken();
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing.');
+    }
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/guest/migrate'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'owner_id': ownerId,
+        'expenses': data['expenses'] ?? [],
+        'goals': data['goals'] ?? [],
+        'budgets': data['budgets'] ?? [],
+        'settings': data['settings'] ?? [],
+      }),
+    );
+
+    Map<String, dynamic> body;
+
+    try {
+      body = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw Exception(
+        'Invalid response from migration server (${response.statusCode}).',
+      );
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+
+    throw Exception(body['message'] ?? 'Guest data migration failed.');
+  }
+
   static Future<Map<String, dynamic>> addExpense(
     String title,
     String amount,

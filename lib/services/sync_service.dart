@@ -72,30 +72,48 @@ class SyncService {
   }
 
   Future<void> syncPendingOperations() async {
+    if (SyncStatus.instance.isSyncing.value) {
+      return;
+    }
+
     final database = await db.database;
 
     final queue = await database.query("sync_queue", orderBy: "id ASC");
 
-    for (final item in queue) {
-      try {
-        await _processItem(item);
-
-        await database.delete(
-          "sync_queue",
-          where: "id=?",
-          whereArgs: [item["id"]],
-        );
-
-        await _refreshPendingCounter();
-      } catch (_) {
-        break;
-      }
-    }
     await _refreshPendingCounter();
 
-    await refreshOfflineCaches();
+    // Don't show the spinner when there is nothing to sync.
+    if (queue.isEmpty) {
+      return;
+    }
 
-    await settingsRepository.saveLastSync(DateTime.now());
+    SyncStatus.instance.setSyncing(true);
+
+    try {
+      for (final item in queue) {
+        try {
+          await _processItem(item);
+
+          await database.delete(
+            "sync_queue",
+            where: "id=?",
+            whereArgs: [item["id"]],
+          );
+
+          await _refreshPendingCounter();
+        } catch (_) {
+          break;
+        }
+      }
+
+      await _refreshPendingCounter();
+
+      await refreshOfflineCaches();
+
+      await settingsRepository.saveLastSync(DateTime.now());
+    } finally {
+      SyncStatus.instance.setSyncing(false);
+    }
   }
 
   Future<void> _processItem(Map<String, dynamic> item) async {
@@ -110,9 +128,35 @@ class SyncService {
             targetAmount: double.parse(payload["target_amount"].toString()),
             targetDate: payload["target_date"],
           );
+          return;
+        }
+
+        // Deduplication check
+        final existingServerId = await expenseRepository.findDuplicateOnServer(
+          payload,
+        );
+
+        if (existingServerId != null) {
+          // Update local record with serverId instead of creating duplicate
+          final database = await db.database;
+          await database.update(
+            "expenses",
+            {"server_id": existingServerId, "is_synced": 1},
+            where: "id=?",
+            whereArgs: [item["record_id"]],
+          );
+
+          // Remove the queue item since it's now linked
+          await database.delete(
+            "sync_queue",
+            where: "id=?",
+            whereArgs: [item["id"]],
+          );
 
           return;
         }
+
+        // No duplicate found → create normally
         await expenseRepository.syncOfflineExpense(
           localId: item["record_id"] as int,
           title: payload["title"],
@@ -221,13 +265,11 @@ class SyncService {
       case "delete":
         if (item["table_name"] == "goals") {
           final serverId = await _getServerGoalId(item["record_id"] as int);
-
           if (serverId == null) {
+            // Goals must have serverId, so fail
             throw Exception("Goal has no server id.");
           }
-
           await goalsRepository.deleteGoalOnline(serverId);
-
           final database = await db.database;
           await database.update(
             "goals",
@@ -239,11 +281,23 @@ class SyncService {
           await budgetRepository.syncOfflineBudgetDelete();
         } else {
           final localId = item["record_id"] as int;
-
           final serverId = await expenseRepository.getServerExpenseId(localId);
+          final database = await db.database;
 
           if (serverId == null) {
-            throw Exception("Expense has no server id.");
+            // Guest record → just clear from local DB and queue
+            await database.delete(
+              "expenses",
+              where: "id=?",
+              whereArgs: [localId],
+            );
+            await database.delete(
+              "sync_queue",
+              where: "id=?",
+              whereArgs: [item["id"]],
+            );
+            //  Do not throw, just return
+            return;
           }
 
           await expenseRepository.syncOfflineExpenseDelete(
@@ -306,19 +360,34 @@ class SyncService {
     await getPendingChanges();
   }
 
-  Future<void> refreshOfflineCaches() async {
+  Future<void> refreshOfflineCaches({Set<String>? tables}) async {
     try {
-      await dashboardRepository.getDashboard();
-
-      await insightsRepository.getInsights();
-
-      await goalsRepository.getGoals();
-
-      await goalAnalyticsRepository.getGoalAnalytics();
-
-      await goalDeadlineRepository.getUpcomingDeadlines();
-
-      SyncEvents.instance.notifyGoalsUpdated();
+      if (tables == null || tables.contains("dashboard")) {
+        await dashboardRepository.getDashboard();
+      }
+      if (tables == null || tables.contains("insights")) {
+        await insightsRepository.getInsights();
+      }
+      if (tables == null || tables.contains("goals")) {
+        await goalsRepository.getGoals();
+        await goalAnalyticsRepository.getGoalAnalytics();
+        await goalDeadlineRepository.getUpcomingDeadlines();
+        SyncEvents.instance.notifyGoalsUpdated();
+      }
     } catch (_) {}
+  }
+
+  Future<void> cleanupGuestQueue() async {
+    final database = await db.database;
+
+    // Remove expense operations with no server_id
+    await database.delete(
+      "sync_queue",
+      where:
+          "table_name=? AND record_id NOT IN (SELECT id FROM expenses WHERE server_id IS NOT NULL)",
+      whereArgs: ["expenses"],
+    );
+
+    // You can extend this for other tables if needed
   }
 }

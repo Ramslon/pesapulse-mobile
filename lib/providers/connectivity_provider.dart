@@ -2,9 +2,23 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+
 import '../services/sync_status.dart';
 
 class ConnectivityProvider extends ChangeNotifier {
+  ConnectivityProvider() {
+    _initialize();
+
+    SyncStatus.instance.pendingChanges.addListener(_onPendingChangesChanged);
+
+    SyncStatus.instance.isSyncing.addListener(_onSyncingChanged);
+
+    // Get the current values immediately.
+    _pendingChanges = SyncStatus.instance.pendingChanges.value;
+
+    _isSyncing = SyncStatus.instance.isSyncing.value;
+  }
+
   final Connectivity _connectivity = Connectivity();
 
   StreamSubscription<List<ConnectivityResult>>? _subscription;
@@ -16,14 +30,6 @@ class ConnectivityProvider extends ChangeNotifier {
   bool get isOnline => _isOnline;
   bool get isSyncing => _isSyncing;
   int get pendingChanges => _pendingChanges;
-
-  ConnectivityProvider() {
-    _initialize();
-    SyncStatus.instance.pendingChanges.addListener(() {
-      _pendingChanges = SyncStatus.instance.pendingChanges.value;
-      notifyListeners();
-    });
-  }
 
   Future<void> _initialize() async {
     final result = await _connectivity.checkConnectivity();
@@ -41,19 +47,35 @@ class ConnectivityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setSyncing(bool value) {
-    _isSyncing = value;
+  void _onPendingChangesChanged() {
+    _pendingChanges = SyncStatus.instance.pendingChanges.value;
+
     notifyListeners();
   }
 
-  void setPendingChanges(int value) {
-    _pendingChanges = value;
+  void _onSyncingChanged() {
+    _isSyncing = SyncStatus.instance.isSyncing.value;
+
     notifyListeners();
+  }
+
+  // Keep these methods for compatibility with existing UI code.
+  void setSyncing(bool value) {
+    SyncStatus.instance.setSyncing(value);
+  }
+
+  void setPendingChanges(int value) {
+    SyncStatus.instance.updatePending(value);
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
+
+    SyncStatus.instance.pendingChanges.removeListener(_onPendingChangesChanged);
+
+    SyncStatus.instance.isSyncing.removeListener(_onSyncingChanged);
+
     super.dispose();
   }
 }

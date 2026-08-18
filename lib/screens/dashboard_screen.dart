@@ -106,81 +106,48 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> loadDashboardData({bool useCacheOnly = false}) async {
     try {
-      // Skip heavy calls for guest users
-      if (isGuest) {
-        final data = await dashboardRepository.getDashboard(
-          useCache: useCacheOnly,
-        );
-        final summary = data['summary'];
-        final recent = await _parseExpenses(data['recent_expenses']);
+      final data = await dashboardRepository.getDashboard(
+        useCache: useCacheOnly,
+      );
+      final summary = data['summary'];
+      final recent = await _parseExpenses(data['recent_expenses']);
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        setState(() {
-          totalExpenses =
-              double.tryParse(summary['total_expenses'].toString())?.toInt() ??
-              0;
-          totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
-          totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
-          recentExpenses = recent;
+      setState(() {
+        totalExpenses = int.tryParse(summary['total_expenses'].toString()) ?? 0;
+        totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
+        totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
+        recentExpenses = recent;
+        isLoading = false;
+      });
 
-          // Default guest values
-          currentBudget = 0;
-          spentThisMonth = 0;
-          remainingBudget = 0;
-          budgetCount = 0;
-          financialHealthScore = 100;
-          financialHealthLabel = "Guest Mode";
-          recommendation = "Sign up to unlock financial insights.";
-          categoryAdvice = "";
-          isLoading = false;
+      // Defer heavy calls
+      if (!useCacheOnly && !isGuest) {
+        Future.wait([
+          budgetRepository.getBudgetSummary(),
+          insightsRepository.getInsights(),
+        ]).then((results) {
+          if (!mounted) return;
+          final budget = results[0];
+          final insights = results[1];
+          setState(() {
+            currentBudget = double.tryParse(budget["budget"].toString()) ?? 0;
+            spentThisMonth = double.tryParse(budget["spent"].toString()) ?? 0;
+            remainingBudget =
+                double.tryParse(budget["remaining"].toString()) ?? 0;
+            budgetCount = int.tryParse(budget["budget_count"].toString()) ?? 0;
+            budgetStatus = insights["budget_status"] ?? "healthy";
+            financialHealthScore =
+                double.tryParse(
+                  insights["financial_health_score"].toString(),
+                ) ??
+                0;
+            financialHealthLabel = insights["financial_health_label"] ?? "";
+            recommendation = insights["recommendation"] ?? "";
+            categoryAdvice = insights["category_advice"] ?? "";
+          });
         });
-        return;
-      }
-      if (useCacheOnly) {
-        final results = await Future.wait([
-          dashboardRepository.getDashboard(useCache: true),
-          budgetRepository.getBudgetSummary(useCache: true),
-          insightsRepository.getInsights(useCache: true),
-        ]);
-
-        final data = results[0];
-        final budget = results[1];
-        final insights = results[2];
-        final summary = data['summary'];
-
-        final recent = await _parseExpenses(data['recent_expenses']);
-
-        if (!mounted) return;
-
-        setState(() {
-          // Budget
-          currentBudget = double.tryParse(budget["budget"].toString()) ?? 0;
-          spentThisMonth = double.tryParse(budget["spent"].toString()) ?? 0;
-          remainingBudget =
-              double.tryParse(budget["remaining"].toString()) ?? 0;
-          budgetCount = int.tryParse(budget["budget_count"].toString()) ?? 0;
-
-          // Summary
-          totalExpenses =
-              double.tryParse(summary['total_expenses'].toString())?.toInt() ??
-              0;
-          totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
-          totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
-
-          // Insights
-          recentExpenses = recent;
-          budgetStatus = insights["budget_status"] ?? "healthy";
-          financialHealthScore =
-              double.tryParse(insights["financial_health_score"].toString()) ??
-              0;
-          financialHealthLabel = insights["financial_health_label"] ?? "";
-          recommendation = insights["recommendation"] ?? "";
-          categoryAdvice = insights["category_advice"] ?? "";
-
-          isLoading = false;
-        });
-        return;
       }
     } catch (e) {
       if (!mounted) return;
@@ -848,7 +815,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         ? 155.0
         : 165.0;
 
-    if (isLoading) {
+    if (isLoading && recentExpenses.isEmpty) {
       return const DashboardLoadingSkeleton();
     }
 

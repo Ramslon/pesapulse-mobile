@@ -3,6 +3,9 @@ import 'package:pesapulse_mobile/screens/forgot_password_screen.dart';
 import 'register_screen.dart';
 import '../services/api_services.dart';
 import '../services/session_service.dart';
+import '../services/migration_service.dart';
+import '../services/sync_service.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
 import '../widgets/custom_button.dart';
@@ -79,15 +82,51 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.containsKey('token')) {
         final prefs = await SharedPreferences.getInstance();
 
-        await prefs.setString('token', response['token']);
+        final token = response['token'];
+        final userId = response['user']['id'].toString();
 
-        await prefs.setString("owner_id", response["user"]["id"].toString());
+        // ------------------------------------------------------------
+        // STEP 1: Save authentication information.
+        // ------------------------------------------------------------
 
-        ApiService.token = response['token'];
+        await prefs.setString('token', token);
+        await prefs.setString('owner_id', userId);
 
-        await SessionService.loginUser(response["user"]["id"].toString());
+        ApiService.token = token;
+
+        await SessionService.loginUser(userId, token);
+        // Start automatic syncing only after authentication
+        SyncService.instance.startListening();
+
+        // ------------------------------------------------------------
+        // STEP 2: Migrate any guest data to this authenticated user.
+        // ------------------------------------------------------------
+
+        try {
+          await MigrationService.instance.migrateGuestData(userId);
+
+          // Cleanup guest-only sync items
+          await SyncService.instance.cleanupGuestQueue();
+
+          debugPrint('Guest data migration completed successfully.');
+        } catch (migrationError) {
+          debugPrint('Guest data migration failed: $migrationError');
+
+          if (!mounted) return;
+
+          AuthMessageHelper.showError(
+            context,
+            'Guest data migration failed: ${migrationError.toString().replaceFirst("Exception: ", "")}',
+          );
+
+          return;
+        }
 
         if (!mounted) return;
+
+        // ------------------------------------------------------------
+        // STEP 3: Continue to the application.
+        // ------------------------------------------------------------
 
         AuthMessageHelper.showSuccess(context, "Welcome back!");
 
@@ -108,6 +147,10 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         e.toString().replaceFirst("Exception: ", ""),
       );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
