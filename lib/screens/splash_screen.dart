@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'login_screen.dart';
+
+import 'onboarding_screen.dart';
+import 'auth_choice_screen.dart';
 import 'home_screen.dart';
+
 import '../services/api_services.dart';
+import '../services/session_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,27 +26,66 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
 
-    String? token = prefs.getString('token');
+    final String? token = prefs.getString('token');
+
+    final bool hasCompletedOnboarding =
+        prefs.getBool('hasCompletedOnboarding') ?? false;
+
+    final bool isGuest = await SessionService.isGuest();
 
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
 
-    if (token != null) {
+    // ------------------------------------------------------------
+    // 1. Authenticated user
+    // ------------------------------------------------------------
+
+    if (token != null && token.isNotEmpty) {
       ApiService.token = token;
 
       Navigator.pushReplacement(
         context,
-
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
-    } else {
+
+      return;
+    }
+
+    // ------------------------------------------------------------
+    // 2. Guest user
+    // ------------------------------------------------------------
+
+    if (isGuest) {
       Navigator.pushReplacement(
         context,
-
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
+
+      return;
     }
+
+    // ------------------------------------------------------------
+    // 3. First-time user
+    // ------------------------------------------------------------
+
+    if (!hasCompletedOnboarding) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+      );
+
+      return;
+    }
+
+    // ------------------------------------------------------------
+    // 4. No active session
+    // ------------------------------------------------------------
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthChoiceScreen()),
+    );
   }
 
   @override
@@ -51,7 +94,6 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-
           children: [
             const Icon(Icons.account_balance_wallet, size: 100),
 

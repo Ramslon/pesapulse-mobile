@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // STEP 3: Continue to the application.
         // ------------------------------------------------------------
 
-        AuthMessageHelper.showSuccess(context, "Welcome back!");
+        AuthMessageHelper.showSuccess(context, "Welcome back! 👋");
 
         Navigator.pushAndRemoveUntil(
           context,
@@ -168,39 +168,21 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 30),
 
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  alignment: Alignment.centerLeft,
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                  ),
-                ),
-
                 Center(
                   child: Container(
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF66BB6A), Color(0xFF2E7D32)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: const Color(0xFF2E7D32).withOpacity(.10),
                       borderRadius: BorderRadius.circular(32),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.green.withOpacity(.25),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
+                      border: Border.all(
+                        color: const Color(0xFF2E7D32).withOpacity(.15),
+                      ),
                     ),
                     child: const Icon(
-                      Icons.account_balance_wallet_rounded,
-                      color: Colors.white,
-                      size: 34,
+                      Icons.lock_open_rounded,
+                      color: Color(0xFF2E7D32),
+                      size: 32,
                     ),
                   ),
                 ),

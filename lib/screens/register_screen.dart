@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:pesapulse_mobile/repositories/settings_repository.dart';
 import 'package:pesapulse_mobile/screens/login_screen.dart';
+import 'package:pesapulse_mobile/screens/home_screen.dart';
+
 import '../services/api_services.dart';
 import '../services/session_service.dart';
-import '../services/settings_service.dart';
+import '../services/migration_service.dart';
+import '../services/sync_service.dart';
+
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/auth_message_helper.dart';
-import '../screens/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,13 +22,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final SettingsRepository settingsRepository = SettingsRepository();
 
   bool isLoading = false;
 
   final _formKey = GlobalKey<FormState>();
 
   bool _autoValidate = false;
+
   void registerUser() async {
     FocusScope.of(context).unfocus();
 
@@ -34,6 +36,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _autoValidate = true);
       return;
     }
+
+    if (isLoading) return;
 
     final name = nameController.text.trim();
     final email = emailController.text.trim();
@@ -44,21 +48,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final response = await ApiService.registerUser(name, email, password);
 
-      setState(() => isLoading = false);
-
       if (response.containsKey('token')) {
+        final token = response["token"];
+        final userId = response["user"]["id"].toString();
+
+        // ------------------------------------------------------------
+        // STEP 1: Create the authenticated session.
+        // ------------------------------------------------------------
+
+        await SessionService.loginUser(userId, token);
+
+        ApiService.token = token;
+
+        // Start automatic syncing after authentication.
+        SyncService.instance.startListening();
+
+        // ------------------------------------------------------------
+        // STEP 2: Migrate any guest data to the new account.
+        // ------------------------------------------------------------
+
+        try {
+          await MigrationService.instance.migrateGuestData(userId);
+
+          // Cleanup guest-only sync items after successful migration.
+          await SyncService.instance.cleanupGuestQueue();
+
+          debugPrint(
+            'Guest data migration after registration completed successfully.',
+          );
+        } catch (migrationError) {
+          debugPrint(
+            'Guest data migration after registration failed: '
+            '$migrationError',
+          );
+
+          if (!mounted) return;
+
+          AuthMessageHelper.showError(
+            context,
+            'Account created, but guest data migration failed: '
+            '${migrationError.toString().replaceFirst("Exception: ", "")}',
+          );
+
+          return;
+        }
+
         if (!mounted) return;
+
+        // ------------------------------------------------------------
+        // STEP 3: Continue to the application.
+        // ------------------------------------------------------------
 
         AuthMessageHelper.showSuccess(context, "Account created successfully!");
 
         await Future.delayed(const Duration(milliseconds: 700));
 
-        await SessionService.loginUser(
-          response["user"]["id"].toString(),
-          response["token"],
-        );
+        if (!mounted) return;
 
-        Navigator.pop(context, true);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
       } else {
         if (!mounted) return;
 
@@ -68,11 +119,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } catch (e) {
-      setState(() => isLoading = false);
-
       if (!mounted) return;
 
       AuthMessageHelper.showOffline(context);
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -88,35 +141,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10),
+                const SizedBox(height: 30),
 
                 Center(
                   child: Container(
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: Colors.blue.withOpacity(.10),
                       borderRadius: BorderRadius.circular(32),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(.25),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
+                      border: Border.all(color: Colors.blue.withOpacity(.15)),
                     ),
                     child: const Icon(
                       Icons.person_add_alt_1_rounded,
                       color: Colors.blue,
-                      size: 40,
+                      size: 32,
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 22),
 
                 Text(
@@ -228,59 +270,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
 
                           const SizedBox(height: 22),
-
-                          Row(
-                            children: [
-                              Expanded(child: Divider()),
-
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  "OR",
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-
-                              Expanded(child: Divider()),
-                            ],
-                          ),
-
-                          const SizedBox(height: 22),
-
-                          SizedBox(
-                            width: double.infinity,
-                            height: 54,
-                            child: OutlinedButton.icon(
-                              icon: const Icon(Icons.travel_explore_rounded),
-                              label: const Text("Continue as Guest"),
-                              style: OutlinedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              onPressed: () async {
-                                settingsRepository.clearCache();
-                                await SettingsService.clearUserSettings();
-
-                                await SessionService.loginAsGuest();
-
-                                if (!mounted) return;
-
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const HomeScreen(),
-                                  ),
-                                  (route) => false,
-                                );
-                              },
-                            ),
-                          ),
-
-                          const SizedBox(height: 20),
 
                           SizedBox(
                             width: double.infinity,

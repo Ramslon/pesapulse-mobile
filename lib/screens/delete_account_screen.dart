@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/screens/auth_choice_screen.dart';
 import 'package:pesapulse_mobile/widgets/auth_message_helper.dart';
 import '../repositories/settings_repository.dart';
 import '../services/session_service.dart';
-import '../screens/login_screen.dart';
 
 class DeleteAccountScreen extends StatefulWidget {
   const DeleteAccountScreen({super.key});
@@ -39,7 +39,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const AuthChoiceScreen()),
         (route) => false,
       );
 

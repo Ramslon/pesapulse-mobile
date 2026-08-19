@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pesapulse_mobile/screens/auth_choice_screen.dart';
 import 'package:pesapulse_mobile/screens/register_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -397,7 +398,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const LoginScreen(),
+                                builder: (_) => const AuthChoiceScreen(),
                               ),
                               (route) => false,
                             );
