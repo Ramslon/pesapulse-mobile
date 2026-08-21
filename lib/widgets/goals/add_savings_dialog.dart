@@ -33,9 +33,9 @@ class _AddSavingsDialogState extends State<AddSavingsDialog> {
   }
 
   Future<void> _save() async {
-    final amount = double.tryParse(_amountController.text.trim()) ?? 0;
+    final amount = double.tryParse(_amountController.text.trim());
 
-    if (amount <= 0) {
+    if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid savings amount.')),
       );
@@ -102,15 +102,24 @@ class _AddSavingsDialogState extends State<AddSavingsDialog> {
         );
       }
     } catch (e) {
+      debugPrint('Failed to add savings: $e');
+
       if (!mounted) return;
 
       setState(() {
         _isSaving = false;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add savings: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'We couldn’t add your savings. Please try again.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(label: 'OK', onPressed: () {}),
+        ),
+      );
     }
   }
 

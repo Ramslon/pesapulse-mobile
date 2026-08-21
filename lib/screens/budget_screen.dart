@@ -26,6 +26,7 @@ import '../providers/connectivity_provider.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
 import '../utils/responsive_helper.dart';
+import '../utils/snackbar_helper.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -90,53 +91,39 @@ class BudgetScreenState extends State<BudgetScreen>
 
   Future<void> saveBudget() async {
     final network = context.read<ConnectivityProvider>();
-
     network.setSyncing(true);
 
     try {
       if (budgetController.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please enter a budget amount")),
-        );
+        SnackbarHelper.showError(context, "Please enter a budget amount");
         return;
       }
 
-      final amount = double.parse(budgetController.text.trim());
-
-      if (amount <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Budget must be greater than zero")),
-        );
+      final amount = double.tryParse(budgetController.text.trim());
+      if (amount == null || amount <= 0) {
+        SnackbarHelper.showError(context, "Budget must be greater than zero");
         return;
       }
 
       final isUpdate = state.budget > 0;
-
       final newState = await controller.saveBudget(amount: amount);
 
       if (!mounted) return;
 
       setState(() {
         state = newState;
-
         budgetController.text = state.budget.toStringAsFixed(0);
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isUpdate
-                ? "Budget updated successfully"
-                : "Budget created successfully",
-          ),
-        ),
+      SnackbarHelper.showSuccess(
+        context,
+        isUpdate
+            ? "Budget updated successfully"
+            : "Budget created successfully",
       );
     } catch (_) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Failed to save budget.")));
+      SnackbarHelper.showError(context, "Failed to save budget.");
     } finally {
       network.setSyncing(false);
     }
@@ -147,16 +134,12 @@ class BudgetScreenState extends State<BudgetScreen>
 
     if (!network.isOnline) {
       await loadBudget();
-
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Offline mode • Showing cached budget data."),
-          behavior: SnackBarBehavior.floating,
-        ),
+      SnackbarHelper.showInfo(
+        context,
+        "Offline mode • Showing cached budget data.",
       );
-
       return;
     }
 
@@ -174,15 +157,10 @@ class BudgetScreenState extends State<BudgetScreen>
         budgetController.clear();
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Budget deleted successfully")),
-      );
+      SnackbarHelper.showSuccess(context, "Budget deleted successfully");
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      SnackbarHelper.showError(context, "Error deleting budget: $e");
     }
   }
 

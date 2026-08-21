@@ -17,6 +17,7 @@ import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/responsive_helper.dart';
+import '../utils/snackbar_helper.dart';
 import '../core/utils/currency_formatter.dart';
 
 List<Map<String, dynamic>> _decodeExpenses(dynamic raw) {
@@ -157,10 +158,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         return; // First launch with no cache
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Unable to refresh dashboard. Showing available data."),
-        ),
+      SnackbarHelper.showInfo(
+        context,
+        "Unable to refresh dashboard. Showing available data.",
       );
     }
   }

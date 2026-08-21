@@ -7,6 +7,7 @@ import '../widgets/app/app_scaffold.dart';
 import '../repositories/expense_repository.dart';
 import '../services/sync_service.dart';
 import '../utils/responsive_helper.dart';
+import '../utils/snackbar_helper.dart';
 import '../core/utils/currency_formatter.dart';
 
 class EditExpenseScreen extends StatefulWidget {
@@ -113,17 +114,14 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
   void updateExpense() async {
     if (!isFormValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please complete all required fields correctly."),
-        ),
+      SnackbarHelper.showError(
+        context,
+        "Please complete all required fields correctly.",
       );
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
     try {
       await repository.updateExpense(
@@ -137,45 +135,19 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
       await SyncService.instance.getPendingChanges();
 
-      setState(() {
-        isLoading = false;
-      });
+      if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          backgroundColor: Colors.green.shade600,
-          content: Row(
-            children: [
-              Icon(Icons.check_circle_rounded, color: Colors.white),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  "Expense updated successfully!",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      setState(() => isLoading = false);
+
+      SnackbarHelper.showSuccess(context, "Expense updated successfully!");
 
       Navigator.pop(context, true);
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      setState(() => isLoading = false);
+
+      SnackbarHelper.showError(context, "Error updating expense: $e");
     }
   }
 

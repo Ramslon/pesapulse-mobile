@@ -10,6 +10,7 @@ import '../repositories/goals_repository.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
 import '../utils/responsive_helper.dart';
+import '../utils/snackbar_helper.dart';
 
 class ArchivedGoalsScreen extends StatefulWidget {
   const ArchivedGoalsScreen({super.key});
@@ -151,21 +152,16 @@ class _ArchivedGoalsScreenState extends State<ArchivedGoalsScreen> {
       SyncEvents.instance.notifyGoalsUpdated();
       SyncEvents.instance.notifyArchivedUpdated();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            connectivity.isOnline
-                ? "Goal restored successfully."
-                : "Goal restored offline. It will sync automatically.",
-          ),
-        ),
+      SnackbarHelper.showSuccess(
+        context,
+        connectivity.isOnline
+            ? "Goal restored successfully."
+            : "Goal restored offline. It will sync automatically.",
       );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error restoring goal: $e")));
+      SnackbarHelper.showError(context, "Error restoring goal: $e");
     }
   }
 

@@ -8,6 +8,16 @@ import '../models/goal.dart';
 import '../services/api_services.dart';
 
 class GoalsRepository extends BaseRepository {
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value.toString()) ?? 0.0;
+  }
+
   Future<List<Goal>> getGoals() async {
     final ownerId = await this.ownerId;
     final database = await db.database;
@@ -39,11 +49,11 @@ class GoalsRepository extends BaseRepository {
           "server_id": goal["id"],
           "owner_id": ownerId,
           "title": goal["title"],
-          "target_amount": goal["target_amount"],
+          "target_amount": _toDouble(goal["target_amount"]),
           "target_date": goal["target_date"],
-          "saved_amount": goal["saved_amount"],
+          "saved_amount": _toDouble(goal["saved_amount"]),
           "achievement": goal["achievement"] ?? "",
-          "completed_percentage": goal["completed_percentage"] ?? 0,
+          "completed_percentage": _toDouble(goal["completed_percentage"]),
           "created_at": goal["created_at"] ?? DateTime.now().toIso8601String(),
           "completed_at": goal["completed_at"],
           "updated_at": goal["updated_at"] ?? DateTime.now().toIso8601String(),
@@ -269,14 +279,13 @@ class GoalsRepository extends BaseRepository {
       throw Exception("Goal not found");
     }
 
-    final currentSaved = (goal.first["saved_amount"] as num?)?.toDouble() ?? 0;
-
-    final targetAmount = (goal.first["target_amount"] as num?)?.toDouble() ?? 0;
+    final currentSaved = _toDouble(goal.first["saved_amount"]);
+    final targetAmount = _toDouble(goal.first["target_amount"]);
 
     final newSaved = currentSaved + amount;
 
     final percentage = targetAmount == 0
-        ? 0
+        ? 0.0
         : ((newSaved / targetAmount) * 100).clamp(0, 100);
 
     await database.update(
@@ -312,18 +321,22 @@ class GoalsRepository extends BaseRepository {
 
     final response = await ApiService.updateGoalProgress(serverGoalId, amount);
 
-    final goal = response["goal"];
+    final goal = Map<String, dynamic>.from(response["goal"]);
+
+    final savedAmount = _toDouble(goal["saved_amount"]);
+    final targetAmount = _toDouble(goal["target_amount"]);
+    final percentage = _toDouble(response["percentage"]);
+
+    final updatedAt = goal["updated_at"]?.toString();
 
     await database.update(
       "goals",
       {
         "owner_id": ownerId,
-        "saved_amount": goal["saved_amount"],
-        "updated_at": goal["updated_at"],
-        "completed_percentage": response["percentage"],
-        "completed_at": goal["saved_amount"] >= goal["target_amount"]
-            ? goal["updated_at"]
-            : null,
+        "saved_amount": savedAmount,
+        "updated_at": updatedAt,
+        "completed_percentage": percentage,
+        "completed_at": savedAmount >= targetAmount ? updatedAt : null,
         "is_synced": 1,
       },
       where: "id=? AND owner_id=?",
@@ -460,11 +473,11 @@ class GoalsRepository extends BaseRepository {
           "server_id": goal["id"],
           "owner_id": ownerId,
           "title": goal["title"],
-          "target_amount": goal["target_amount"],
+          "target_amount": _toDouble(goal["target_amount"]),
           "target_date": goal["target_date"],
-          "saved_amount": goal["saved_amount"],
+          "saved_amount": _toDouble(goal["saved_amount"]),
           "achievement": goal["achievement"] ?? "",
-          "completed_percentage": goal["completed_percentage"] ?? 0,
+          "completed_percentage": _toDouble(goal["completed_percentage"]),
           "created_at": goal["created_at"],
           "completed_at": goal["completed_at"],
           "updated_at": goal["updated_at"],

@@ -6,6 +6,7 @@ import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
 
 import '../utils/responsive_helper.dart';
+import '../utils/snackbar_helper.dart';
 
 import '../services/notification_service.dart';
 import '../repositories/expense_repository.dart';
@@ -93,55 +94,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
       if (!mounted) return;
 
-      final compact = ResponsiveHelper.useCompactLayout(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.all(compact ? 12 : 20),
-          duration: const Duration(seconds: 2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(compact ? 12 : 16),
-          ),
-          backgroundColor: Colors.green.shade600,
-          content: Row(
-            children: [
-              Icon(
-                Icons.check_circle_rounded,
-                color: Colors.white,
-                size: compact ? 18 : 22,
-              ),
-              SizedBox(width: compact ? 8 : 12),
-              Expanded(
-                child: Text(
-                  'Expense saved successfully!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: compact ? 12 : 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Expense saved successfully!');
 
       Navigator.pop(context, true);
     } catch (e) {
+      debugPrint('Error saving expense: $e');
       if (!mounted) return;
 
-      final compact = ResponsiveHelper.useCompactLayout(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.all(compact ? 12 : 20),
-          content: Text(
-            'Error saving expense: $e',
-            style: TextStyle(fontSize: compact ? 12 : 14),
-          ),
-        ),
+      SnackbarHelper.showError(
+        context,
+        'We couldn’t save your expense. Please try again',
       );
 
       setState(() => isLoading = false);

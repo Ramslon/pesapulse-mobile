@@ -35,6 +35,7 @@ import '../models/analytics_period.dart';
 
 import '../utils/analytics_theme_helper.dart';
 import '../utils/responsive_helper.dart';
+import '../utils/snackbar_helper.dart';
 
 import '../repositories/analytics_repository.dart';
 
@@ -144,24 +145,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   Future<void> _loadAnalytics({bool showFullSkeleton = false}) async {
-    if (_analyticsRequestInProgress) {
-      return;
-    }
-
-    if (isGuest == true) {
-      return;
-    }
+    if (_analyticsRequestInProgress) return;
+    if (isGuest == true) return;
 
     _analyticsRequestInProgress = true;
-
     final requestPeriod = selectedPeriod;
-
     final shouldShowSkeleton = showFullSkeleton && summary == null;
 
     if (mounted) {
       setState(() {
         _analyticsError = null;
-
         if (shouldShowSkeleton) {
           isLoading = true;
         } else {
@@ -183,22 +176,31 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         isRefreshingAnalytics = false;
         _analyticsError = null;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
 
       setState(() {
         isLoading = false;
         isRefreshingAnalytics = false;
-
-        if (!_network.isOnline) {
-          _isOffline = true;
-          _analyticsError =
-              'You are offline. Your existing analytics are still available.';
-        } else {
-          _analyticsError =
-              'We couldn\'t load your analytics. Please try again.';
-        }
       });
+
+      if (!_network.isOnline) {
+        _isOffline = true;
+        _analyticsError =
+            'You are offline. Your existing analytics are still available.';
+
+        SnackbarHelper.showError(
+          context,
+          'Offline mode: showing cached analytics.',
+        );
+      } else {
+        _analyticsError = 'We couldn\'t load your analytics. Please try again.';
+
+        SnackbarHelper.showError(
+          context,
+          'Failed to load analytics. Please try again.',
+        );
+      }
     } finally {
       _analyticsRequestInProgress = false;
     }
@@ -207,50 +209,36 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   Future<void> _refreshAnalytics() async {
     if (_isOffline) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'You are offline. Your existing analytics are still available.',
-          ),
-        ),
+      SnackbarHelper.showError(
+        context,
+        'You are offline. Your existing analytics are still available.',
       );
-
       return;
     }
-
     await _loadAnalytics();
   }
 
   Future<void> _retryAnalytics() async {
     if (_isOffline) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You are offline. Please reconnect and try again.'),
-        ),
+      SnackbarHelper.showError(
+        context,
+        'You are offline. Please reconnect and try again.',
       );
-
       return;
     }
-
     await _loadAnalytics();
   }
 
   Future<void> shareExistingReport(String path) async {
     final exists = await ReportManagerService.shareExistingReport(path);
-
     if (!exists && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Report file no longer exists')),
-      );
+      SnackbarHelper.showError(context, 'Report file no longer exists');
     }
   }
 
   Future<void> previewReport(Map<String, dynamic> report) async {
     if (!mounted) return;
-
     await showDialog(
       context: context,
       builder: (_) => ReportDetailsDialog(report: report),
@@ -259,9 +247,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   Future<void> loadReports() async {
     final result = await ReportManagerService.loadReports();
-
     if (!mounted) return;
-
     setState(() {
       reports = result;
     });
@@ -269,9 +255,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   Future<void> deleteReport(int index) async {
     final result = await ReportManagerService.deleteReport(index);
-
     if (!mounted) return;
-
     setState(() {
       reports = result;
     });

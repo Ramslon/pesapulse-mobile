@@ -21,6 +21,7 @@ import '../utils/responsive_helper.dart';
 import '../utils/expense_filters.dart';
 import '../utils/expense_date_utils.dart';
 import '../utils/expense_search_utils.dart';
+import '../utils/snackbar_helper.dart';
 import '../core/utils/currency_formatter.dart';
 
 import '../screens/add_expense_screen.dart';
@@ -216,7 +217,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
   Future<void> refreshExpenses() async {
     setState(() {
       isLoading = true;
-
       expenses.clear();
       filteredExpenses.clear();
     });
@@ -227,19 +227,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 1),
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 8),
-            Text("Expenses updated"),
-          ],
-        ),
-      ),
-    );
+    SnackbarHelper.showSuccess(context, "Expenses updated");
   }
 
   void filterExpenses() {

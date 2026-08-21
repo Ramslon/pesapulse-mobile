@@ -7,6 +7,7 @@ import '../repositories/goals_repository.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
 import '../utils/responsive_helper.dart';
+import '../utils/snackbar_helper.dart';
 
 class AddGoalScreen extends StatefulWidget {
   const AddGoalScreen({super.key});
@@ -25,26 +26,21 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
   Future<void> saveGoal() async {
     if (titleController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a goal title.")),
-      );
+      SnackbarHelper.showError(context, "Please enter a goal title.");
       return;
     }
 
     if (amountController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a target amount.")),
-      );
+      SnackbarHelper.showError(context, "Please enter a target amount.");
       return;
     }
 
     final amount = double.tryParse(amountController.text.trim());
 
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Target amount must be greater than zero."),
-        ),
+      SnackbarHelper.showError(
+        context,
+        "Target amount must be greater than zero.",
       );
       return;
     }
@@ -52,9 +48,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
     if (isLoading) return;
 
     try {
-      setState(() {
-        isLoading = true;
-      });
+      setState(() => isLoading = true);
 
       final connectivity = context.read<ConnectivityProvider>();
 
@@ -68,28 +62,20 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            connectivity.isOnline
-                ? "Goal created successfully!"
-                : "Goal saved offline. It will sync automatically.",
-          ),
-        ),
+      SnackbarHelper.showSuccess(
+        context,
+        connectivity.isOnline
+            ? "Goal created successfully!"
+            : "Goal saved offline. It will sync automatically.",
       );
 
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      SnackbarHelper.showError(context, "Failed to save goal: $e");
     } finally {
       if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
+        setState(() => isLoading = false);
       }
     }
   }
