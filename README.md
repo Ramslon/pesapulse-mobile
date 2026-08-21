@@ -264,8 +264,8 @@ Demo video coming soon...
     <img src="docs/screenshots/dashboard.jpeg" alt="Dashboard" width="280"/>
   </a>
 
-  <a href="docs/screenshots/budget-overview.jpeg">
-    <img src="docs/screenshots/budget-overview.jpeg" alt="Budget Overview" width="280"/>
+  <a href="docs/screenshots/budget_overview.jpeg">
+    <img src="docs/screenshots/budget_overview.jpeg" alt="Budget Overview" width="280"/>
   </a>
 </p>
 
