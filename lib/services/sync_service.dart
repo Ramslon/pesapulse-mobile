@@ -169,25 +169,20 @@ class SyncService {
         break;
 
       case "update_progress":
-        final serverId = await _getServerGoalId(item["record_id"] as int);
+        final localId = item["record_id"] as int;
+
+        final serverId = await _getServerGoalId(localId);
 
         if (serverId == null) {
           throw Exception("Goal has no server id.");
         }
 
         await goalsRepository.updateGoalProgressOnline(
-          item["record_id"] as int,
+          localId,
           serverId,
           double.parse(payload["amount"].toString()),
         );
-        final database = await db.database;
 
-        await database.update(
-          "goals",
-          {"is_synced": 1},
-          where: "id=?",
-          whereArgs: [item["record_id"]],
-        );
         break;
 
       case "archive":

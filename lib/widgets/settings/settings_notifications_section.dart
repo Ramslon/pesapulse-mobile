@@ -61,21 +61,36 @@ class SettingsNotificationsSection extends StatelessWidget {
             compact: isCompact,
             horizontalPadding: horizontalPadding,
             onChanged: (value) async {
-              onDailyReminderChanged(value);
+              try {
+                await _updatePreferences(
+                  context,
+                  dailyReminder: value,
+                  expenseAlerts: expenseAlerts,
+                  weeklySummary: weeklySummary,
+                );
 
-              await _updatePreferences(
-                context,
-                dailyReminder: value,
-                expenseAlerts: expenseAlerts,
-                weeklySummary: weeklySummary,
-              );
+                onDailyReminderChanged(value);
 
-              await NotificationService.showNotification(
-                title: 'Daily Reminder',
-                body: value
-                    ? 'Daily reminders enabled'
-                    : 'Daily reminders disabled',
-              );
+                await NotificationService.showNotification(
+                  id: NotificationService.preferenceNotificationId,
+                  title: 'Daily Reminder',
+                  body: value
+                      ? 'Daily reminders enabled'
+                      : 'Daily reminders disabled',
+                );
+              } catch (e) {
+                debugPrint('Daily reminder update failed: $e');
+
+                if (!context.mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Couldn’t update Daily Reminder. Please try again.',
+                    ),
+                  ),
+                );
+              }
             },
           ),
 
@@ -85,26 +100,41 @@ class SettingsNotificationsSection extends StatelessWidget {
             icon: Icons.notifications_active_outlined,
             iconColor: Colors.orange,
             title: 'Expense Alerts',
-            subtitle: 'Notify me when spending exceeds my budget.',
+            subtitle: 'Notify me when spending exceeds your budget.',
             value: expenseAlerts,
             compact: isCompact,
             horizontalPadding: horizontalPadding,
             onChanged: (value) async {
-              onExpenseAlertsChanged(value);
+              try {
+                await _updatePreferences(
+                  context,
+                  dailyReminder: dailyReminder,
+                  expenseAlerts: value,
+                  weeklySummary: weeklySummary,
+                );
 
-              await _updatePreferences(
-                context,
-                dailyReminder: dailyReminder,
-                expenseAlerts: value,
-                weeklySummary: weeklySummary,
-              );
+                onExpenseAlertsChanged(value);
 
-              await NotificationService.showNotification(
-                title: 'Expense Alerts',
-                body: value
-                    ? 'Expense alerts enabled'
-                    : 'Expense alerts disabled',
-              );
+                await NotificationService.showNotification(
+                  id: NotificationService.preferenceNotificationId,
+                  title: 'Expense Alerts',
+                  body: value
+                      ? 'Expense alerts enabled'
+                      : 'Expense alerts disabled',
+                );
+              } catch (e) {
+                debugPrint('Expense alerts update failed: $e');
+
+                if (!context.mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Couldn’t update Expense Alerts. Please try again.',
+                    ),
+                  ),
+                );
+              }
             },
           ),
 
@@ -119,21 +149,36 @@ class SettingsNotificationsSection extends StatelessWidget {
             compact: isCompact,
             horizontalPadding: horizontalPadding,
             onChanged: (value) async {
-              onWeeklySummaryChanged(value);
+              try {
+                await _updatePreferences(
+                  context,
+                  dailyReminder: dailyReminder,
+                  expenseAlerts: expenseAlerts,
+                  weeklySummary: value,
+                );
 
-              await _updatePreferences(
-                context,
-                dailyReminder: dailyReminder,
-                expenseAlerts: expenseAlerts,
-                weeklySummary: value,
-              );
+                onWeeklySummaryChanged(value);
 
-              await NotificationService.showNotification(
-                title: 'Weekly Summary',
-                body: value
-                    ? 'Weekly summaries enabled'
-                    : 'Weekly summaries disabled',
-              );
+                await NotificationService.showNotification(
+                  id: NotificationService.preferenceNotificationId,
+                  title: 'Weekly Summary',
+                  body: value
+                      ? 'Weekly summaries enabled'
+                      : 'Weekly summaries disabled',
+                );
+              } catch (e) {
+                debugPrint('Weekly summary update failed: $e');
+
+                if (!context.mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Couldn’t update Weekly Summary. Please try again.',
+                    ),
+                  ),
+                );
+              }
             },
           ),
         ],

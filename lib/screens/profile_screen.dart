@@ -140,16 +140,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         weeklySummary: newWeeklySummary,
       );
 
-      await NotificationService.showNotification(
-        title: notificationTitle,
-        body:
-            (dailyReminderValue ??
-                expenseAlertsValue ??
-                weeklySummaryValue ??
-                false)
-            ? enabledMessage
-            : disabledMessage,
-      );
+      final changedValue =
+          dailyReminderValue ?? expenseAlertsValue ?? weeklySummaryValue;
+
+      if (changedValue != null) {
+        await NotificationService.showNotification(
+          id: NotificationService.preferenceNotificationId,
+          title: notificationTitle,
+          body: changedValue ? enabledMessage : disabledMessage,
+        );
+      }
     } catch (e) {
       debugPrint('Preference update error: $e');
 
@@ -158,7 +158,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       AuthMessageHelper.showOffline(context);
     }
   }
-
   // ─────────────────────────────────────────────
   // Dashboard statistics
   // ─────────────────────────────────────────────

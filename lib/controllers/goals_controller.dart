@@ -148,7 +148,24 @@ class GoalsController extends ChangeNotifier {
 
         final days = goalsService.getDaysRemaining(goal);
 
+        final goalId = int.tryParse(goal['goal_id']?.toString() ?? '');
+
+        if (goalId == null) {
+          continue;
+        }
+
+        final shouldShow =
+            await NotificationService.shouldShowGoalDeadlineNotification(
+              goalId,
+              days,
+            );
+
+        if (!shouldShow) {
+          continue;
+        }
+
         await NotificationService.showNotification(
+          id: NotificationService.goalNotificationId(goalId),
           title: '🎯 Goal Deadline Approaching',
           body: '${goal['title']} is due in $days day(s)',
         );
@@ -162,7 +179,7 @@ class GoalsController extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> addSavings({
+  Future<Map<String, dynamic>> addSavings({
     required int goalId,
     required double amount,
     required bool isOnline,

@@ -59,27 +59,27 @@ class _AddSavingsDialogState extends State<AddSavingsDialog> {
 
       if (!mounted) return;
 
-      Navigator.pop(context);
-
-      if (!connectivity.isOnline) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Savings added offline. Changes will sync automatically.',
-            ),
-          ),
-        );
-      }
-
-      final milestone = response?['milestone'];
+      final milestone = response['milestone'];
 
       if (milestone != null) {
-        await NotificationService.showNotification(
-          title: milestone['percentage'] == 100
-              ? '🏆 Goal Completed'
-              : '🎯 Goal Milestone',
-          body: milestone['message'],
-        );
+        final percentage =
+            int.tryParse(milestone['percentage']?.toString() ?? '') ?? 0;
+
+        final shouldShow =
+            await NotificationService.shouldShowGoalMilestoneNotification(
+              widget.goalId,
+              percentage,
+            );
+
+        if (shouldShow) {
+          final isCompleted = percentage == 100;
+
+          await NotificationService.showNotification(
+            id: NotificationService.goalMilestoneNotificationId(widget.goalId),
+            title: isCompleted ? '🏆 Goal Completed' : '🎯 Goal Milestone',
+            body: milestone['message']?.toString() ?? '',
+          );
+        }
 
         if (!mounted) return;
 
@@ -87,17 +87,28 @@ class _AddSavingsDialogState extends State<AddSavingsDialog> {
           context: context,
           builder: (_) => AlertDialog(
             title: Text(
-              milestone['percentage'] == 100
-                  ? '🏆 Goal Completed'
-                  : '🎉 Milestone Reached',
+              percentage == 100 ? '🏆 Goal Completed' : '🎉 Milestone Reached',
             ),
-            content: Text(milestone['message']),
+            content: Text(milestone['message']?.toString() ?? ''),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Awesome'),
               ),
             ],
+          ),
+        );
+      }
+      if (!mounted) return;
+
+      Navigator.pop(context);
+
+      if (!connectivity.isOnline && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Savings added offline. Changes will sync automatically.',
+            ),
           ),
         );
       }

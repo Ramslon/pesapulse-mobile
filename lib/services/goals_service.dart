@@ -162,22 +162,22 @@ class GoalsService {
     _insightCache.clear();
   }
 
-  Future<Map<String, dynamic>?> addSavings({
+  Future<Map<String, dynamic>> addSavings({
     required Goal goal,
     required double amount,
     required bool isOnline,
   }) async {
     if (isOnline) {
-      return await goalsRepository.updateGoalProgressOnline(
+      final response = await goalsRepository.updateGoalProgressOnline(
         goal.id,
         goal.requestId,
         amount,
       );
+
+      return {...response, "offline": false};
     }
 
-    await goalsRepository.updateGoalProgressOffline(goal.id, amount);
-
-    return null;
+    return await goalsRepository.updateGoalProgressOffline(goal.id, amount);
   }
 
   Future<void> deleteGoal({required Goal goal, required bool isOnline}) async {

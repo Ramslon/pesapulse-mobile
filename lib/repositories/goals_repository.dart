@@ -28,14 +28,22 @@ class GoalsRepository extends BaseRepository {
 
       final goals = [...activeGoals, ...archivedGoals];
 
-      final serverIds = goals.map((g) => g["id"]).toList();
+      final serverIds = goals
+          .map((g) => g["id"])
+          .where((id) => id != null)
+          .toList();
 
-      await database.delete(
-        "goals",
-        where:
-            "owner_id=? AND server_id IS NOT NULL AND server_id NOT IN (${List.filled(serverIds.length, "?").join(",")}) ",
-        whereArgs: [ownerId, ...serverIds],
-      );
+      if (serverIds.isNotEmpty) {
+        await database.delete(
+          "goals",
+          where:
+              "owner_id=? "
+              "AND server_id IS NOT NULL "
+              "AND is_synced=1 "
+              "AND server_id NOT IN (${List.filled(serverIds.length, "?").join(",")})",
+          whereArgs: [ownerId, ...serverIds],
+        );
+      }
 
       for (final goal in goals) {
         final existing = await database.query(
@@ -63,12 +71,24 @@ class GoalsRepository extends BaseRepository {
         };
 
         if (existing.isNotEmpty) {
-          await database.update(
-            "goals",
-            values,
-            where: "server_id=? AND owner_id=?",
-            whereArgs: [goal["id"], ownerId],
-          );
+          final localGoal = existing.first;
+
+          final isSynced = (localGoal["is_synced"] as int? ?? 1) == 1;
+
+          if (isSynced) {
+            // Local record is synchronized, so the server
+            // is allowed to refresh it.
+            await database.update(
+              "goals",
+              values,
+              where: "server_id=? AND owner_id=?",
+              whereArgs: [goal["id"], ownerId],
+            );
+          } else {
+            // Local record contains unsynchronized changes.
+            // Do NOT overwrite it with stale server data.
+            continue;
+          }
         } else {
           await database.insert(
             "goals",
@@ -262,38 +282,53 @@ class GoalsRepository extends BaseRepository {
     }
   }
 
-  Future<void> updateGoalProgressOffline(int goalId, double amount) async {
+  Future<Map<String, dynamic>> updateGoalProgressOffline(
+    int goalId,
+    double amount,
+  ) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
     final now = DateTime.now().toIso8601String();
 
-    final goal = await database.query(
+    final rows = await database.query(
       "goals",
       where: "id=? AND owner_id=?",
       whereArgs: [goalId, ownerId],
       limit: 1,
     );
 
-    if (goal.isEmpty) {
+    if (rows.isEmpty) {
       throw Exception("Goal not found");
     }
 
-    final currentSaved = _toDouble(goal.first["saved_amount"]);
-    final targetAmount = _toDouble(goal.first["target_amount"]);
+    final goal = rows.first;
+
+    final currentSaved = _toDouble(goal["saved_amount"]);
+    final targetAmount = _toDouble(goal["target_amount"]);
+
+    final previousPercentage = targetAmount <= 0
+        ? 0.0
+        : ((currentSaved / targetAmount) * 100).clamp(0.0, 100.0);
 
     final newSaved = currentSaved + amount;
 
-    final percentage = targetAmount == 0
+    final percentage = targetAmount <= 0
         ? 0.0
-        : ((newSaved / targetAmount) * 100).clamp(0, 100);
+        : ((newSaved / targetAmount) * 100).clamp(0.0, 100.0);
+
+    final completed = targetAmount > 0 && newSaved >= targetAmount;
+
+    final completedAt = completed
+        ? (goal["completed_at"]?.toString() ?? now)
+        : null;
 
     await database.update(
       "goals",
       {
-        "owner_id": ownerId,
         "saved_amount": newSaved,
         "completed_percentage": percentage,
+        "completed_at": completedAt,
         "updated_at": now,
         "is_synced": 0,
       },
@@ -309,6 +344,37 @@ class GoalsRepository extends BaseRepository {
       "payload": jsonEncode({"amount": amount}),
       "created_at": now,
     });
+
+    Map<String, dynamic>? milestone;
+
+    const milestones = [25, 50, 75, 100];
+
+    for (final milestonePercentage in milestones) {
+      if (previousPercentage < milestonePercentage &&
+          percentage >= milestonePercentage) {
+        milestone = {
+          "percentage": milestonePercentage,
+          "message": milestonePercentage == 100
+              ? "Congratulations! You completed your goal."
+              : "Great job! You've reached $milestonePercentage% of your goal.",
+        };
+
+        break;
+      }
+    }
+
+    return {
+      "goal": {
+        "id": goalId,
+        "saved_amount": newSaved,
+        "target_amount": targetAmount,
+        "completed_percentage": percentage,
+        "completed_at": completedAt,
+      },
+      "percentage": percentage,
+      "milestone": milestone,
+      "offline": true,
+    };
   }
 
   Future<Map<String, dynamic>> updateGoalProgressOnline(

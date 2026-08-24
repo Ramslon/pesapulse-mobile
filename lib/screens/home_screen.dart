@@ -13,6 +13,7 @@ import '../repositories/settings_repository.dart';
 import '../repositories/financial_insights_repository.dart';
 
 import '../providers/theme_provider.dart';
+import '../providers/connectivity_provider.dart';
 import '../services/session_service.dart';
 
 import '../../utils/responsive_helper.dart';
@@ -323,10 +324,17 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    final connectivity = context.read<ConnectivityProvider>();
+
+    if (!connectivity.isOnline) {
+      debugPrint('Preferences sync skipped: device is offline.');
+      return;
+    }
+
     try {
       await SettingsRepository().syncPreferencesFromBackend();
     } catch (e) {
-      debugPrint('Settings sync failed: $e');
+      debugPrint('Preferences sync unavailable: $e');
     }
 
     if (!mounted) return;
@@ -337,10 +345,9 @@ class _HomeScreenState extends State<HomeScreen> {
         listen: false,
       ).syncWithBackend();
     } catch (e) {
-      debugPrint('Theme sync failed: $e');
+      debugPrint('Theme sync unavailable: $e');
     }
   }
-
   // ─────────────────────────────────────────────
   // Budget status
   // ─────────────────────────────────────────────

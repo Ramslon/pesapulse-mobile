@@ -46,20 +46,29 @@ class GoalDeadlineRepository extends BaseRepository {
       AND is_deleted = 0
       AND is_archived = 0
       AND target_date IS NOT NULL
-    """,
+      """,
       whereArgs: [ownerId],
     );
 
     final now = DateTime.now();
+
+    final today = DateTime(now.year, now.month, now.day);
 
     final List<Map<String, dynamic>> deadlines = [];
 
     for (final goal in rows) {
       final targetDate = DateTime.parse(goal["target_date"] as String);
 
-      final daysRemaining = targetDate.difference(now).inDays;
+      final targetDay = DateTime(
+        targetDate.year,
+        targetDate.month,
+        targetDate.day,
+      );
+
+      final daysRemaining = targetDay.difference(today).inDays;
 
       deadlines.add({
+        "id": goal["id"],
         "title": goal["title"],
         "target_date": goal["target_date"],
         "days_remaining": daysRemaining,

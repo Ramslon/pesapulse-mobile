@@ -7,6 +7,8 @@ class SettingsPreferencesController {
 
   SettingsPreferencesController({required this.settingsRepository});
 
+  static const int preferenceNotificationId = 3001;
+
   Future<void> updatePreferences({
     required bool dailyReminder,
     required bool expenseAlerts,
@@ -35,6 +37,7 @@ class SettingsPreferencesController {
     required bool enabled,
   }) async {
     await NotificationService.showNotification(
+      id: preferenceNotificationId,
       title: title,
       body: enabled ? '$title enabled' : '$title disabled',
     );
