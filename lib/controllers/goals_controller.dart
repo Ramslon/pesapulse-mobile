@@ -167,7 +167,16 @@ class GoalsController extends ChangeNotifier {
         await NotificationService.showNotification(
           id: NotificationService.goalNotificationId(goalId),
           title: '🎯 Goal Deadline Approaching',
-          body: '${goal['title']} is due in $days day(s)',
+          body: days == 0
+              ? '${goal['title']} is due today.'
+              : days == 1
+              ? '${goal['title']} is due tomorrow.'
+              : '${goal['title']} is due in $days days.',
+        );
+
+        await NotificationService.markGoalDeadlineNotificationShown(
+          goalId,
+          days,
         );
       }
 

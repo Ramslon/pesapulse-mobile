@@ -154,15 +154,18 @@ class NotificationService {
 
     final key = 'goal_deadline_notification_${goalId}_$daysRemaining';
 
-    final alreadyNotified = prefs.getBool(key) ?? false;
+    return !(prefs.getBool(key) ?? false);
+  }
 
-    if (alreadyNotified) {
-      return false;
-    }
+  static Future<void> markGoalDeadlineNotificationShown(
+    int goalId,
+    int daysRemaining,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final key = 'goal_deadline_notification_${goalId}_$daysRemaining';
 
     await prefs.setBool(key, true);
-
-    return true;
   }
 
   static Future<bool> shouldShowGoalMilestoneNotification(

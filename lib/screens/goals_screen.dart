@@ -188,6 +188,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                     upcomingDeadlines: goalsController.upcomingDeadlines,
                   ),
 
+                  SizedBox(height: sectionSpacing),
+
                   ...goals.map<Widget>(
                     (goal) => GoalListItem(
                       goal: goal,

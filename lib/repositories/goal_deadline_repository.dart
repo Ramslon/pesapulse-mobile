@@ -67,12 +67,14 @@ class GoalDeadlineRepository extends BaseRepository {
 
       final daysRemaining = targetDay.difference(today).inDays;
 
-      deadlines.add({
-        "id": goal["id"],
-        "title": goal["title"],
-        "target_date": goal["target_date"],
-        "days_remaining": daysRemaining,
-      });
+      if (daysRemaining >= 0 && daysRemaining <= 3) {
+        deadlines.add({
+          "goal_id": goal["server_id"] ?? goal["id"],
+          "title": goal["title"],
+          "target_date": goal["target_date"],
+          "days_remaining": daysRemaining,
+        });
+      }
     }
 
     deadlines.sort(
