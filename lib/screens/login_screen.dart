@@ -12,6 +12,8 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/auth_message_helper.dart';
 
+import '../exceptions/rate_limit_exception.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -28,38 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool _autoValidate = false;
-
-  void showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-      ),
-    );
-  }
 
   void loginUser() async {
     if (!_formKey.currentState!.validate()) {
@@ -95,7 +65,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ApiService.token = token;
 
         await SessionService.loginUser(userId, token);
-        // Start automatic syncing only after authentication
+
+        // Start automatic syncing only after authentication.
         SyncService.instance.startListening();
 
         // ------------------------------------------------------------
@@ -105,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
         try {
           await MigrationService.instance.migrateGuestData(userId);
 
-          // Cleanup guest-only sync items
+          // Cleanup guest-only sync items.
           await SyncService.instance.cleanupGuestQueue();
 
           debugPrint('Guest data migration completed successfully.');
@@ -116,7 +87,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
           AuthMessageHelper.showError(
             context,
-            'Guest data migration failed: ${migrationError.toString().replaceFirst("Exception: ", "")}',
+            'You signed in successfully, but your guest data '
+            'could not be migrated. You can continue using your account.',
           );
 
           return;
@@ -138,14 +110,28 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         if (!mounted) return;
 
-        AuthMessageHelper.showError(context, response["message"]);
+        AuthMessageHelper.showError(
+          context,
+          response["message"] ?? "Login failed.",
+        );
       }
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 
+      debugPrint('Login error: $e');
+
       AuthMessageHelper.showError(
         context,
-        e.toString().replaceFirst("Exception: ", ""),
+        'Unable to sign in. Please check your email and password and try again.',
       );
     } finally {
       if (mounted) {

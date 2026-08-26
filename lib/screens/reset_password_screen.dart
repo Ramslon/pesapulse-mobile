@@ -6,6 +6,7 @@ import '../widgets/custom_textfield.dart';
 import '../widgets/success_dialog.dart';
 import '../widgets/auth_message_helper.dart';
 import 'login_screen.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -61,7 +62,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         builder: (_) => SuccessDialog(
           title: "Password Reset Successful",
           message:
-              "Your password has been updated successfully.\n\nPlease log in using your new password.",
+              "Your password has been updated successfully.\n\n"
+              "Please log in using your new password.",
           onContinue: () {
             Navigator.of(context).pop();
 
@@ -73,13 +75,30 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           },
         ),
       );
-    } catch (e) {
+    } on RateLimitException catch (e) {
       if (!mounted) return;
 
       setState(() => isLoading = false);
 
-      //  Use helper for consistency
-      AuthMessageHelper.showOffline(context);
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      debugPrint('Password reset error: $e');
+
+      AuthMessageHelper.showError(
+        context,
+        'Unable to reset your password. Please check your information and try again.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 

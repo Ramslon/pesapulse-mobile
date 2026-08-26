@@ -6,11 +6,17 @@ import '../widgets/custom_button.dart';
 import '../widgets/auth_message_helper.dart';
 
 import 'reset_password_screen.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class VerifyOtpScreen extends StatefulWidget {
   final String email;
+  final int resendAfter;
 
-  const VerifyOtpScreen({super.key, required this.email});
+  const VerifyOtpScreen({
+    super.key,
+    required this.email,
+    this.resendAfter = 60,
+  });
 
   @override
   State<VerifyOtpScreen> createState() => _VerifyOtpScreenState();
@@ -59,8 +65,10 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
       setState(() => isLoading = false);
 
-      // Use helper for success message
-      AuthMessageHelper.showSuccess(context, response["message"]);
+      AuthMessageHelper.showSuccess(
+        context,
+        response["message"] ?? "OTP verified successfully.",
+      );
 
       Navigator.pushReplacement(
         context,
@@ -69,69 +77,157 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
               ResetPasswordScreen(email: widget.email, otp: enteredOtp),
         ),
       );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      setState(() => isLoading = false);
+
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 
       setState(() => isLoading = false);
 
-      // Use helper for offline/error
-      AuthMessageHelper.showOffline(context);
+      debugPrint('OTP verification error: $e');
+
+      AuthMessageHelper.showError(
+        context,
+        'Unable to verify the OTP. Please check the code and try again.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
   Future<void> resendOtp() async {
+    if (_resendCooldown > 0 || isLoading) {
+      return;
+    }
+
+    setState(() => isLoading = true);
+
     try {
       final response = await ApiService.forgotPassword(widget.email);
 
       if (!mounted) return;
 
-      AuthMessageHelper.showSuccess(context, response["message"]);
+      final expiresIn = response['expires_in'];
+      final resendAfter = response['resend_after'];
 
-      // Restart timers
-      startCountdown();
+      // Restart OTP expiration timer using the server value.
+      if (expiresIn is int && expiresIn > 0) {
+        startCountdown(expiresIn);
+      } else {
+        // Safe fallback.
+        startCountdown(600);
+      }
 
-      startResendCooldown();
+      // Restart resend cooldown using the server value.
+      if (resendAfter is int && resendAfter > 0) {
+        startResendCooldown(resendAfter);
+      } else {
+        // Safe fallback.
+        startResendCooldown(60);
+      }
+
+      AuthMessageHelper.showSuccess(
+        context,
+        response["message"] ?? "A new OTP has been sent.",
+      );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      // Laravel's Retry-After takes precedence.
+      final retryAfter = e.retryAfter ?? 60;
+
+      startResendCooldown(retryAfter);
+
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 
-      // Use helper for offline/error
-      AuthMessageHelper.showOffline(context);
+      debugPrint('OTP resend error: $e');
+
+      AuthMessageHelper.showError(
+        context,
+        'Unable to resend the OTP. Please try again.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
-  void startCountdown() {
+  void startCountdown([int seconds = 600]) {
     _timer?.cancel();
 
-    _remainingSeconds = 600;
+    if (!mounted) return;
+
+    setState(() {
+      _remainingSeconds = seconds;
+    });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_remainingSeconds == 0) {
+      if (!mounted) {
         timer.cancel();
-      } else {
-        if (mounted) {
-          setState(() {
-            _remainingSeconds--;
-          });
-        }
+        return;
       }
+
+      if (_remainingSeconds <= 1) {
+        setState(() {
+          _remainingSeconds = 0;
+        });
+
+        timer.cancel();
+        return;
+      }
+
+      setState(() {
+        _remainingSeconds--;
+      });
     });
   }
 
-  void startResendCooldown() {
+  void startResendCooldown(int seconds) {
     _resendTimer?.cancel();
 
-    _resendCooldown = 60;
+    if (!mounted) return;
+
+    setState(() {
+      _resendCooldown = seconds;
+    });
 
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_resendCooldown == 0) {
+      if (!mounted) {
         timer.cancel();
-      } else {
-        if (mounted) {
-          setState(() {
-            _resendCooldown--;
-          });
-        }
+        return;
       }
+
+      if (_resendCooldown <= 1) {
+        setState(() {
+          _resendCooldown = 0;
+        });
+
+        timer.cancel();
+        return;
+      }
+
+      setState(() {
+        _resendCooldown--;
+      });
     });
   }
 
@@ -147,11 +243,9 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   void initState() {
     super.initState();
 
-    startCountdown();
+    startCountdown(600);
 
-    _resendTimer?.cancel();
-
-    startResendCooldown();
+    startResendCooldown(widget.resendAfter);
   }
 
   @override

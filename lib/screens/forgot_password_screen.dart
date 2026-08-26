@@ -4,6 +4,7 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/auth_message_helper.dart';
 import 'verify_otp_screen.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -42,7 +43,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       setState(() => isLoading = false);
 
-      //  Use helper for success message
       AuthMessageHelper.showSuccess(
         context,
         response["message"] ?? "OTP sent successfully.",
@@ -54,13 +54,32 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           builder: (_) => VerifyOtpScreen(email: emailController.text.trim()),
         ),
       );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      setState(() => isLoading = false);
+
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 
       setState(() => isLoading = false);
 
-      //  Use helper for offline/error
-      AuthMessageHelper.showOffline(context);
+      debugPrint('Forgot password error: $e');
+
+      AuthMessageHelper.showError(
+        context,
+        'Unable to send the password reset OTP. Please try again.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 

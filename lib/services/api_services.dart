@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_preferences.dart';
+import '../exceptions/rate_limit_exception.dart';
+import '../exceptions/auth_exception.dart';
 
 class ApiService {
   static const String baseUrl = 'https://pesapulse-t9hk.onrender.com/api';
@@ -12,6 +14,48 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
 
     return prefs.getString('token');
+  }
+
+  static Never _handleRateLimitResponse(http.Response response) {
+    String message = 'Too many attempts. Please try again later.';
+
+    try {
+      final data = jsonDecode(response.body);
+
+      if (data is Map<String, dynamic> && data['message'] != null) {
+        message = data['message'].toString();
+      }
+    } catch (_) {
+      // Keep default message.
+    }
+
+    final retryAfterHeader = response.headers['retry-after'];
+
+    final retryAfter = retryAfterHeader != null
+        ? int.tryParse(retryAfterHeader)
+        : null;
+
+    final remainingHeader = response.headers['x-ratelimit-remaining'];
+
+    final remaining = remainingHeader != null
+        ? int.tryParse(remainingHeader)
+        : null;
+
+    throw RateLimitException(
+      message: message,
+      retryAfter: retryAfter,
+      remaining: remaining,
+    );
+  }
+
+  static int? _getRemainingAttempts(http.Response response) {
+    final header = response.headers['x-ratelimit-remaining'];
+
+    if (header == null) {
+      return null;
+    }
+
+    return int.tryParse(header);
   }
 
   static Future<Map<String, dynamic>> loginUser(
@@ -27,13 +71,22 @@ class ApiService {
       body: jsonEncode({'email': email, 'password': password}),
     );
 
+    if (response.statusCode == 429) {
+      _handleRateLimitResponse(response);
+    }
+
     final body = jsonDecode(response.body);
 
     if (response.statusCode == 200) {
       return body;
     }
 
-    throw Exception(body["message"] ?? "Login failed");
+    final remaining = _getRemainingAttempts(response);
+
+    throw AuthException(
+      message: body["message"] ?? "Login failed",
+      remaining: remaining,
+    );
   }
 
   static Future<void> logoutUser() async {
@@ -83,16 +136,29 @@ class ApiService {
   ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/register'),
-
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-
       body: jsonEncode({'name': name, 'email': email, 'password': password}),
     );
 
-    return jsonDecode(response.body);
+    if (response.statusCode == 429) {
+      _handleRateLimitResponse(response);
+    }
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    final remaining = _getRemainingAttempts(response);
+
+    throw AuthException(
+      message: body["message"] ?? "Registration failed",
+      remaining: remaining,
+    );
   }
 
   static Future<Map<String, dynamic>> migrateGuestData({
@@ -616,7 +682,17 @@ class ApiService {
       body: jsonEncode({'email': email}),
     );
 
-    return jsonDecode(response.body);
+    if (response.statusCode == 429) {
+      _handleRateLimitResponse(response);
+    }
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+
+    throw Exception(body['message'] ?? 'Failed to send password reset OTP.');
   }
 
   static Future<Map<String, dynamic>> verifyOtp(
@@ -631,6 +707,10 @@ class ApiService {
       },
       body: jsonEncode({'email': email, 'otp': otp}),
     );
+
+    if (response.statusCode == 429) {
+      _handleRateLimitResponse(response);
+    }
 
     final data = jsonDecode(response.body);
 
@@ -661,12 +741,16 @@ class ApiService {
       }),
     );
 
+    if (response.statusCode == 429) {
+      _handleRateLimitResponse(response);
+    }
+
     final body = jsonDecode(response.body);
 
     if (response.statusCode == 200) {
       return body;
     }
 
-    throw Exception(body["message"] ?? "Password reset failed.");
+    throw Exception(body['message'] ?? 'Password reset failed.');
   }
 }

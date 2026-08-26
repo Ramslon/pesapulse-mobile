@@ -11,6 +11,8 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/auth_message_helper.dart';
 
+import '../exceptions/rate_limit_exception.dart';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -86,8 +88,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           AuthMessageHelper.showError(
             context,
-            'Account created, but guest data migration failed: '
-            '${migrationError.toString().replaceFirst("Exception: ", "")}',
+            'Account created, but your guest data could not be migrated. '
+            'You can continue using your account.',
           );
 
           return;
@@ -99,7 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         // STEP 3: Continue to the application.
         // ------------------------------------------------------------
 
-        AuthMessageHelper.showSuccess(context, "Account created successfully!");
+        AuthMessageHelper.showSuccess(context, 'Account created successfully!');
 
         await Future.delayed(const Duration(milliseconds: 700));
 
@@ -118,10 +120,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           response["message"] ?? "Registration failed.",
         );
       }
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 
-      AuthMessageHelper.showOffline(context);
+      debugPrint('Registration error: $e');
+
+      AuthMessageHelper.showError(
+        context,
+        'Unable to create your account. Please try again.',
+      );
     } finally {
       if (mounted) {
         setState(() => isLoading = false);
