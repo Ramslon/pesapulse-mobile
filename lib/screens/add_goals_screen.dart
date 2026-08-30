@@ -8,6 +8,7 @@ import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
 import '../utils/responsive_helper.dart';
 import '../utils/snackbar_helper.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class AddGoalScreen extends StatefulWidget {
   const AddGoalScreen({super.key});
@@ -73,6 +74,15 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
       );
 
       Navigator.pop(context, true);
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 

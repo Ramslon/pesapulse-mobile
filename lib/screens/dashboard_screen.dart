@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pesapulse_mobile/repositories/budget_repository.dart';
+import 'package:pesapulse_mobile/exceptions/rate_limit_exception.dart';
 
 import 'package:pesapulse_mobile/screens/expense_screen.dart';
 import '../services/session_service.dart';
@@ -110,6 +111,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       final data = await dashboardRepository.getDashboard(
         useCache: useCacheOnly,
       );
+
       final summary = data['summary'];
       final recent = await _parseExpenses(data['recent_expenses']);
 
@@ -117,45 +119,95 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       setState(() {
         totalExpenses = int.tryParse(summary['total_expenses'].toString()) ?? 0;
+
         totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
+
         totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
+
         recentExpenses = recent;
         isLoading = false;
       });
 
-      // Defer heavy calls
-      if (!useCacheOnly && !isGuest) {
-        Future.wait([
-          budgetRepository.getBudgetSummary(),
-          insightsRepository.getInsights(),
-        ]).then((results) {
-          if (!mounted) return;
-          final budget = results[0];
-          final insights = results[1];
-          setState(() {
-            currentBudget = double.tryParse(budget["budget"].toString()) ?? 0;
-            spentThisMonth = double.tryParse(budget["spent"].toString()) ?? 0;
-            remainingBudget =
-                double.tryParse(budget["remaining"].toString()) ?? 0;
-            budgetCount = int.tryParse(budget["budget_count"].toString()) ?? 0;
-            budgetStatus = insights["budget_status"] ?? "healthy";
-            financialHealthScore =
-                double.tryParse(
-                  insights["financial_health_score"].toString(),
-                ) ??
-                0;
-            financialHealthLabel = insights["financial_health_label"] ?? "";
-            recommendation = insights["recommendation"] ?? "";
-            categoryAdvice = insights["category_advice"] ?? "";
-          });
+      // ------------------------------------------------------------
+      // Defer heavy calls until after the dashboard has rendered.
+      // ------------------------------------------------------------
+      if (!useCacheOnly && !isGuest && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          try {
+            final results = await Future.wait([
+              budgetRepository.getBudgetSummary(),
+              insightsRepository.getInsights(),
+            ]);
+
+            if (!mounted) return;
+
+            final budget = results[0];
+            final insights = results[1];
+
+            setState(() {
+              currentBudget = double.tryParse(budget["budget"].toString()) ?? 0;
+
+              spentThisMonth = double.tryParse(budget["spent"].toString()) ?? 0;
+
+              remainingBudget =
+                  double.tryParse(budget["remaining"].toString()) ?? 0;
+
+              budgetCount =
+                  int.tryParse(budget["budget_count"].toString()) ?? 0;
+
+              budgetStatus = insights["budget_status"] ?? "healthy";
+
+              financialHealthScore =
+                  double.tryParse(
+                    insights["financial_health_score"].toString(),
+                  ) ??
+                  0;
+
+              financialHealthLabel = insights["financial_health_label"] ?? "";
+
+              recommendation = insights["recommendation"] ?? "";
+
+              categoryAdvice = insights["category_advice"] ?? "";
+            });
+          } on RateLimitException catch (e) {
+            if (!mounted) return;
+
+            SnackbarHelper.showRateLimited(
+              context,
+              message: e.message,
+              remaining: e.remaining,
+              retryAfter: e.retryAfter,
+            );
+          } catch (e) {
+            debugPrint('Failed to load dashboard insights: $e');
+
+            if (!mounted) return;
+
+            SnackbarHelper.showInfo(
+              context,
+              "Unable to refresh dashboard. Showing available data.",
+            );
+          }
         });
       }
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      setState(() => isLoading = false);
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
+
       setState(() => isLoading = false);
 
       if (e.toString().contains("No cached dashboard")) {
-        return; // First launch with no cache
+        return;
       }
 
       SnackbarHelper.showInfo(

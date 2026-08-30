@@ -22,6 +22,8 @@ import '../features/budget/controllers/budget_controller.dart';
 import '../features/budget/utils/budget_calculator.dart';
 import '../features/budget/models/budget_state.dart';
 
+import '../exceptions/rate_limit_exception.dart';
+
 import '../providers/connectivity_provider.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
@@ -91,21 +93,24 @@ class BudgetScreenState extends State<BudgetScreen>
 
   Future<void> saveBudget() async {
     final network = context.read<ConnectivityProvider>();
+
+    if (budgetController.text.trim().isEmpty) {
+      SnackbarHelper.showError(context, "Please enter a budget amount");
+      return;
+    }
+
+    final amount = double.tryParse(budgetController.text.trim());
+
+    if (amount == null || amount <= 0) {
+      SnackbarHelper.showError(context, "Budget must be greater than zero");
+      return;
+    }
+
     network.setSyncing(true);
 
     try {
-      if (budgetController.text.trim().isEmpty) {
-        SnackbarHelper.showError(context, "Please enter a budget amount");
-        return;
-      }
-
-      final amount = double.tryParse(budgetController.text.trim());
-      if (amount == null || amount <= 0) {
-        SnackbarHelper.showError(context, "Budget must be greater than zero");
-        return;
-      }
-
       final isUpdate = state.budget > 0;
+
       final newState = await controller.saveBudget(amount: amount);
 
       if (!mounted) return;
@@ -121,8 +126,20 @@ class BudgetScreenState extends State<BudgetScreen>
             ? "Budget updated successfully"
             : "Budget created successfully",
       );
-    } catch (_) {
+    } on RateLimitException catch (e) {
       if (!mounted) return;
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      debugPrint('Save budget failed: $e');
+
+      if (!mounted) return;
+
       SnackbarHelper.showError(context, "Failed to save budget.");
     } finally {
       network.setSyncing(false);
@@ -158,6 +175,15 @@ class BudgetScreenState extends State<BudgetScreen>
       });
 
       SnackbarHelper.showSuccess(context, "Budget deleted successfully");
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
       SnackbarHelper.showError(context, "Error deleting budget: $e");

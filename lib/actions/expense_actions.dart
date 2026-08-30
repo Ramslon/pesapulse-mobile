@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../screens/edit_expense_screen.dart';
 import '../screens/expense_details_screen.dart';
+import '../exceptions/rate_limit_exception.dart';
+import '../utils/snackbar_helper.dart';
 
 class ExpenseActions {
   ExpenseActions._();
@@ -55,7 +57,29 @@ class ExpenseActions {
         .closed;
 
     if (!undoPressed) {
-      await onDeletePermanently();
+      try {
+        await onDeletePermanently();
+      } on RateLimitException catch (e) {
+        debugPrint('Expense deletion rate limit: ${e.message}');
+
+        if (!context.mounted) return;
+
+        SnackbarHelper.showRateLimited(
+          context,
+          message: e.message,
+          remaining: e.remaining,
+          retryAfter: e.retryAfter,
+        );
+      } catch (e) {
+        debugPrint('Error permanently deleting expense: $e');
+
+        if (!context.mounted) return;
+
+        SnackbarHelper.showError(
+          context,
+          'Failed to delete expense. Please try again.',
+        );
+      }
     }
   }
 }

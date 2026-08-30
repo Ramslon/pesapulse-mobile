@@ -17,35 +17,55 @@ class ApiService {
   }
 
   static Never _handleRateLimitResponse(http.Response response) {
-    String message = 'Too many attempts. Please try again later.';
+    String message = 'Too many requests. Please try again later.';
+
+    int? retryAfter;
+    int? remaining;
 
     try {
       final data = jsonDecode(response.body);
 
-      if (data is Map<String, dynamic> && data['message'] != null) {
-        message = data['message'].toString();
+      if (data is Map<String, dynamic>) {
+        if (data['message'] != null) {
+          message = data['message'].toString();
+        }
+
+        if (data['retry_after'] != null) {
+          retryAfter = int.tryParse(data['retry_after'].toString());
+        }
+
+        if (data['remaining'] != null) {
+          remaining = int.tryParse(data['remaining'].toString());
+        }
       }
     } catch (_) {
-      // Keep default message.
+      // Ignore invalid JSON and continue using headers.
     }
 
+    // Laravel Retry-After header takes precedence.
     final retryAfterHeader = response.headers['retry-after'];
 
-    final retryAfter = retryAfterHeader != null
-        ? int.tryParse(retryAfterHeader)
-        : null;
+    if (retryAfterHeader != null) {
+      retryAfter = int.tryParse(retryAfterHeader);
+    }
 
     final remainingHeader = response.headers['x-ratelimit-remaining'];
 
-    final remaining = remainingHeader != null
-        ? int.tryParse(remainingHeader)
-        : null;
+    if (remainingHeader != null) {
+      remaining = int.tryParse(remainingHeader);
+    }
 
     throw RateLimitException(
       message: message,
       retryAfter: retryAfter,
       remaining: remaining,
     );
+  }
+
+  static void _checkRateLimit(http.Response response) {
+    if (response.statusCode == 429) {
+      _handleRateLimitResponse(response);
+    }
   }
 
   static int? _getRemainingAttempts(http.Response response) {
@@ -71,9 +91,7 @@ class ApiService {
       body: jsonEncode({'email': email, 'password': password}),
     );
 
-    if (response.statusCode == 429) {
-      _handleRateLimitResponse(response);
-    }
+    _checkRateLimit(response);
 
     final body = jsonDecode(response.body);
 
@@ -92,15 +110,21 @@ class ApiService {
   static Future<void> logoutUser() async {
     final prefs = await SharedPreferences.getInstance();
 
-    String? token = prefs.getString('token');
+    final token = prefs.getString('token');
 
-    await http.post(
+    final response = await http.post(
       Uri.parse('$baseUrl/logout'),
-
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
-    await prefs.remove('token');
+    _checkRateLimit(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      await prefs.remove('token');
+      return;
+    }
+
+    throw Exception('Failed to logout (${response.statusCode}).');
   }
 
   static Future<void> deleteAccount(String password) async {
@@ -113,20 +137,32 @@ class ApiService {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({"password": password}),
+      body: jsonEncode({'password': password}),
     );
 
-    if (response.statusCode == 200) {
+    _checkRateLimit(response);
+
+    Map<String, dynamic> body;
+
+    try {
+      body = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw AuthException(message: 'Invalid response from server.');
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
     }
 
-    try {
-      final body = jsonDecode(response.body);
-
-      throw Exception(body["message"] ?? "Failed to delete account");
-    } catch (_) {
-      throw Exception("Failed to delete account (${response.statusCode})");
+    // Laravel validation errors
+    if (response.statusCode == 422 && body['errors'] != null) {
+      throw AuthException(message: jsonEncode(body['errors']));
     }
+
+    // Authentication/account/general error
+    throw AuthException(
+      message: body['message'] ?? 'Failed to delete account.',
+    );
   }
 
   static Future<Map<String, dynamic>> registerUser(
@@ -143,9 +179,7 @@ class ApiService {
       body: jsonEncode({'name': name, 'email': email, 'password': password}),
     );
 
-    if (response.statusCode == 429) {
-      _handleRateLimitResponse(response);
-    }
+    _checkRateLimit(response);
 
     final body = jsonDecode(response.body);
 
@@ -168,7 +202,7 @@ class ApiService {
     final token = await getToken();
 
     if (token == null || token.isEmpty) {
-      throw Exception('Authentication token is missing.');
+      throw AuthException(message: 'Authentication token is missing.');
     }
 
     final response = await http.post(
@@ -187,13 +221,18 @@ class ApiService {
       }),
     );
 
+    // 429 → RateLimitException
+    _checkRateLimit(response);
+
     Map<String, dynamic> body;
 
     try {
       body = jsonDecode(response.body) as Map<String, dynamic>;
     } catch (_) {
-      throw Exception(
-        'Invalid response from migration server (${response.statusCode}).',
+      throw AuthException(
+        message:
+            'Invalid response from migration server '
+            '(${response.statusCode}).',
       );
     }
 
@@ -201,7 +240,10 @@ class ApiService {
       return body;
     }
 
-    throw Exception(body['message'] ?? 'Guest data migration failed.');
+    throw AuthException(
+      message: body['message']?.toString() ?? 'Guest data migration failed.',
+      remaining: _getRemainingAttempts(response),
+    );
   }
 
   static Future<Map<String, dynamic>> addExpense(
@@ -211,19 +253,15 @@ class ApiService {
     String expenseDate,
     String description,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    String? token = prefs.getString('token');
+    final token = await getToken();
 
     final response = await http.post(
       Uri.parse('$baseUrl/expenses'),
-
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-
       body: jsonEncode({
         'title': title,
         'amount': amount,
@@ -233,7 +271,15 @@ class ApiService {
       }),
     );
 
-    return jsonDecode(response.body);
+    _checkRateLimit(response);
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+
+    throw Exception(body['message'] ?? 'Failed to add expense.');
   }
 
   static Future<dynamic> getExpenses({int page = 1}) async {
@@ -247,6 +293,8 @@ class ApiService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
+    _checkRateLimit(response);
+
     return jsonDecode(response.body);
   }
 
@@ -258,19 +306,15 @@ class ApiService {
     String expenseDate,
     String description,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    String? token = prefs.getString('token');
+    final token = await getToken();
 
     final response = await http.put(
       Uri.parse('$baseUrl/expenses/$id'),
-
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-
       body: jsonEncode({
         'title': title,
         'amount': amount,
@@ -280,38 +324,65 @@ class ApiService {
       }),
     );
 
-    return jsonDecode(response.body);
+    _checkRateLimit(response);
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+
+    throw Exception(body['message'] ?? 'Failed to update expense.');
   }
 
   static Future<void> deleteExpense(int id) async {
-    final prefs = await SharedPreferences.getInstance();
+    final token = await getToken();
 
-    String? token = prefs.getString('token');
-
-    await http.delete(
+    final response = await http.delete(
       Uri.parse('$baseUrl/expenses/$id'),
-
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+
+    _checkRateLimit(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    try {
+      final body = jsonDecode(response.body);
+
+      throw Exception(body['message'] ?? 'Failed to delete expense.');
+    } catch (_) {
+      throw Exception('Failed to delete expense (${response.statusCode}).');
+    }
   }
 
   static Future<Map<String, dynamic>> updateProfile(
     String name,
     String email,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    String? token = prefs.getString('token');
+    final token = await getToken();
 
     final response = await http.put(
       Uri.parse('$baseUrl/profile'),
-
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-
-      body: {'name': name, 'email': email},
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'name': name, 'email': email}),
     );
 
-    return jsonDecode(response.body);
+    _checkRateLimit(response);
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+
+    throw Exception(body['message'] ?? 'Failed to update profile.');
   }
 
   static Future<Map<String, dynamic>> getProfile() async {
@@ -322,6 +393,8 @@ class ApiService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
+    _checkRateLimit(response);
+
     if (response.statusCode != 200) {
       throw Exception('Failed to load profile');
     }
@@ -330,12 +403,22 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getDashboardSummary() async {
+    final token = await getToken();
+
     final response = await http.get(
       Uri.parse('$baseUrl/dashboard-summary'),
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
-    return jsonDecode(response.body);
+    _checkRateLimit(response);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception(
+      'Failed to load dashboard summary (${response.statusCode})',
+    );
   }
 
   static Future<Map<String, dynamic>> getDashboard() async {
@@ -345,6 +428,8 @@ class ApiService {
       Uri.parse('$baseUrl/dashboard'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+
+    _checkRateLimit(response);
 
     if (response.statusCode != 200) {
       throw Exception('Failed to load dashboard');
@@ -366,9 +451,15 @@ class ApiService {
       body: jsonEncode(data),
     );
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update preferences');
+    _checkRateLimit(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
     }
+
+    final body = jsonDecode(response.body);
+
+    throw Exception(body['message'] ?? 'Failed to update preferences.');
   }
 
   static bool _toBool(dynamic value) {
@@ -390,6 +481,8 @@ class ApiService {
       Uri.parse('$baseUrl/preferences'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+
+    _checkRateLimit(response);
 
     if (response.statusCode != 200) {
       throw Exception('Failed to load preferences');
@@ -423,7 +516,14 @@ class ApiService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
-    return jsonDecode(response.body);
+    // 429 → RateLimitException
+    _checkRateLimit(response);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Failed to load budget summary (${response.statusCode})');
   }
 
   static Future<Map<String, dynamic>> setBudget(double amount) async {
@@ -431,17 +531,23 @@ class ApiService {
 
     final response = await http.post(
       Uri.parse('$baseUrl/budget'),
-
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-
       body: jsonEncode({'amount': amount}),
     );
 
-    return jsonDecode(response.body);
+    _checkRateLimit(response);
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+
+    throw Exception(body['message'] ?? 'Failed to set budget.');
   }
 
   static Future<void> deleteBudget() async {
@@ -452,8 +558,18 @@ class ApiService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to delete budget');
+    _checkRateLimit(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    try {
+      final body = jsonDecode(response.body);
+
+      throw Exception(body['message'] ?? 'Failed to delete budget.');
+    } catch (_) {
+      throw Exception('Failed to delete budget (${response.statusCode}).');
     }
   }
 
@@ -464,6 +580,8 @@ class ApiService {
       Uri.parse('$baseUrl/financial-insights'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+
+    _checkRateLimit(response);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -480,6 +598,8 @@ class ApiService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
+    _checkRateLimit(response);
+
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
@@ -494,6 +614,8 @@ class ApiService {
       Uri.parse('$baseUrl/goals'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+
+    _checkRateLimit(response);
 
     return jsonDecode(response.body);
   }
@@ -519,13 +641,15 @@ class ApiService {
       }),
     );
 
+    _checkRateLimit(response);
+
     final body = jsonDecode(response.body);
 
-    if (response.statusCode == 201) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
 
-    throw Exception(body["message"] ?? "Failed to create goal");
+    throw Exception(body['message'] ?? 'Failed to create goal.');
   }
 
   static Future<Map<String, dynamic>> updateGoalProgress(
@@ -536,17 +660,23 @@ class ApiService {
 
     final response = await http.put(
       Uri.parse('$baseUrl/goals/$goalId/progress'),
-
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-
       body: jsonEncode({'amount': amount}),
     );
 
-    return jsonDecode(response.body);
+    _checkRateLimit(response);
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+
+    throw Exception(body['message'] ?? 'Failed to update goal progress.');
   }
 
   static Future<List<dynamic>> getUpcomingGoalDeadlines() async {
@@ -557,7 +687,16 @@ class ApiService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
-    return jsonDecode(response.body);
+    _checkRateLimit(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception(
+      'Failed to load upcoming goal deadlines '
+      '(${response.statusCode}).',
+    );
   }
 
   static Future<Map<String, dynamic>> getGoalAnalytics() async {
@@ -567,6 +706,8 @@ class ApiService {
       Uri.parse('$baseUrl/goals/analytics'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+
+    _checkRateLimit(response);
 
     return jsonDecode(response.body);
   }
@@ -578,6 +719,8 @@ class ApiService {
       Uri.parse('$baseUrl/goals/$goalId/forecast'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+
+    _checkRateLimit(response);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -594,9 +737,15 @@ class ApiService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
-    if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['message']);
+    _checkRateLimit(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
     }
+
+    final body = jsonDecode(response.body);
+
+    throw Exception(body['message'] ?? 'Failed to archive goal.');
   }
 
   static Future<List<dynamic>> getArchivedGoals() async {
@@ -606,7 +755,7 @@ class ApiService {
       Uri.parse('$baseUrl/goals/archived'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
-
+    _checkRateLimit(response);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
@@ -621,6 +770,7 @@ class ApiService {
       Uri.parse('$baseUrl/goals/$goalId/restore'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+    _checkRateLimit(response);
 
     if (response.statusCode != 200) {
       throw Exception(jsonDecode(response.body)['message']);
@@ -634,6 +784,8 @@ class ApiService {
       Uri.parse('$baseUrl/goals/$goalId'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
+
+    _checkRateLimit(response);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -651,25 +803,39 @@ class ApiService {
 
     final response = await http.put(
       Uri.parse('$baseUrl/change-password'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-      body: {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
         'current_password': currentPassword,
         'new_password': newPassword,
         'new_password_confirmation': confirmPassword,
-      },
+      }),
     );
+
+    _checkRateLimit(response);
+
+    final body = jsonDecode(response.body);
 
     if (response.statusCode == 200) {
       return;
     }
 
-    final body = jsonDecode(response.body);
+    final remaining = _getRemainingAttempts(response);
 
-    if (body['errors'] != null) {
-      throw Exception(body['errors']);
+    if (response.statusCode == 422 && body['errors'] != null) {
+      throw AuthException(
+        message: jsonEncode(body['errors']),
+        remaining: remaining,
+      );
     }
 
-    throw Exception(body['message'] ?? 'Failed to change password.');
+    throw AuthException(
+      message: body['message'] ?? 'Failed to change password.',
+      remaining: remaining,
+    );
   }
 
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
@@ -682,9 +848,7 @@ class ApiService {
       body: jsonEncode({'email': email}),
     );
 
-    if (response.statusCode == 429) {
-      _handleRateLimitResponse(response);
-    }
+    _checkRateLimit(response);
 
     final body = jsonDecode(response.body);
 
@@ -708,9 +872,7 @@ class ApiService {
       body: jsonEncode({'email': email, 'otp': otp}),
     );
 
-    if (response.statusCode == 429) {
-      _handleRateLimitResponse(response);
-    }
+    _checkRateLimit(response);
 
     final data = jsonDecode(response.body);
 
@@ -741,9 +903,7 @@ class ApiService {
       }),
     );
 
-    if (response.statusCode == 429) {
-      _handleRateLimitResponse(response);
-    }
+    _checkRateLimit(response);
 
     final body = jsonDecode(response.body);
 

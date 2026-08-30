@@ -9,6 +9,8 @@ import '../widgets/custom_textfield.dart';
 import '../widgets/auth_message_helper.dart';
 import '../providers/theme_provider.dart';
 import '../../utils/responsive_helper.dart';
+import '../exceptions/rate_limit_exception.dart';
+import '../utils/snackbar_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -70,6 +72,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       AuthMessageHelper.showSuccess(
         context,
         response['message'] ?? 'Profile updated successfully.',
+      );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
       );
     } catch (e) {
       if (!mounted) return;
@@ -176,8 +187,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         totalExpenses = stats['totalExpenses'] ?? 0;
         totalBudgets = stats['totalBudgets'] ?? 0;
       });
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
+      if (!mounted) return;
+
       debugPrint('Stats Error: $e');
+
+      SnackbarHelper.showError(context, 'Unable to load dashboard statistics.');
     }
   }
 

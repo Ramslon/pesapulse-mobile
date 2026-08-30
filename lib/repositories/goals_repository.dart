@@ -424,7 +424,6 @@ class GoalsRepository extends BaseRepository {
       {
         "owner_id": ownerId,
         "is_archived": 1,
-        "completed_at": now,
         "updated_at": now,
         "is_synced": 0,
       },
@@ -454,7 +453,6 @@ class GoalsRepository extends BaseRepository {
       {
         "owner_id": ownerId,
         "is_archived": 1,
-        "completed_at": DateTime.now().toIso8601String(),
         "is_synced": 1,
         "updated_at": DateTime.now().toIso8601String(),
       },
@@ -494,12 +492,12 @@ class GoalsRepository extends BaseRepository {
     });
   }
 
-  Future<void> restoreGoalOnline(int goalId) async {
+  Future<void> restoreGoalOnline(int localGoalId, int serverGoalId) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
-      await ApiService.restoreGoal(goalId);
+      await ApiService.restoreGoal(serverGoalId);
     } catch (e) {
       if (!e.toString().contains("Goal is already active")) {
         rethrow;
@@ -509,14 +507,13 @@ class GoalsRepository extends BaseRepository {
     await database.update(
       "goals",
       {
-        "owner_id": ownerId,
         "is_archived": 0,
         "is_deleted": 0,
         "updated_at": DateTime.now().toIso8601String(),
         "is_synced": 1,
       },
       where: "owner_id=? AND id=?",
-      whereArgs: [ownerId, goalId],
+      whereArgs: [ownerId, localGoalId],
     );
   }
 

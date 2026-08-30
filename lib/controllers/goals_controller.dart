@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../models/goal.dart';
 import '../services/goals_service.dart';
 import '../services/notification_service.dart';
+
+import '../../exceptions/rate_limit_exception.dart';
 
 class GoalsController extends ChangeNotifier {
   final GoalsService goalsService;
@@ -183,8 +186,11 @@ class GoalsController extends ChangeNotifier {
       _upcomingDeadlines = List<Map<String, dynamic>>.from(data);
 
       notifyListeners();
+    } on RateLimitException {
+      rethrow;
     } catch (e) {
-      debugPrint('Upcoming deadlines error: $e');
+      debugPrint('Failed to load upcoming deadlines: $e');
+      rethrow;
     }
   }
 
@@ -212,6 +218,10 @@ class GoalsController extends ChangeNotifier {
     await goalsService.deleteGoal(goal: goal, isOnline: isOnline);
 
     invalidateGoal(goal.id);
+
+    goals.removeWhere((g) => g.id == goal.id);
+
+    notifyListeners();
   }
 
   Future<void> restoreGoal({required Goal goal, required bool isOnline}) async {

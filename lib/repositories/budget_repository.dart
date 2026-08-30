@@ -6,6 +6,9 @@ import 'package:sqflite/sqflite.dart';
 import '../services/api_services.dart';
 import '../services/sync_service.dart';
 
+import 'package:http/http.dart' as http;
+import '../exceptions/rate_limit_exception.dart';
+
 class BudgetRepository extends BaseRepository {
   Map<String, dynamic> _toLocal(Map<String, dynamic> summary, String ownerId) {
     return {
@@ -55,6 +58,8 @@ class BudgetRepository extends BaseRepository {
       );
 
       return summary;
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       final cached = await database.query(
         "budget_summary_cache",
@@ -82,7 +87,10 @@ class BudgetRepository extends BaseRepository {
         _toLocal(summary, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-    } catch (_) {
+    } on RateLimitException {
+      // Do NOT treat rate limiting as offline.
+      rethrow;
+    } on http.ClientException {
       // Offline
 
       final cached = await database.query(
@@ -149,27 +157,28 @@ class BudgetRepository extends BaseRepository {
 
       await database.delete(
         "budget_summary_cache",
-        where: " owner_id=?",
+        where: "owner_id=?",
         whereArgs: [ownerId],
       );
-    } catch (_) {
+    } on RateLimitException {
+      // Rate limiting is NOT an offline condition.
+      // Let the UI handle the 429 response.
+      rethrow;
+    } on http.ClientException {
+      // Actual network failure → delete locally and queue
+      // the operation for synchronization.
       await database.delete(
         "budget_summary_cache",
-        where: " owner_id=?",
+        where: "owner_id=?",
         whereArgs: [ownerId],
       );
 
       await database.insert("sync_queue", {
         "owner_id": ownerId,
-
         "table_name": "budget",
-
         "operation": "delete",
-
         "record_id": 1,
-
         "payload": "{}",
-
         "created_at": DateTime.now().toIso8601String(),
       });
 

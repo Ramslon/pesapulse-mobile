@@ -4,6 +4,7 @@ import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../services/api_services.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class GoalDeadlineRepository extends BaseRepository {
   Future<List<dynamic>> getUpcomingDeadlines() async {
@@ -20,6 +21,8 @@ class GoalDeadlineRepository extends BaseRepository {
       );
 
       return deadlines;
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       final cached = await database.query(
         "goal_deadlines_cache",

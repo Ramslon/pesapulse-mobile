@@ -6,6 +6,9 @@ import '../../services/notification_service.dart';
 import '../../services/sync_events.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../utils/responsive_helper.dart';
+import '../../utils/snackbar_helper.dart';
+
+import '../../exceptions/rate_limit_exception.dart';
 
 class AddSavingsDialog extends StatefulWidget {
   final int goalId;
@@ -101,17 +104,29 @@ class _AddSavingsDialogState extends State<AddSavingsDialog> {
       }
       if (!mounted) return;
 
-      Navigator.pop(context);
-
-      if (!connectivity.isOnline && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Savings added offline. Changes will sync automatically.',
-            ),
-          ),
+      if (!connectivity.isOnline) {
+        SnackbarHelper.showInfo(
+          context,
+          'Savings added offline. Changes will sync automatically.',
         );
+      } else {
+        SnackbarHelper.showSuccess(context, 'Savings added successfully!');
       }
+
+      Navigator.pop(context);
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isSaving = false;
+      });
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       debugPrint('Failed to add savings: $e');
 

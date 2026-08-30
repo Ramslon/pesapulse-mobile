@@ -19,6 +19,9 @@ import 'archived_goals_screen.dart';
 
 import '../controllers/goals_controller.dart';
 
+import '../utils/snackbar_helper.dart';
+import '../exceptions/rate_limit_exception.dart';
+
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
 
@@ -81,12 +84,24 @@ class _GoalsScreenState extends State<GoalsScreen>
   Future<void> _initializeGoalsScreen({bool forceRefresh = false}) async {
     try {
       await goalsController.initialize(forceRefresh: forceRefresh);
-    } catch (e) {
+    } on RateLimitException catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
+      SnackbarHelper.showRateLimited(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      debugPrint('Failed to initialize goals screen: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to load goals. Please try again.',
+      );
     }
   }
 

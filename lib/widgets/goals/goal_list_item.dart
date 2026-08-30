@@ -6,6 +6,8 @@ import '../../models/goal.dart';
 import '../../controllers/goals_controller.dart';
 import '../../services/sync_events.dart';
 import '../../utils/responsive_helper.dart';
+import '../../exceptions/rate_limit_exception.dart';
+import '../../utils/snackbar_helper.dart';
 import 'goal_action_helpers.dart';
 import 'goal_card.dart';
 import 'add_savings_dialog.dart';
@@ -38,8 +40,6 @@ class GoalListItem extends StatelessWidget {
         isOnline: connectivity.isOnline,
       );
 
-      await goalsController.loadGoals(forceRefresh: true);
-
       if (!context.mounted) return;
 
       GoalActionHelpers.showMessage(
@@ -48,10 +48,21 @@ class GoalListItem extends StatelessWidget {
             ? 'Goal deleted successfully'
             : 'Goal deleted offline. Changes will sync automatically.',
       );
+    } on RateLimitException catch (e) {
+      if (!context.mounted) return;
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!context.mounted) return;
 
-      GoalActionHelpers.showMessage(context, 'Failed to delete goal: $e');
+      debugPrint('Failed to delete goal: $e');
+
+      GoalActionHelpers.showMessage(context, 'Failed to delete goal');
     }
   }
 
@@ -81,11 +92,22 @@ class GoalListItem extends StatelessWidget {
             ? 'Goal archived successfully.'
             : 'Goal archived offline. It will sync automatically.',
       );
+    } on RateLimitException catch (e) {
+      if (!context.mounted) return;
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!context.mounted) return;
 
-      // Corrected: this is an archive failure.
-      GoalActionHelpers.showMessage(context, 'Failed to archive goal: $e');
+      GoalActionHelpers.showMessage(
+        context,
+        'Failed to archive goal. Please try again.',
+      );
     }
   }
 

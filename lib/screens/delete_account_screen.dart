@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:pesapulse_mobile/screens/auth_choice_screen.dart';
 import 'package:pesapulse_mobile/widgets/auth_message_helper.dart';
 import '../repositories/settings_repository.dart';
 import '../services/session_service.dart';
+import '../exceptions/auth_exception.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class DeleteAccountScreen extends StatefulWidget {
   const DeleteAccountScreen({super.key});
@@ -44,10 +47,50 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       );
 
       AuthMessageHelper.showSuccess(context, "Account deleted successfully");
+    } on AuthException catch (e) {
+      if (!mounted) return;
+
+      // Try to decode Laravel validation errors.
+      try {
+        final errors = jsonDecode(e.message);
+
+        if (errors is Map<String, dynamic>) {
+          // If your delete-account form has a password-specific
+          // error field, handle it here.
+          if (errors['password'] != null) {
+            AuthMessageHelper.showError(
+              context,
+              errors['password'][0]?.toString() ?? 'Invalid password.',
+            );
+          } else {
+            AuthMessageHelper.showError(context, e.message);
+          }
+
+          return;
+        }
+      } catch (_) {
+        // Not a validation-error JSON payload.
+      }
+
+      AuthMessageHelper.showError(context, e.message);
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 
-      AuthMessageHelper.showError(context, e.toString());
+      debugPrint('Delete account error: $e');
+
+      AuthMessageHelper.showError(
+        context,
+        'Account deletion failed. Please try again.',
+      );
     } finally {
       if (mounted) {
         setState(() {

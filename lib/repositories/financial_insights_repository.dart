@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:pesapulse_mobile/exceptions/rate_limit_exception.dart';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 import '../services/session_service.dart';
@@ -66,6 +67,8 @@ class FinancialInsightsRepository extends BaseRepository {
       );
 
       return insights;
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       final cached = await database.query(
         "financial_insights_cache",

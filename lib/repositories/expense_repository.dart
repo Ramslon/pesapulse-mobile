@@ -1,3 +1,5 @@
+import 'package:pesapulse_mobile/exceptions/rate_limit_exception.dart';
+
 import '../services/api_services.dart';
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
@@ -60,6 +62,8 @@ class ExpenseRepository extends BaseRepository {
       await SyncService.instance.getPendingChanges();
 
       return response;
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       final database = await db.database;
 
@@ -131,6 +135,8 @@ class ExpenseRepository extends BaseRepository {
         expense,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       // Offline fallback
       final id = await database.insert("expenses", expense);
@@ -237,6 +243,8 @@ class ExpenseRepository extends BaseRepository {
         where: "id=? AND owner_id=?",
         whereArgs: [id, ownerId],
       );
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       await database.update(
         "expenses",
@@ -323,6 +331,8 @@ class ExpenseRepository extends BaseRepository {
         where: "id=? AND owner_id=?",
         whereArgs: [id, ownerId],
       );
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       await database.delete(
         "expenses",

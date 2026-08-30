@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pesapulse_mobile/screens/auth_choice_screen.dart';
 import 'package:pesapulse_mobile/screens/register_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:pesapulse_mobile/widgets/auth_message_helper.dart';
 import 'package:provider/provider.dart';
 
 import '../core/constants/app_constants.dart';
@@ -39,6 +40,8 @@ import '../repositories/settings_repository.dart';
 import '../models/settings_state.dart';
 import '../utils/responsive_helper.dart';
 import '../utils/settings_error_message.dart';
+
+import '../exceptions/rate_limit_exception.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -391,7 +394,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             if (confirm != true) return;
 
-                            await settingsController.logout();
+                            try {
+                              await settingsController.logout();
+                            } on RateLimitException catch (e) {
+                              if (!mounted) return;
+
+                              AuthMessageHelper.showRateLimited(
+                                context,
+                                message: e.message,
+                                remaining: e.remaining,
+                                retryAfter: e.retryAfter,
+                              );
+                            } catch (e) {
+                              debugPrint('Logout error: $e');
+                            }
 
                             if (!mounted) return;
 

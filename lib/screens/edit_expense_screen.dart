@@ -9,6 +9,7 @@ import '../services/sync_service.dart';
 import '../utils/responsive_helper.dart';
 import '../utils/snackbar_helper.dart';
 import '../core/utils/currency_formatter.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class EditExpenseScreen extends StatefulWidget {
   final Map expense;
@@ -112,7 +113,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         dateController.text.isNotEmpty;
   }
 
-  void updateExpense() async {
+  Future<void> updateExpense() async {
     if (!isFormValid) {
       SnackbarHelper.showError(
         context,
@@ -142,6 +143,19 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       SnackbarHelper.showSuccess(context, "Expense updated successfully!");
 
       Navigator.pop(context, true);
+    } on RateLimitException catch (e) {
+      debugPrint('Expense rate limit: ${e.message}');
+
+      if (!mounted) return;
+
+      setState(() => isLoading = false);
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 

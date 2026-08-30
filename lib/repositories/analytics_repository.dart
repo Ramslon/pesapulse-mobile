@@ -4,6 +4,7 @@ import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../services/api_services.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class AnalyticsRepository extends BaseRepository {
   Future<Map<String, dynamic>> getAnalytics() async {
@@ -32,6 +33,8 @@ class AnalyticsRepository extends BaseRepository {
         "goalAnalytics": goalAnalytics,
         "financialInsights": financialInsights,
       };
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       final cached = await database.query(
         "analytics_cache",

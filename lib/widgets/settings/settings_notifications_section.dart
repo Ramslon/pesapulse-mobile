@@ -5,7 +5,9 @@ import '../../providers/connectivity_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/sync_events.dart';
 import '../../utils/responsive_helper.dart';
+import '../../exceptions/rate_limit_exception.dart';
 import '../../repositories/settings_repository.dart';
+import '../../utils/snackbar_helper.dart';
 
 class SettingsNotificationsSection extends StatelessWidget {
   final bool dailyReminder;
@@ -78,17 +80,25 @@ class SettingsNotificationsSection extends StatelessWidget {
                       ? 'Daily reminders enabled'
                       : 'Daily reminders disabled',
                 );
+              } on RateLimitException catch (e) {
+                debugPrint('Daily reminder rate limit: ${e.message}');
+
+                if (!context.mounted) return;
+
+                SnackbarHelper.showRateLimited(
+                  context,
+                  message: e.message,
+                  remaining: e.remaining,
+                  retryAfter: e.retryAfter,
+                );
               } catch (e) {
                 debugPrint('Daily reminder update failed: $e');
 
                 if (!context.mounted) return;
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Couldn’t update Daily Reminder. Please try again.',
-                    ),
-                  ),
+                SnackbarHelper.showError(
+                  context,
+                  'Couldn’t update Daily Reminder. Please try again.',
                 );
               }
             },
@@ -122,17 +132,25 @@ class SettingsNotificationsSection extends StatelessWidget {
                       ? 'Expense alerts enabled'
                       : 'Expense alerts disabled',
                 );
+              } on RateLimitException catch (e) {
+                debugPrint('Expense alerts rate limit: ${e.message}');
+
+                if (!context.mounted) return;
+
+                SnackbarHelper.showRateLimited(
+                  context,
+                  message: e.message,
+                  remaining: e.remaining,
+                  retryAfter: e.retryAfter,
+                );
               } catch (e) {
                 debugPrint('Expense alerts update failed: $e');
 
                 if (!context.mounted) return;
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Couldn’t update Expense Alerts. Please try again.',
-                    ),
-                  ),
+                SnackbarHelper.showError(
+                  context,
+                  'Couldn’t update Expense Alerts. Please try again.',
                 );
               }
             },
@@ -166,17 +184,25 @@ class SettingsNotificationsSection extends StatelessWidget {
                       ? 'Weekly summaries enabled'
                       : 'Weekly summaries disabled',
                 );
+              } on RateLimitException catch (e) {
+                debugPrint('Weekly summary rate limit: ${e.message}');
+
+                if (!context.mounted) return;
+
+                SnackbarHelper.showRateLimited(
+                  context,
+                  message: e.message,
+                  remaining: e.remaining,
+                  retryAfter: e.retryAfter,
+                );
               } catch (e) {
                 debugPrint('Weekly summary update failed: $e');
 
                 if (!context.mounted) return;
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Couldn’t update Weekly Summary. Please try again.',
-                    ),
-                  ),
+                SnackbarHelper.showError(
+                  context,
+                  'Couldn’t update Weekly Summary. Please try again.',
                 );
               }
             },

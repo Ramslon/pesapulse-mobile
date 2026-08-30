@@ -12,6 +12,8 @@ import '../services/notification_service.dart';
 import '../repositories/expense_repository.dart';
 import '../services/sync_service.dart';
 
+import '../exceptions/rate_limit_exception.dart';
+
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
 
@@ -97,16 +99,30 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       SnackbarHelper.showSuccess(context, 'Expense saved successfully!');
 
       Navigator.pop(context, true);
+    } on RateLimitException catch (e) {
+      debugPrint('Expense rate limit: ${e.message}');
+
+      if (!mounted) return;
+
+      setState(() => isLoading = false);
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       debugPrint('Error saving expense: $e');
+
       if (!mounted) return;
+
+      setState(() => isLoading = false);
 
       SnackbarHelper.showError(
         context,
         'We couldn’t save your expense. Please try again',
       );
-
-      setState(() => isLoading = false);
     }
   }
 

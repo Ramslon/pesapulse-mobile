@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../exceptions/rate_limit_exception.dart';
+
 import '../services/api_services.dart';
 
 class GoalForecastRepository extends BaseRepository {
@@ -20,6 +22,10 @@ class GoalForecastRepository extends BaseRepository {
       );
 
       return forecast;
+    } on RateLimitException {
+      // Do NOT fall back to cached/local data when the server
+      // explicitly says the request has been rate limited.
+      rethrow;
     } catch (_) {
       final cached = await database.query(
         "goal_forecasts_cache",

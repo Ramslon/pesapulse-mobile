@@ -11,6 +11,7 @@ import 'home_screen.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/auth_message_helper.dart';
+import '../exceptions/auth_exception.dart';
 
 import '../exceptions/rate_limit_exception.dart';
 
@@ -31,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _autoValidate = false;
 
-  void loginUser() async {
+  Future<void> loginUser() async {
     if (!_formKey.currentState!.validate()) {
       setState(() => _autoValidate = true);
       return;
@@ -76,10 +77,27 @@ class _LoginScreenState extends State<LoginScreen> {
         try {
           await MigrationService.instance.migrateGuestData(userId);
 
-          // Cleanup guest-only sync items.
+          // Cleanup guest-only sync items after successful migration.
           await SyncService.instance.cleanupGuestQueue();
 
           debugPrint('Guest data migration completed successfully.');
+        } on AuthException catch (e) {
+          debugPrint('Guest data migration failed: $e');
+
+          if (!mounted) return;
+
+          AuthMessageHelper.showError(
+            context,
+            'You signed in successfully, but your guest data '
+            'could not be migrated: ${e.message}',
+          );
+
+          if (e.remaining != null && e.remaining! > 0) {
+            AuthMessageHelper.showAttemptsRemaining(context, e.remaining!);
+          }
+
+          // Do NOT return.
+          // Authentication was successful.
         } catch (migrationError) {
           debugPrint('Guest data migration failed: $migrationError');
 
@@ -91,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
             'could not be migrated. You can continue using your account.',
           );
 
-          return;
+          // Do NOT return.
         }
 
         if (!mounted) return;

@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
+import '../exceptions/rate_limit_exception.dart';
+import '../services/api_services.dart';
 
 class GoalInsightsRepository extends BaseRepository {
   Future<Map<String, dynamic>> getInsights(int goalId) async {
@@ -9,16 +11,23 @@ class GoalInsightsRepository extends BaseRepository {
     final database = await db.database;
 
     try {
-      final localInsights = await _calculateInsights(database, goalId, ownerId);
+      // 1. Try Laravel API first.
+      final insights = await ApiService.getGoalInsights(goalId);
 
+      // 2. Cache the successful server response.
       await database.insert(
         "goal_insights_cache",
-        _toLocal(goalId, localInsights, ownerId),
+        _toLocal(goalId, insights, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      return localInsights;
+      return insights;
+    } on RateLimitException {
+      // 3. Never swallow a 429.
+      // Let the UI display the rate-limit message.
+      rethrow;
     } catch (_) {
+      // 4. Other errors can fall back to cached data.
       final cached = await database.query(
         "goal_insights_cache",
         where: "goal_id=? AND owner_id=?",
@@ -29,6 +38,7 @@ class GoalInsightsRepository extends BaseRepository {
         return jsonDecode(cached.first["data"] as String);
       }
 
+      // 5. No cache → calculate locally.
       return await _calculateInsights(database, goalId, ownerId);
     }
   }

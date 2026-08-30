@@ -5,6 +5,8 @@ import 'dart:convert';
 
 import 'login_screen.dart';
 import '../widgets/auth_message_helper.dart';
+import '../exceptions/auth_exception.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -89,33 +91,58 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         MaterialPageRoute(builder: (_) => const LoginScreen()),
         (_) => false,
       );
-    } on Exception catch (e) {
-      try {
-        final raw = e.toString().replaceFirst("Exception: ", "");
-        final errors = raw.contains("{")
-            ? Map<String, dynamic>.from(jsonDecode(raw))
-            : null;
+    } on AuthException catch (e) {
+      if (!mounted) return;
 
-        setState(() {
-          if (errors != null) {
+      // Laravel validation errors are returned as JSON.
+      try {
+        final errors = jsonDecode(e.message);
+
+        if (errors is Map<String, dynamic>) {
+          setState(() {
             if (errors['current_password'] != null) {
-              currentError = errors['current_password'][0];
+              currentError = errors['current_password'][0]?.toString();
             }
+
             if (errors['new_password'] != null) {
-              newError = errors['new_password'][0];
+              newError = errors['new_password'][0]?.toString();
             }
+
             if (errors['new_password_confirmation'] != null) {
-              confirmError = errors['new_password_confirmation'][0];
+              confirmError = errors['new_password_confirmation'][0]?.toString();
             }
-          }
-        });
+          });
+
+          return;
+        }
       } catch (_) {
-        if (!mounted) return;
-        AuthMessageHelper.showError(
-          context,
-          e.toString().replaceFirst("Exception: ", "Password change failed: "),
-        );
+        // Not a validation-error JSON payload.
       }
+
+      // General authentication/account error.
+      AuthMessageHelper.showError(context, e.message);
+
+      if (e.remaining != null && e.remaining! > 0) {
+        AuthMessageHelper.showAttemptsRemaining(context, e.remaining!);
+      }
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      debugPrint('Password change error: $e');
+
+      AuthMessageHelper.showError(
+        context,
+        'Password change failed. Please try again.',
+      );
     } finally {
       if (mounted) {
         setState(() => isSaving = false);

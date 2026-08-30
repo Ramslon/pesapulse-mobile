@@ -38,6 +38,7 @@ import '../utils/responsive_helper.dart';
 import '../utils/snackbar_helper.dart';
 
 import '../repositories/analytics_repository.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -149,12 +150,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     if (isGuest == true) return;
 
     _analyticsRequestInProgress = true;
+
     final requestPeriod = selectedPeriod;
     final shouldShowSkeleton = showFullSkeleton && summary == null;
 
     if (mounted) {
       setState(() {
         _analyticsError = null;
+
         if (shouldShowSkeleton) {
           isLoading = true;
         } else {
@@ -175,7 +178,23 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         isLoading = false;
         isRefreshingAnalytics = false;
         _analyticsError = null;
+        _isOffline = false;
       });
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+        isRefreshingAnalytics = false;
+        _analyticsError = e.message;
+      });
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 

@@ -5,6 +5,8 @@ import '../services/guest_dialog_service.dart';
 import '../widgets/auth_message_helper.dart';
 import '../../utils/responsive_helper.dart';
 
+import '../exceptions/rate_limit_exception.dart';
+
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -73,6 +75,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       AuthMessageHelper.showSuccess(context, 'Profile updated successfully');
 
       Navigator.pop(context, true);
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      AuthMessageHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
     } catch (e) {
       if (!mounted) return;
 

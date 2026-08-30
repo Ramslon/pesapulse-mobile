@@ -7,6 +7,7 @@ import '../models/user_preferences.dart';
 import '../services/api_services.dart';
 import '../services/settings_service.dart';
 import '../database/database_helper.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class SettingsRepository extends BaseRepository {
   Map<String, dynamic>? _profileCache;
@@ -39,6 +40,8 @@ class SettingsRepository extends BaseRepository {
       _profileCache = profile;
 
       return profile;
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       final name = await _getSetting("profile_name") ?? "";
       final email = await _getSetting("profile_email") ?? "";
@@ -242,12 +245,14 @@ class SettingsRepository extends BaseRepository {
         "totalBudgets": budgetSummary["budget_count"] ?? 0,
       };
 
-      final ownerId = await this.ownerId;
-
       await _saveSetting("dashboard_stats_$ownerId", jsonEncode(stats));
+
       _dashboardCache = stats;
 
       return stats;
+    } on RateLimitException {
+      // Do NOT hide rate-limit errors.
+      rethrow;
     } catch (_) {
       final cached = await _getSetting("dashboard_stats_$ownerId");
 

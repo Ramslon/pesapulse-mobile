@@ -4,6 +4,7 @@ import '../repositories/settings_repository.dart';
 import '../services/session_service.dart';
 import 'settings_preferences_controller.dart';
 import 'settings_session_controller.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class SettingsController {
   final SettingsRepository settingsRepository;
@@ -136,6 +137,11 @@ class SettingsController {
         ),
         notify: notify,
       );
+    } on RateLimitException catch (e) {
+      debugPrint('Dashboard statistics rate limited: ${e.message}');
+
+      // Let the actual UI decide how to display the message.
+      rethrow;
     } catch (e) {
       debugPrint('Failed to load dashboard statistics: $e');
     }

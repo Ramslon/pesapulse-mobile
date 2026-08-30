@@ -1,3 +1,4 @@
+import 'package:pesapulse_mobile/exceptions/rate_limit_exception.dart';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -66,6 +67,8 @@ class DashboardRepository extends BaseRepository {
       );
 
       return dashboard;
+    } on RateLimitException {
+      rethrow;
     } catch (_) {
       // Fallback to cache if API fails
       final cached = await database.query(

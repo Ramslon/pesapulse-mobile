@@ -31,7 +31,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _autoValidate = false;
 
-  void registerUser() async {
+  Future<void> registerUser() async {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) {
@@ -51,8 +51,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final response = await ApiService.registerUser(name, email, password);
 
       if (response.containsKey('token')) {
-        final token = response["token"];
-        final userId = response["user"]["id"].toString();
+        final token = response['token'];
+        final userId = response['user']['id'].toString();
 
         // ------------------------------------------------------------
         // STEP 1: Create the authenticated session.
@@ -117,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         AuthMessageHelper.showError(
           context,
-          response["message"] ?? "Registration failed.",
+          response['message'] ?? 'Registration failed.',
         );
       }
     } on RateLimitException catch (e) {

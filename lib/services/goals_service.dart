@@ -4,6 +4,8 @@ import '../repositories/goal_deadline_repository.dart';
 import '../repositories/goal_insights_repository.dart';
 import '../repositories/goals_forecast_repository.dart';
 import '../repositories/goals_repository.dart';
+import '../exceptions/rate_limit_exception.dart';
+import 'package:flutter/foundation.dart';
 
 class GoalsService {
   final GoalsRepository goalsRepository;
@@ -72,7 +74,11 @@ class GoalsService {
 
           _forecastCache[localId] = forecast;
           map[localId] = forecast;
-        } catch (_) {
+        } on RateLimitException {
+          // Important: propagate rate-limit errors to the UI.
+          rethrow;
+        } catch (e) {
+          debugPrint('Failed to load forecast for goal $localId: $e');
           map[localId] = null;
         }
       }),
@@ -107,7 +113,11 @@ class GoalsService {
 
           _insightCache[localId] = insight;
           map[localId] = insight;
-        } catch (_) {
+        } on RateLimitException {
+          rethrow;
+        } catch (e) {
+          debugPrint('Failed to load insights for goal $localId: $e');
+
           map[localId] = null;
         }
       }),
@@ -197,10 +207,12 @@ class GoalsService {
   }
 
   Future<void> restoreGoal({required Goal goal, required bool isOnline}) async {
-    if (isOnline && goal.serverId != null) {
-      await goalsRepository.restoreGoalOnline(goal.serverId!);
-    } else {
+    if (!isOnline) {
       await goalsRepository.restoreGoalOffline(goal.id);
+    } else if (goal.serverId != null) {
+      await goalsRepository.restoreGoalOnline(goal.id, goal.serverId!);
+    } else {
+      throw Exception('Cannot restore goal: server ID is missing.');
     }
   }
 
