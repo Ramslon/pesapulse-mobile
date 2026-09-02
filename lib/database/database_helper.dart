@@ -1,5 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 
 class DatabaseHelper {
   DatabaseHelper._();
@@ -16,6 +17,29 @@ class DatabaseHelper {
     return _database!;
   }
 
+  Future<void> _assignMissingClientIds(Database db) async {
+    const uuid = Uuid();
+
+    final tables = ['expenses', 'goals', 'budgets', 'savings'];
+
+    for (final table in tables) {
+      final records = await db.query(
+        table,
+        columns: ['id'],
+        where: 'client_id IS NULL',
+      );
+
+      for (final record in records) {
+        await db.update(
+          table,
+          {'client_id': uuid.v4()},
+          where: 'id = ?',
+          whereArgs: [record['id']],
+        );
+      }
+    }
+  }
+
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
 
@@ -23,7 +47,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 19,
+      version: 20,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -38,6 +62,7 @@ class DatabaseHelper {
     await db.execute('''
 CREATE TABLE expenses(
 id INTEGER PRIMARY KEY,
+client_id TEXT,
 owner_id TEXT DEFAULT 'guest',
 server_id INTEGER,
 title TEXT,
@@ -54,6 +79,7 @@ is_deleted INTEGER DEFAULT 0
     await db.execute('''
     CREATE TABLE goals(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
+client_id TEXT,
 server_id INTEGER UNIQUE,
 owner_id TEXT DEFAULT 'guest',
 title TEXT,
@@ -74,6 +100,7 @@ is_archived INTEGER DEFAULT 0
     await db.execute('''
 CREATE TABLE savings(
 id INTEGER PRIMARY KEY,
+client_id TEXT,
 owner_id TEXT DEFAULT 'guest',
 server_id INTEGER,
 goal_id INTEGER,
@@ -88,6 +115,7 @@ is_deleted INTEGER DEFAULT 0
     await db.execute('''
 CREATE TABLE budgets(
 id INTEGER PRIMARY KEY,
+client_id TEXT,
 owner_id TEXT DEFAULT 'guest',
 server_id INTEGER,
 category TEXT,
@@ -412,6 +440,30 @@ CREATE TABLE settings(
     ALTER TABLE  budget_summary_cache
     ADD COLUMN budget_count INTEGER DEFAULT 0
   """);
+    }
+
+    if (oldVersion < 20) {
+      await db.execute('''
+    ALTER TABLE expenses
+    ADD COLUMN client_id TEXT
+  ''');
+
+      await db.execute('''
+    ALTER TABLE goals
+    ADD COLUMN client_id TEXT
+  ''');
+
+      await db.execute('''
+    ALTER TABLE budgets
+    ADD COLUMN client_id TEXT
+  ''');
+
+      await db.execute('''
+    ALTER TABLE savings
+    ADD COLUMN client_id TEXT
+  ''');
+
+      await _assignMissingClientIds(db);
     }
   }
 }

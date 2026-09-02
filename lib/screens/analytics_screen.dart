@@ -79,11 +79,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     _wasOnline = _network.isOnline;
     _network.addListener(_onConnectivityChanged);
 
-    loadSessionState();
-    loadReports();
+    _initializeAnalytics();
   }
 
-  Future<void> loadSessionState() async {
+  Future<void> _initializeAnalytics() async {
     final guest = await SessionService.isGuest();
 
     if (!mounted) return;
@@ -92,6 +91,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       isGuest = guest;
     });
 
+    await _loadCachedAnalytics();
+
+    if (!mounted) return;
+
     if (guest) {
       setState(() {
         isLoading = false;
@@ -99,7 +102,47 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       return;
     }
 
-    await _loadAnalytics();
+    // If there was no cache, the skeleton remains visible until
+    // the first successful network request.
+    if (summary == null) {
+      setState(() {
+        isLoading = true;
+      });
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _refreshAnalyticsInBackground();
+    });
+
+    loadReports();
+  }
+
+  Future<void> _loadCachedAnalytics() async {
+    try {
+      final analytics = await analyticsRepository.getCachedAnalytics();
+
+      final processed = await analyticsService.processAnalyticsData(
+        analytics: analytics,
+        period: selectedPeriod,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        summary = processed;
+        isLoading = false;
+        _analyticsError = null;
+      });
+
+      debugPrint('Loaded cached analytics data.');
+    } catch (e) {
+      debugPrint('No cached analytics available: $e');
+    }
   }
 
   void _onConnectivityChanged() {
@@ -135,7 +178,45 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         return;
       }
 
-      _loadAnalytics(showFullSkeleton: summary == null);
+      _refreshAnalyticsInBackground();
+    }
+  }
+
+  Future<void> _refreshAnalyticsInBackground() async {
+    if (_analyticsRequestInProgress) return;
+
+    _analyticsRequestInProgress = true;
+
+    try {
+      final analytics = await analyticsRepository.refreshAnalytics();
+
+      final processed = await analyticsService.processAnalyticsData(
+        analytics: analytics,
+        period: selectedPeriod,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        summary = processed;
+        _analyticsError = null;
+        _isOffline = false;
+        isLoading = false;
+      });
+
+      debugPrint('Analytics background refresh completed.');
+    } on RateLimitException catch (e) {
+      debugPrint('Analytics background refresh rate limited: ${e.message}');
+    } catch (e) {
+      debugPrint('Analytics background refresh failed: $e');
+    } finally {
+      _analyticsRequestInProgress = false;
+
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -167,7 +248,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     }
 
     try {
-      final result = await analyticsService.loadAnalytics(
+      final analytics = await analyticsRepository.refreshAnalytics();
+
+      final result = await analyticsService.processAnalyticsData(
+        analytics: analytics,
         period: requestPeriod,
       );
 
@@ -204,16 +288,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       });
 
       if (!_network.isOnline) {
-        _isOffline = true;
-        _analyticsError =
-            'You are offline. Your existing analytics are still available.';
+        setState(() {
+          _isOffline = true;
+          _analyticsError =
+              'You are offline. Your existing analytics are still available.';
+        });
 
         SnackbarHelper.showError(
           context,
           'Offline mode: showing cached analytics.',
         );
       } else {
-        _analyticsError = 'We couldn\'t load your analytics. Please try again.';
+        setState(() {
+          _analyticsError =
+              'We couldn\'t load your analytics. Please try again.';
+        });
 
         SnackbarHelper.showError(
           context,
@@ -247,6 +336,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       return;
     }
     await _loadAnalytics();
+  }
+
+  Future<void> _changeAnalyticsPeriod(AnalyticsPeriod period) async {
+    try {
+      final analytics = await analyticsRepository.getCachedAnalytics();
+
+      final processed = await analyticsService.processAnalyticsData(
+        analytics: analytics,
+        period: period,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        selectedPeriod = period;
+        summary = processed;
+      });
+    } catch (e) {
+      debugPrint('Unable to change analytics period from cache: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        selectedPeriod = period;
+      });
+    }
   }
 
   Future<void> shareExistingReport(String path) async {
@@ -460,11 +575,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                               return;
                             }
 
-                            setState(() {
-                              selectedPeriod = value;
-                            });
-
-                            await _loadAnalytics();
+                            await _changeAnalyticsPeriod(value);
                           },
                         ),
 

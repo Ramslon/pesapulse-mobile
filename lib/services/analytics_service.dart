@@ -231,8 +231,15 @@ class AnalyticsService {
   Future<AnalyticsSummary> loadAnalytics({
     AnalyticsPeriod period = AnalyticsPeriod.thisMonth,
   }) async {
-    final analytics = await repository.getAnalytics();
+    final analytics = await repository.refreshAnalytics();
 
+    return processAnalyticsData(analytics: analytics, period: period);
+  }
+
+  Future<AnalyticsSummary> processAnalyticsData({
+    required Map<String, dynamic> analytics,
+    required AnalyticsPeriod period,
+  }) async {
     final allExpenses = analytics["expenses"]["data"] ?? [];
 
     final filteredExpenses = _filterExpensesByPeriod(allExpenses, period);

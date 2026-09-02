@@ -2,12 +2,31 @@ import 'dart:convert';
 
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart';
 
 import '../services/api_services.dart';
 import '../exceptions/rate_limit_exception.dart';
 
 class AnalyticsRepository extends BaseRepository {
-  Future<Map<String, dynamic>> getAnalytics() async {
+  Future<Map<String, dynamic>> getCachedAnalytics() async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final cached = await database.query(
+      "analytics_cache",
+      where: "owner_id=?",
+      whereArgs: [ownerId],
+      limit: 1,
+    );
+
+    if (cached.isEmpty) {
+      throw Exception("No cached analytics");
+    }
+
+    return _fromLocal(cached.first);
+  }
+
+  Future<Map<String, dynamic>> refreshAnalytics() async {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
@@ -18,9 +37,9 @@ class AnalyticsRepository extends BaseRepository {
         ApiService.getFinancialInsights(),
       ]);
 
-      final expenses = results[0] as Map<String, dynamic>;
-      final goalAnalytics = results[1] as Map<String, dynamic>;
-      final financialInsights = results[2] as Map<String, dynamic>;
+      final expenses = results[0];
+      final goalAnalytics = results[1];
+      final financialInsights = results[2];
 
       await database.insert(
         "analytics_cache",
@@ -35,18 +54,9 @@ class AnalyticsRepository extends BaseRepository {
       };
     } on RateLimitException {
       rethrow;
-    } catch (_) {
-      final cached = await database.query(
-        "analytics_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-      );
-
-      if (cached.isEmpty) {
-        throw Exception("No cached analytics");
-      }
-
-      return _fromLocal(cached.first);
+    } catch (e) {
+      debugPrint('Analytics API refresh failed: $e');
+      rethrow;
     }
   }
 

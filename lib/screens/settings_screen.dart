@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pesapulse_mobile/screens/auth_choice_screen.dart';
 import 'package:pesapulse_mobile/screens/register_screen.dart';
 import 'package:intl/intl.dart';
-import 'package:pesapulse_mobile/widgets/auth_message_helper.dart';
 import 'package:provider/provider.dart';
 
 import '../core/constants/app_constants.dart';
@@ -30,6 +29,7 @@ import '../widgets/settings/settings_support_section.dart';
 import '../widgets/settings/settings_session_section.dart';
 import '../widgets/settings/settings_footer.dart';
 import '../widgets/settings/settings_section_header.dart';
+import '../widgets/settings/settings_loading_skeleton.dart';
 import '../widgets/settings/dialogs/about_pesapulse_dialog.dart';
 import '../widgets/settings/dialogs/privacy_policy_dialog.dart';
 import '../widgets/settings/dialogs/terms_of_service_dialog.dart';
@@ -40,8 +40,6 @@ import '../repositories/settings_repository.dart';
 import '../models/settings_state.dart';
 import '../utils/responsive_helper.dart';
 import '../utils/settings_error_message.dart';
-
-import '../exceptions/rate_limit_exception.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -169,12 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             vertical: spacing,
           ),
           child: _settingsState.isLoading
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 100),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
+              ? const SettingsLoadingSkeleton()
               : _settingsState.loadingError != null
               ? Center(
                   child: Padding(
@@ -396,15 +389,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             try {
                               await settingsController.logout();
-                            } on RateLimitException catch (e) {
-                              if (!mounted) return;
-
-                              AuthMessageHelper.showRateLimited(
-                                context,
-                                message: e.message,
-                                remaining: e.remaining,
-                                retryAfter: e.retryAfter,
-                              );
                             } catch (e) {
                               debugPrint('Logout error: $e');
                             }

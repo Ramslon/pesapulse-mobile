@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:sqflite/sqflite.dart';
 
 import '../database/database_helper.dart';
@@ -169,89 +167,6 @@ class MigrationRepository {
       where: 'owner_id = ?',
       whereArgs: [guestOwnerId],
     );
-  }
-
-  /// Transfers the guest sync queue to the authenticated user.
-  ///
-  /// The queue itself is local-only. Its payloads may contain owner_id,
-  /// so the payload is rewritten before changing the queue owner.
-  Future<void> migrateSyncQueue(String userId) async {
-    final database = await db.database;
-
-    await database.transaction((txn) async {
-      final queue = await txn.query(
-        'sync_queue',
-        where: 'owner_id = ?',
-        whereArgs: [guestOwnerId],
-      );
-
-      for (final item in queue) {
-        Map<String, dynamic> payload = {};
-
-        final rawPayload = item['payload'];
-
-        if (rawPayload != null && rawPayload.toString().trim().isNotEmpty) {
-          try {
-            final decoded = jsonDecode(rawPayload.toString());
-
-            if (decoded is Map<String, dynamic>) {
-              payload = Map<String, dynamic>.from(decoded);
-            }
-          } catch (_) {
-            // Keep the original payload if it is not valid JSON.
-          }
-        }
-
-        payload['owner_id'] = userId;
-
-        await txn.update(
-          'sync_queue',
-          {'owner_id': userId, 'payload': jsonEncode(payload)},
-          where: 'id = ? AND owner_id = ?',
-          whereArgs: [item['id'], guestOwnerId],
-        );
-      }
-    });
-  }
-
-  /// Clears all remaining guest-owned local data.
-  ///
-  /// This is a safety cleanup operation and should only happen after
-  /// successful migration.
-  Future<void> clearGuestData() async {
-    final database = await db.database;
-
-    await database.transaction((txn) async {
-      await txn.delete(
-        'expenses',
-        where: 'owner_id = ?',
-        whereArgs: [guestOwnerId],
-      );
-
-      await txn.delete(
-        'goals',
-        where: 'owner_id = ?',
-        whereArgs: [guestOwnerId],
-      );
-
-      await txn.delete(
-        'budgets',
-        where: 'owner_id = ?',
-        whereArgs: [guestOwnerId],
-      );
-
-      await txn.delete(
-        'settings',
-        where: 'owner_id = ?',
-        whereArgs: [guestOwnerId],
-      );
-
-      await txn.delete(
-        'sync_queue',
-        where: 'owner_id = ?',
-        whereArgs: [guestOwnerId],
-      );
-    });
   }
 
   Future<void> clearGuestSyncQueue() async {

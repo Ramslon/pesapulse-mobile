@@ -355,7 +355,7 @@ class SyncService {
   Future<void> refreshOfflineCaches({Set<String>? tables}) async {
     try {
       if (tables == null || tables.contains("dashboard")) {
-        await dashboardRepository.getDashboard();
+        await dashboardRepository.refreshDashboard();
       }
       if (tables == null || tables.contains("insights")) {
         await insightsRepository.getInsights();

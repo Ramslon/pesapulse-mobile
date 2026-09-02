@@ -12,6 +12,7 @@ import '../widgets/custom_textfield.dart';
 import '../widgets/auth_message_helper.dart';
 
 import '../exceptions/rate_limit_exception.dart';
+import '../exceptions/auth_exception.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -24,8 +25,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   bool isLoading = false;
+
+  String loadingMessage = '';
 
   final _formKey = GlobalKey<FormState>();
 
@@ -42,85 +47,169 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (isLoading) return;
 
     final name = nameController.text.trim();
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
+    final email = emailController.text.trim().toLowerCase();
+    final password = passwordController.text;
+    final passwordConfirmation = confirmPasswordController.text;
 
-    setState(() => isLoading = true);
+    _setLoading('Creating your account...');
 
     try {
-      final response = await ApiService.registerUser(name, email, password);
+      // ------------------------------------------------------------
+      // STEP 1: Register the user.
+      // ------------------------------------------------------------
 
-      if (response.containsKey('token')) {
-        final token = response['token'];
-        final userId = response['user']['id'].toString();
+      final response = await ApiService.registerUser(
+        name,
+        email,
+        password,
+        passwordConfirmation,
+      );
 
-        // ------------------------------------------------------------
-        // STEP 1: Create the authenticated session.
-        // ------------------------------------------------------------
+      // ------------------------------------------------------------
+      // STEP 2: Validate registration response.
+      // ------------------------------------------------------------
 
-        await SessionService.loginUser(userId, token);
+      final token = response['token'];
+      final user = response['user'];
 
-        ApiService.token = token;
-
-        // Start automatic syncing after authentication.
-        SyncService.instance.startListening();
-
-        // ------------------------------------------------------------
-        // STEP 2: Migrate any guest data to the new account.
-        // ------------------------------------------------------------
-
-        try {
-          await MigrationService.instance.migrateGuestData(userId);
-
-          // Cleanup guest-only sync items after successful migration.
-          await SyncService.instance.cleanupGuestQueue();
-
-          debugPrint(
-            'Guest data migration after registration completed successfully.',
-          );
-        } catch (migrationError) {
-          debugPrint(
-            'Guest data migration after registration failed: '
-            '$migrationError',
-          );
-
-          if (!mounted) return;
-
-          AuthMessageHelper.showError(
-            context,
-            'Account created, but your guest data could not be migrated. '
-            'You can continue using your account.',
-          );
-
-          return;
-        }
-
-        if (!mounted) return;
-
-        // ------------------------------------------------------------
-        // STEP 3: Continue to the application.
-        // ------------------------------------------------------------
-
-        AuthMessageHelper.showSuccess(context, 'Account created successfully!');
-
-        await Future.delayed(const Duration(milliseconds: 700));
-
-        if (!mounted) return;
-
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
-      } else {
-        if (!mounted) return;
-
-        AuthMessageHelper.showError(
-          context,
-          response['message'] ?? 'Registration failed.',
+      if (token is! String ||
+          token.isEmpty ||
+          user is! Map<String, dynamic> ||
+          user['id'] == null) {
+        throw AuthException(
+          message: 'Invalid registration response from server.',
         );
       }
+
+      final userId = user['id'].toString();
+
+      // ------------------------------------------------------------
+      // STEP 3: Create authenticated session.
+      // ------------------------------------------------------------
+
+      await SessionService.loginUser(userId, token);
+
+      ApiService.token = token;
+
+      // ------------------------------------------------------------
+      // STEP 4: Migrate any existing guest data.
+      //
+      // IMPORTANT:
+      // SyncService is intentionally NOT started yet.
+      // This prevents the old guest sync queue from being replayed
+      // before migration clears it.
+      // ------------------------------------------------------------
+
+      bool migrationFailed = false;
+
+      try {
+        _setLoading('Migrating your guest data...');
+
+        final migrationResult = await MigrationService.instance
+            .migrateGuestData(userId);
+
+        if (migrationResult.migrated) {
+          debugPrint(
+            'Guest migration completed successfully: '
+            '${migrationResult.recordCount} records.',
+          );
+        } else {
+          debugPrint('No guest data found to migrate.');
+        }
+      } on RateLimitException catch (e) {
+        migrationFailed = true;
+
+        debugPrint(
+          'Guest data migration rate limited: '
+          'message=${e.message}, '
+          'remaining=${e.remaining}, '
+          'retryAfter=${e.retryAfter}',
+        );
+
+        if (mounted) {
+          AuthMessageHelper.showRateLimited(
+            context,
+            message: e.message,
+            remaining: e.remaining,
+            retryAfter: e.retryAfter,
+          );
+        }
+
+        // Registration succeeded.
+        // Do NOT return.
+      } on AuthException catch (e) {
+        migrationFailed = true;
+
+        debugPrint('Guest data migration authentication error: ${e.message}');
+
+        if (mounted) {
+          AuthMessageHelper.showError(
+            context,
+            'Account created successfully, but your guest data '
+            'could not be migrated. You can continue using your account.',
+          );
+        }
+
+        // Registration succeeded.
+        // Do NOT return.
+      } catch (e) {
+        migrationFailed = true;
+
+        debugPrint('Guest data migration failed: $e');
+
+        if (mounted) {
+          AuthMessageHelper.showError(
+            context,
+            'Account created successfully, but your guest data '
+            'could not be migrated. You can continue using your account.',
+          );
+        }
+
+        // Registration succeeded.
+        // Do NOT return.
+      }
+
+      // ------------------------------------------------------------
+      // STEP 5: Start synchronization.
+      //
+      // This happens AFTER migration has either:
+      //
+      //   - completed successfully and cleared the guest queue, or
+      //   - failed and the user is allowed to continue.
+      //
+      // SyncService can now operate under the authenticated session.
+      // ------------------------------------------------------------
+
+      SyncService.instance.startListening();
+
+      if (!mounted) return;
+
+      // ------------------------------------------------------------
+      // STEP 6: Continue to the application.
+      // ------------------------------------------------------------
+
+      _setLoading('Opening your account...');
+
+      // Only show the normal success message when migration did not
+      // produce an error message.
+      if (!migrationFailed) {
+        AuthMessageHelper.showSuccess(context, 'Account created successfully!');
+      }
+
+      await Future.delayed(const Duration(milliseconds: 700));
+
+      if (!mounted) return;
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
     } on RateLimitException catch (e) {
+      // ------------------------------------------------------------
+      // Registration itself was rate limited.
+      // ------------------------------------------------------------
+
       if (!mounted) return;
 
       AuthMessageHelper.showRateLimited(
@@ -129,7 +218,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
         remaining: e.remaining,
         retryAfter: e.retryAfter,
       );
+    } on AuthException catch (e) {
+      // ------------------------------------------------------------
+      // Registration/authentication error.
+      // ------------------------------------------------------------
+
+      if (!mounted) return;
+
+      debugPrint('Registration authentication error: ${e.message}');
+
+      AuthMessageHelper.showError(context, e.message);
     } catch (e) {
+      // ------------------------------------------------------------
+      // Unexpected registration error.
+      // ------------------------------------------------------------
+
       if (!mounted) return;
 
       debugPrint('Registration error: $e');
@@ -140,9 +243,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } finally {
       if (mounted) {
-        setState(() => isLoading = false);
+        setState(() {
+          isLoading = false;
+          loadingMessage = '';
+        });
       }
     }
+  }
+
+  void _setLoading(String message) {
+    if (!mounted) return;
+
+    setState(() {
+      isLoading = true;
+      loadingMessage = message;
+    });
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -224,8 +348,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return "Please enter your full name";
                               }
 
-                              if (value.trim().length < 3) {
-                                return "Name is too short";
+                              if (value.trim().length > 255) {
+                                return "Name must be 255 characters or less";
                               }
 
                               return null;
@@ -269,6 +393,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return "Password must be at least 8 characters";
                               }
 
+                              if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                                return "Password must contain an uppercase letter";
+                              }
+
+                              if (!RegExp(r'[a-z]').hasMatch(value)) {
+                                return "Password must contain a lowercase letter";
+                              }
+
+                              if (!RegExp(r'[0-9]').hasMatch(value)) {
+                                return "Password must contain a number";
+                              }
+
+                              if (!RegExp(r'[^A-Za-z0-9]').hasMatch(value)) {
+                                return "Password must contain a symbol";
+                              }
+
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          CustomTextField(
+                            controller: confirmPasswordController,
+                            label: "Confirm Password",
+                            obscureText: true,
+                            prefixIcon: Icons.lock_outline,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Please confirm your password";
+                              }
+
+                              if (value != passwordController.text) {
+                                return "Passwords do not match";
+                              }
+
                               return null;
                             },
                           ),
@@ -284,6 +444,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               onPressed: registerUser,
                             ),
                           ),
+
+                          if (isLoading && loadingMessage.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              loadingMessage,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
 
                           const SizedBox(height: 22),
 

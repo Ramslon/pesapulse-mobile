@@ -36,11 +36,17 @@ class SettingsPreferencesController {
     required String title,
     required bool enabled,
   }) async {
-    await NotificationService.showNotification(
-      id: preferenceNotificationId,
-      title: title,
-      body: enabled ? '$title enabled' : '$title disabled',
-    );
+    try {
+      await NotificationService.showNotification(
+        id: preferenceNotificationId,
+        title: title,
+        body: enabled ? '$title enabled' : '$title disabled',
+      );
+    } catch (e) {
+      // Notification failure should never affect
+      // the already-successful preference update.
+      print('Preference notification failed: $e');
+    }
   }
 
   Future<void> updateNotificationPreference({

@@ -39,7 +39,7 @@ class ExpenseRepository extends BaseRepository {
   Future<Map<String, dynamic>> getExpenses({int page = 1}) async {
     final ownerId = await this.ownerId;
     try {
-      final response = await ApiService.getExpenses(page: page);
+      final response = await ApiService.getExpenses();
 
       final database = await db.database;
 
@@ -373,7 +373,7 @@ class ExpenseRepository extends BaseRepository {
     String? category,
     String? expenseDate,
   }) async {
-    final response = await ApiService.getExpenses(page: 1);
+    final response = await ApiService.getExpenses();
     final allExpenses = List<Map<String, dynamic>>.from(response["data"]);
 
     return allExpenses.where((exp) {

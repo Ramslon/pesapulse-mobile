@@ -232,11 +232,17 @@ class SettingsRepository extends BaseRepository {
     }
 
     try {
-      final goalsAnalytics = await ApiService.getGoalAnalytics();
+      final results = await Future.wait([
+        ApiService.getGoalAnalytics(),
+        ApiService.getExpenses(),
+        ApiService.getBudgetSummary(),
+      ]);
 
-      final expenses = await ApiService.getExpenses();
+      final goalsAnalytics = results[0];
 
-      final budgetSummary = await ApiService.getBudgetSummary();
+      final expenses = results[1];
+
+      final budgetSummary = results[2];
 
       final stats = {
         "totalGoals": goalsAnalytics["total_goals"] ?? 0,
@@ -251,13 +257,13 @@ class SettingsRepository extends BaseRepository {
 
       return stats;
     } on RateLimitException {
-      // Do NOT hide rate-limit errors.
       rethrow;
     } catch (_) {
       final cached = await _getSetting("dashboard_stats_$ownerId");
 
       if (cached != null) {
         _dashboardCache = jsonDecode(cached) as Map<String, dynamic>;
+
         return _dashboardCache!;
       }
 
@@ -270,16 +276,47 @@ class SettingsRepository extends BaseRepository {
     }
   }
 
-  Future<Map<String, dynamic>> getGoalAnalytics() async {
-    return await ApiService.getGoalAnalytics();
+  Future<Map<String, dynamic>> getCachedProfile() async {
+    if (_profileCache != null) {
+      return _profileCache!;
+    }
+
+    final name = await _getSetting("profile_name");
+    final email = await _getSetting("profile_email");
+
+    if (name == null && email == null) {
+      throw Exception("No cached profile");
+    }
+
+    final profile = {"name": name ?? "", "email": email ?? ""};
+
+    _profileCache = profile;
+
+    return profile;
   }
 
-  Future<Map<String, dynamic>> getExpenses() async {
-    return await ApiService.getExpenses();
-  }
+  Future<Map<String, dynamic>> getCachedDashboardStatistics() async {
+    if (_dashboardCache != null) {
+      return _dashboardCache!;
+    }
 
-  Future<Map<String, dynamic>> getBudgetSummary() async {
-    return await ApiService.getBudgetSummary();
+    final ownerId = await this.ownerId;
+
+    final cached = await _getSetting("dashboard_stats_$ownerId");
+
+    if (cached == null || cached.isEmpty) {
+      throw Exception("No cached dashboard statistics");
+    }
+
+    final decoded = jsonDecode(cached);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception("Invalid cached dashboard statistics");
+    }
+
+    _dashboardCache = decoded;
+
+    return decoded;
   }
 
   // ==========================

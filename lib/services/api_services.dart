@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,11 +10,106 @@ import '../exceptions/auth_exception.dart';
 class ApiService {
   static const String baseUrl = 'https://pesapulse-t9hk.onrender.com/api';
   static String token = '';
+  static const Duration _requestTimeout = Duration(seconds: 15);
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
+    final storedToken = prefs.getString('token');
 
-    return prefs.getString('token');
+    if (storedToken != null && storedToken.isNotEmpty) {
+      token = storedToken;
+      return storedToken;
+    }
+
+    return null;
+  }
+
+  static Future<http.Response> _request({
+    required String method,
+    required String endpoint,
+    Map<String, String>? headers,
+    Object? body,
+    bool authenticated = true,
+  }) async {
+    final requestHeaders = <String, String>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...?headers,
+    };
+
+    if (authenticated) {
+      final storedToken = await getToken();
+
+      final authToken = storedToken != null && storedToken.isNotEmpty
+          ? storedToken
+          : token;
+
+      if (authToken.isNotEmpty) {
+        requestHeaders['Authorization'] = 'Bearer $authToken';
+      }
+    }
+
+    final uri = Uri.parse('$baseUrl$endpoint');
+
+    try {
+      late http.Response response;
+
+      switch (method.toUpperCase()) {
+        case 'GET':
+          response = await http
+              .get(uri, headers: requestHeaders)
+              .timeout(_requestTimeout);
+
+          break;
+
+        case 'POST':
+          response = await http
+              .post(uri, headers: requestHeaders, body: body)
+              .timeout(_requestTimeout);
+
+          break;
+
+        case 'PUT':
+          response = await http
+              .put(uri, headers: requestHeaders, body: body)
+              .timeout(_requestTimeout);
+
+          break;
+
+        case 'PATCH':
+          response = await http
+              .patch(uri, headers: requestHeaders, body: body)
+              .timeout(_requestTimeout);
+
+          break;
+
+        case 'DELETE':
+          response = await http
+              .delete(uri, headers: requestHeaders, body: body)
+              .timeout(_requestTimeout);
+
+          break;
+
+        default:
+          throw UnsupportedError('Unsupported HTTP method: $method');
+      }
+
+      _checkRateLimit(response);
+
+      if (response.statusCode == 401) {
+        throw AuthException(
+          message: 'Your session has expired. Please log in again.',
+        );
+      }
+
+      return response;
+    } on TimeoutException {
+      throw Exception(
+        'The request timed out. Please check your internet connection and try again.',
+      );
+    } on http.ClientException {
+      rethrow;
+    }
   }
 
   static Never _handleRateLimitResponse(http.Response response) {
@@ -82,86 +178,77 @@ class ApiService {
     String email,
     String password,
   ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/login'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/login',
+      authenticated: false,
       body: jsonEncode({'email': email, 'password': password}),
     );
 
-    _checkRateLimit(response);
-
-    final body = jsonDecode(response.body);
-
     if (response.statusCode == 200) {
-      return body;
+      return jsonDecode(response.body) as Map<String, dynamic>;
     }
+
+    final data = _decodeResponseBody(response);
 
     final remaining = _getRemainingAttempts(response);
 
     throw AuthException(
-      message: body["message"] ?? "Login failed",
+      message: data["message"] ?? "Login failed",
       remaining: remaining,
     );
+  }
+
+  static Map<String, dynamic> _decodeResponseBody(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+
+    return {};
   }
 
   static Future<void> logoutUser() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final token = prefs.getString('token');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/logout'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-
-    _checkRateLimit(response);
+    final response = await _request(method: 'POST', endpoint: '/logout');
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       await prefs.remove('token');
+      token = '';
       return;
     }
 
-    throw Exception('Failed to logout (${response.statusCode}).');
+    final body = _decodeResponseBody(response);
+
+    throw Exception(
+      body['message']?.toString() ??
+          'Failed to logout (${response.statusCode}).',
+    );
   }
 
   static Future<void> deleteAccount(String password) async {
-    final token = await getToken();
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/delete-account'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'DELETE',
+      endpoint: '/delete-account',
       body: jsonEncode({'password': password}),
     );
 
-    _checkRateLimit(response);
-
-    Map<String, dynamic> body;
-
-    try {
-      body = jsonDecode(response.body) as Map<String, dynamic>;
-    } catch (_) {
-      throw AuthException(message: 'Invalid response from server.');
-    }
+    final body = _decodeResponseBody(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
     }
 
-    // Laravel validation errors
     if (response.statusCode == 422 && body['errors'] != null) {
       throw AuthException(message: jsonEncode(body['errors']));
     }
 
-    // Authentication/account/general error
     throw AuthException(
-      message: body['message'] ?? 'Failed to delete account.',
+      message: body['message']?.toString() ?? 'Failed to delete account.',
     );
   }
 
@@ -169,51 +256,47 @@ class ApiService {
     String name,
     String email,
     String password,
+    String passwordConfirmation,
   ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/register'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'name': name, 'email': email, 'password': password}),
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/register',
+      authenticated: false,
+      body: jsonEncode({
+        'name': name,
+        'email': email,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      }),
     );
 
-    _checkRateLimit(response);
-
-    final body = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      return body;
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
     }
+
+    final data = _decodeResponseBody(response);
 
     final remaining = _getRemainingAttempts(response);
 
     throw AuthException(
-      message: body["message"] ?? "Registration failed",
+      message: data['message']?.toString() ?? 'Registration failed.',
       remaining: remaining,
     );
   }
 
   static Future<Map<String, dynamic>> migrateGuestData({
-    required String ownerId,
     required Map<String, dynamic> data,
   }) async {
-    final token = await getToken();
+    final storedToken = await getToken();
 
-    if (token == null || token.isEmpty) {
+    if (storedToken == null || storedToken.isEmpty) {
       throw AuthException(message: 'Authentication token is missing.');
     }
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/guest/migrate'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/guest/migrate',
       body: jsonEncode({
-        'owner_id': ownerId,
         'expenses': data['expenses'] ?? [],
         'goals': data['goals'] ?? [],
         'budgets': data['budgets'] ?? [],
@@ -221,20 +304,7 @@ class ApiService {
       }),
     );
 
-    // 429 → RateLimitException
-    _checkRateLimit(response);
-
-    Map<String, dynamic> body;
-
-    try {
-      body = jsonDecode(response.body) as Map<String, dynamic>;
-    } catch (_) {
-      throw AuthException(
-        message:
-            'Invalid response from migration server '
-            '(${response.statusCode}).',
-      );
-    }
+    final body = _decodeResponseBody(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
@@ -253,15 +323,9 @@ class ApiService {
     String expenseDate,
     String description,
   ) async {
-    final token = await getToken();
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/expenses'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/expenses',
       body: jsonEncode({
         'title': title,
         'amount': amount,
@@ -271,31 +335,23 @@ class ApiService {
       }),
     );
 
-    _checkRateLimit(response);
-
-    final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
 
-    throw Exception(body['message'] ?? 'Failed to add expense.');
+    throw Exception(body['message']?.toString() ?? 'Failed to add expense.');
   }
 
-  static Future<dynamic> getExpenses({int page = 1}) async {
-    final prefs = await SharedPreferences.getInstance();
+  static Future<Map<String, dynamic>> getExpenses() async {
+    final response = await _request(method: 'GET', endpoint: '/expenses');
 
-    String? token = prefs.getString('token');
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/expenses?page=$page'),
-
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-
-    _checkRateLimit(response);
-
-    return jsonDecode(response.body);
+    throw Exception('Failed to load expenses (${response.statusCode})');
   }
 
   static Future<Map<String, dynamic>> updateExpense(
@@ -306,15 +362,9 @@ class ApiService {
     String expenseDate,
     String description,
   ) async {
-    final token = await getToken();
-
-    final response = await http.put(
-      Uri.parse('$baseUrl/expenses/$id'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+    final response = await _request(
+      method: 'PUT',
+      endpoint: '/expenses/$id',
       body: jsonEncode({
         'title': title,
         'amount': amount,
@@ -324,93 +374,73 @@ class ApiService {
       }),
     );
 
-    _checkRateLimit(response);
-
-    final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
 
-    throw Exception(body['message'] ?? 'Failed to update expense.');
+    throw Exception(body['message']?.toString() ?? 'Failed to update expense.');
   }
 
   static Future<void> deleteExpense(int id) async {
-    final token = await getToken();
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/expenses/$id'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    final response = await _request(
+      method: 'DELETE',
+      endpoint: '/expenses/$id',
     );
-
-    _checkRateLimit(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
     }
 
-    try {
-      final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
-      throw Exception(body['message'] ?? 'Failed to delete expense.');
-    } catch (_) {
-      throw Exception('Failed to delete expense (${response.statusCode}).');
-    }
+    throw Exception(
+      body['message']?.toString() ??
+          'Failed to delete expense (${response.statusCode}).',
+    );
   }
 
   static Future<Map<String, dynamic>> updateProfile(
     String name,
     String email,
   ) async {
-    final token = await getToken();
-
-    final response = await http.put(
-      Uri.parse('$baseUrl/profile'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+    final response = await _request(
+      method: 'PUT',
+      endpoint: '/profile',
       body: jsonEncode({'name': name, 'email': email}),
     );
 
-    _checkRateLimit(response);
-
-    final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
 
-    throw Exception(body['message'] ?? 'Failed to update profile.');
+    throw Exception(body['message']?.toString() ?? 'Failed to update profile.');
   }
 
   static Future<Map<String, dynamic>> getProfile() async {
-    final token = await getToken();
+    final response = await _request(method: 'GET', endpoint: '/profile');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/profile'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
 
-    _checkRateLimit(response);
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load profile');
+      if (data is Map<String, dynamic>) {
+        return data['user'] is Map<String, dynamic>
+            ? data['user'] as Map<String, dynamic>
+            : data;
+      }
     }
 
-    return jsonDecode(response.body);
+    throw Exception('Failed to load profile (${response.statusCode})');
   }
 
   static Future<Map<String, dynamic>> getDashboardSummary() async {
-    final token = await getToken();
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/dashboard-summary'),
-      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/dashboard-summary',
     );
-
-    _checkRateLimit(response);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -422,84 +452,41 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getDashboard() async {
-    final token = await getToken();
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/dashboard'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-
-    _checkRateLimit(response);
+    final response = await _request(method: 'GET', endpoint: '/dashboard');
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to load dashboard');
+      throw Exception('Failed to load dashboard (${response.statusCode})');
     }
 
-    return jsonDecode(response.body);
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   static Future<void> updatePreferences(Map<String, dynamic> data) async {
-    final token = await getToken();
-
-    final response = await http.put(
-      Uri.parse('$baseUrl/preferences'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'PUT',
+      endpoint: '/preferences',
       body: jsonEncode(data),
     );
-
-    _checkRateLimit(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
     }
 
-    final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
-    throw Exception(body['message'] ?? 'Failed to update preferences.');
-  }
-
-  static bool _toBool(dynamic value) {
-    if (value is bool) return value;
-
-    if (value is int) return value == 1;
-
-    if (value is String) {
-      return value == "1" || value.toLowerCase() == "true";
-    }
-
-    return false;
+    throw Exception(
+      body['message']?.toString() ?? 'Failed to update preferences.',
+    );
   }
 
   static Future<Map<String, dynamic>> getPreferences() async {
-    final token = await getToken();
+    final response = await _request(method: 'GET', endpoint: '/preferences');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/preferences'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-
-    _checkRateLimit(response);
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load preferences');
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
     }
 
-    final data = jsonDecode(response.body);
-
-    // 🔥 NORMALIZE (MERGE SAFETY LAYER)
-    return {
-      'dark_mode': _toBool(data['dark_mode']),
-      'notifications_enabled': _toBool(data['notifications_enabled']),
-
-      // old system fallback
-      'daily_reminder': _toBool(data['daily_reminder']),
-      'expense_alerts': _toBool(data['expense_alerts']),
-      'weekly_summary': _toBool(data['weekly_summary']),
-    };
+    throw Exception('Failed to load preferences (${response.statusCode})');
   }
 
   static Future<UserPreferences> getUserPreferences() async {
@@ -509,15 +496,7 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getBudgetSummary() async {
-    final token = await getToken();
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/budget-summary'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-
-    // 429 → RateLimitException
-    _checkRateLimit(response);
+    final response = await _request(method: 'GET', endpoint: '/budget-summary');
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -527,97 +506,83 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> setBudget(double amount) async {
-    final token = await getToken();
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/budget'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/budget',
       body: jsonEncode({'amount': amount}),
     );
 
-    _checkRateLimit(response);
+    final body = _decodeResponseBody(response);
 
-    final body = jsonDecode(response.body);
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       return body;
     }
 
-    throw Exception(body['message'] ?? 'Failed to set budget.');
+    throw Exception(body['message']?.toString() ?? 'Failed to set budget.');
   }
 
   static Future<void> deleteBudget() async {
-    final token = await getToken();
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/budget'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-
-    _checkRateLimit(response);
+    final response = await _request(method: 'DELETE', endpoint: '/budget');
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
     }
 
-    try {
-      final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
-      throw Exception(body['message'] ?? 'Failed to delete budget.');
-    } catch (_) {
-      throw Exception('Failed to delete budget (${response.statusCode}).');
-    }
+    throw Exception(
+      body['message']?.toString() ??
+          'Failed to delete budget (${response.statusCode}).',
+    );
   }
 
   static Future<Map<String, dynamic>> getFinancialInsights() async {
-    final token = await getToken();
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/financial-insights'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/financial-insights',
     );
 
-    _checkRateLimit(response);
-
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      return jsonDecode(response.body) as Map<String, dynamic>;
     }
 
-    throw Exception('Failed to load financial insights');
+    throw Exception(
+      'Failed to load financial insights (${response.statusCode})',
+    );
   }
 
   static Future<Map<String, dynamic>> getGoalInsights(int goalId) async {
-    final token = await getToken();
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/goals/$goalId/insights'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/goals/$goalId/insights',
     );
 
-    _checkRateLimit(response);
-
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      return jsonDecode(response.body) as Map<String, dynamic>;
     }
 
-    throw Exception("Insights ${response.statusCode}: ${response.body}");
+    throw Exception('Insights ${response.statusCode}: ${response.body}');
   }
 
   static Future<List<dynamic>> getGoals() async {
-    final token = await getToken();
+    final response = await _request(method: 'GET', endpoint: '/goals');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/goals'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = jsonDecode(response.body);
+
+      if (data is List<dynamic>) {
+        return data;
+      }
+
+      throw Exception('Invalid goals response from server.');
+    }
+
+    final body = _decodeResponseBody(response);
+
+    throw Exception(
+      body['message']?.toString() ??
+          'Failed to load goals (${response.statusCode}).',
     );
-
-    _checkRateLimit(response);
-
-    return jsonDecode(response.body);
   }
 
   static Future<Map<String, dynamic>> createGoal({
@@ -625,23 +590,15 @@ class ApiService {
     required double targetAmount,
     String? targetDate,
   }) async {
-    final token = await getToken();
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/goals'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/goals',
       body: jsonEncode({
         'title': title,
         'target_amount': targetAmount,
         'target_date': targetDate,
       }),
     );
-
-    _checkRateLimit(response);
 
     final body = jsonDecode(response.body);
 
@@ -656,41 +613,37 @@ class ApiService {
     int goalId,
     double amount,
   ) async {
-    final token = await getToken();
-
-    final response = await http.put(
-      Uri.parse('$baseUrl/goals/$goalId/progress'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'PUT',
+      endpoint: '/goals/$goalId/progress',
       body: jsonEncode({'amount': amount}),
     );
 
-    _checkRateLimit(response);
-
-    final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
 
-    throw Exception(body['message'] ?? 'Failed to update goal progress.');
+    throw Exception(
+      body['message']?.toString() ?? 'Failed to update goal progress.',
+    );
   }
 
   static Future<List<dynamic>> getUpcomingGoalDeadlines() async {
-    final token = await getToken();
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/goals/upcoming-deadlines'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/goals/upcoming-deadlines',
     );
 
-    _checkRateLimit(response);
-
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+
+      if (data is List<dynamic>) {
+        return data;
+      }
+
+      throw Exception('Invalid upcoming goal deadlines response.');
     }
 
     throw Exception(
@@ -700,98 +653,93 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getGoalAnalytics() async {
-    final token = await getToken();
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/goals/analytics'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/goals/analytics',
     );
 
-    _checkRateLimit(response);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
 
-    return jsonDecode(response.body);
+    throw Exception('Failed to load goal analytics (${response.statusCode})');
   }
 
   static Future<Map<String, dynamic>> getGoalForecast(int goalId) async {
-    final token = await getToken();
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/goals/$goalId/forecast'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/goals/$goalId/forecast',
     );
 
-    _checkRateLimit(response);
-
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      return jsonDecode(response.body) as Map<String, dynamic>;
     }
 
-    throw Exception("Forecast ${response.statusCode}: ${response.body}");
+    throw Exception('Forecast ${response.statusCode}: ${response.body}');
   }
 
   static Future<void> archiveGoal(int goalId) async {
-    final token = await getToken();
-
-    final response = await http.put(
-      Uri.parse('$baseUrl/goals/$goalId/archive'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    final response = await _request(
+      method: 'PUT',
+      endpoint: '/goals/$goalId/archive',
     );
-
-    _checkRateLimit(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
     }
 
-    final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
-    throw Exception(body['message'] ?? 'Failed to archive goal.');
+    throw Exception(body['message']?.toString() ?? 'Failed to archive goal.');
   }
 
   static Future<List<dynamic>> getArchivedGoals() async {
-    final token = await getToken();
+    final response = await _request(method: 'GET', endpoint: '/goals/archived');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/goals/archived'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-    _checkRateLimit(response);
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+
+      if (data is List<dynamic>) {
+        return data;
+      }
+
+      throw Exception('Invalid archived goals response.');
     }
 
-    throw Exception('Failed to load archived goals');
+    throw Exception(
+      'Failed to load archived goals '
+      '(${response.statusCode}).',
+    );
   }
 
   static Future<void> restoreGoal(int goalId) async {
-    final token = await getToken();
-
-    final response = await http.put(
-      Uri.parse('$baseUrl/goals/$goalId/restore'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    final response = await _request(
+      method: 'PUT',
+      endpoint: '/goals/$goalId/restore',
     );
-    _checkRateLimit(response);
 
-    if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['message']);
+    if (response.statusCode == 200) {
+      return;
     }
+
+    final body = _decodeResponseBody(response);
+
+    throw Exception(body['message']?.toString() ?? 'Failed to restore goal.');
   }
 
   static Future<void> deleteGoal(int goalId) async {
-    final token = await getToken();
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/goals/$goalId'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    final response = await _request(
+      method: 'DELETE',
+      endpoint: '/goals/$goalId',
     );
 
-    _checkRateLimit(response);
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        jsonDecode(response.body)['message'] ?? 'Failed to delete goal',
-      );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
     }
+
+    final body = _decodeResponseBody(response);
+
+    throw Exception(body['message']?.toString() ?? 'Failed to delete goal.');
   }
 
   static Future<void> changePassword({
@@ -799,15 +747,9 @@ class ApiService {
     required String newPassword,
     required String confirmPassword,
   }) async {
-    final token = await getToken();
-
-    final response = await http.put(
-      Uri.parse('$baseUrl/change-password'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'PUT',
+      endpoint: '/change-password',
       body: jsonEncode({
         'current_password': currentPassword,
         'new_password': newPassword,
@@ -815,15 +757,12 @@ class ApiService {
       }),
     );
 
-    _checkRateLimit(response);
-
-    final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
+    final remaining = _getRemainingAttempts(response);
 
     if (response.statusCode == 200) {
       return;
     }
-
-    final remaining = _getRemainingAttempts(response);
 
     if (response.statusCode == 422 && body['errors'] != null) {
       throw AuthException(
@@ -833,54 +772,48 @@ class ApiService {
     }
 
     throw AuthException(
-      message: body['message'] ?? 'Failed to change password.',
+      message: body['message']?.toString() ?? 'Failed to change password.',
       remaining: remaining,
     );
   }
 
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/forgot-password'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/forgot-password',
+      authenticated: false,
       body: jsonEncode({'email': email}),
     );
 
-    _checkRateLimit(response);
-
-    final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
 
-    throw Exception(body['message'] ?? 'Failed to send password reset OTP.');
+    throw Exception(
+      body['message']?.toString() ?? 'Failed to send password reset OTP.',
+    );
   }
 
   static Future<Map<String, dynamic>> verifyOtp(
     String email,
     String otp,
   ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/verify-otp'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/verify-otp',
+      authenticated: false,
       body: jsonEncode({'email': email, 'otp': otp}),
     );
 
-    _checkRateLimit(response);
-
-    final data = jsonDecode(response.body);
+    final data = _decodeResponseBody(response);
 
     if (response.statusCode == 200) {
       return data;
     }
 
-    throw Exception(data['message'] ?? 'OTP verification failed.');
+    throw Exception(data['message']?.toString() ?? 'OTP verification failed.');
   }
 
   static Future<Map<String, dynamic>> resetPassword({
@@ -889,12 +822,10 @@ class ApiService {
     required String password,
     required String confirmPassword,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/reset-password'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/reset-password',
+      authenticated: false,
       body: jsonEncode({
         'email': email,
         'otp': otp,
@@ -903,14 +834,12 @@ class ApiService {
       }),
     );
 
-    _checkRateLimit(response);
-
-    final body = jsonDecode(response.body);
+    final body = _decodeResponseBody(response);
 
     if (response.statusCode == 200) {
       return body;
     }
 
-    throw Exception(body['message'] ?? 'Password reset failed.');
+    throw Exception(body['message']?.toString() ?? 'Password reset failed.');
   }
 }

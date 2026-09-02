@@ -13,12 +13,10 @@ class SettingsSessionController {
   Future<void> logout() async {
     try {
       await ApiService.logoutUser();
-    } on RateLimitException {
-      rethrow;
+    } on RateLimitException catch (e) {
+      debugPrint('Server logout rate limited: ${e.message}');
     } catch (e) {
       debugPrint('Server logout failed: $e');
-
-      // Continue with local logout even if the API is unavailable.
     }
 
     await SessionService.logout();

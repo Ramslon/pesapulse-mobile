@@ -38,6 +38,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   bool isGuest = false;
 
+  bool _dashboardRefreshInProgress = false;
+
   int totalExpenses = 0;
   int totalCount = 0;
   int totalCategories = 0;
@@ -72,24 +74,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+
     greeting = getGreeting();
     formattedDate = getFormattedDate();
 
-    SessionService.isGuest().then((guest) {
-      setState(() => isGuest = guest);
-
-      // Load cached dashboard immediately
-      loadDashboardData(useCacheOnly: true);
-
-      // Defer heavy API calls only if not guest
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (!isGuest) {
-          loadDashboardData(); // full refresh with API
-        }
-        setState(() => opacity = 1);
-      });
-    });
+    _initializeDashboard();
   }
 
   String budgetStatus = "healthy";
@@ -102,98 +91,227 @@ class _DashboardScreenState extends State<DashboardScreen>
     return "${percent.toStringAsFixed(0)}% Used";
   }
 
+  Future<void> _initializeDashboard() async {
+    final guest = await SessionService.isGuest();
+
+    if (!mounted) return;
+
+    setState(() {
+      isGuest = guest;
+    });
+
+    // ------------------------------------------------------------
+    // STEP 1: Load everything available locally.
+    // This must never wait for the network.
+    // ------------------------------------------------------------
+    await _loadCachedDashboard();
+
+    if (!mounted) return;
+
+    // ------------------------------------------------------------
+    // STEP 2: Render the first frame.
+    // ------------------------------------------------------------
+    setState(() {
+      opacity = 1;
+    });
+
+    // ------------------------------------------------------------
+    // STEP 3: Refresh from the API after the UI is visible.
+    // ------------------------------------------------------------
+    if (!isGuest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        _refreshDashboardInBackground();
+      });
+    }
+  }
+
   Future<List<Map<String, dynamic>>> _parseExpenses(dynamic raw) async {
     return compute(_decodeExpenses, raw);
   }
 
-  Future<void> loadDashboardData({bool useCacheOnly = false}) async {
+  Future<void> _loadCachedDashboard() async {
     try {
-      final data = await dashboardRepository.getDashboard(
-        useCache: useCacheOnly,
-      );
+      // ------------------------------------------------------------
+      // Load all cached dashboard information in parallel.
+      // ------------------------------------------------------------
+      final results = await Future.wait([
+        dashboardRepository.getCachedDashboard(),
+        budgetRepository.getBudgetSummary(useCache: true),
+        insightsRepository.getInsights(useCache: true),
+      ]);
 
-      final summary = data['summary'];
-      final recent = await _parseExpenses(data['recent_expenses']);
+      if (!mounted) return;
+
+      // ------------------------------------------------------------
+      // Dashboard
+      // ------------------------------------------------------------
+      final dashboard = results[0];
+      final summary = dashboard['summary'];
+      final recent = dashboard['recent_expenses'] as List? ?? [];
+
+      final parsedExpenses = await _parseExpenses(recent);
+
+      // ------------------------------------------------------------
+      // Budget
+      // ------------------------------------------------------------
+      final budget = results[1];
+
+      // ------------------------------------------------------------
+      // Financial insights
+      // ------------------------------------------------------------
+      final insights = results[2];
 
       if (!mounted) return;
 
       setState(() {
+        // Dashboard statistics
         totalExpenses = int.tryParse(summary['total_expenses'].toString()) ?? 0;
 
         totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
 
         totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
 
-        recentExpenses = recent;
+        recentExpenses = parsedExpenses;
+
+        // Budget
+        currentBudget = double.tryParse(budget['budget'].toString()) ?? 0;
+
+        spentThisMonth = double.tryParse(budget['spent'].toString()) ?? 0;
+
+        remainingBudget = double.tryParse(budget['remaining'].toString()) ?? 0;
+
+        budgetCount = int.tryParse(budget['budget_count'].toString()) ?? 0;
+
+        // Financial insights
+        budgetStatus = insights['budget_status']?.toString() ?? 'healthy';
+
+        financialHealthScore =
+            double.tryParse(insights['financial_health_score'].toString()) ?? 0;
+
+        financialHealthLabel =
+            insights['financial_health_label']?.toString() ?? '';
+
+        recommendation = insights['recommendation']?.toString() ?? '';
+
+        categoryAdvice = insights['category_advice']?.toString() ?? '';
+
+        // We have enough cached information to display the dashboard.
         isLoading = false;
       });
 
+      debugPrint('Loaded cached dashboard data.');
+    } catch (e) {
       // ------------------------------------------------------------
-      // Defer heavy calls until after the dashboard has rendered.
+      // It is perfectly normal for a new installation to have no
+      // cache yet. In that case the background API refresh will
+      // provide the initial data.
       // ------------------------------------------------------------
-      if (!useCacheOnly && !isGuest && mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          try {
-            final results = await Future.wait([
-              budgetRepository.getBudgetSummary(),
-              insightsRepository.getInsights(),
-            ]);
+      debugPrint('No complete cached dashboard available: $e');
+    }
+  }
 
-            if (!mounted) return;
+  Future<void> _refreshDashboardInBackground() async {
+    if (_dashboardRefreshInProgress) return;
 
-            final budget = results[0];
-            final insights = results[1];
+    _dashboardRefreshInProgress = true;
 
-            setState(() {
-              currentBudget = double.tryParse(budget["budget"].toString()) ?? 0;
+    try {
+      // ------------------------------------------------------------
+      // Refresh all dashboard data concurrently.
+      // ------------------------------------------------------------
+      final results = await Future.wait([
+        dashboardRepository.refreshDashboard(),
+        budgetRepository.getBudgetSummary(),
+        insightsRepository.getInsights(),
+      ]);
 
-              spentThisMonth = double.tryParse(budget["spent"].toString()) ?? 0;
-
-              remainingBudget =
-                  double.tryParse(budget["remaining"].toString()) ?? 0;
-
-              budgetCount =
-                  int.tryParse(budget["budget_count"].toString()) ?? 0;
-
-              budgetStatus = insights["budget_status"] ?? "healthy";
-
-              financialHealthScore =
-                  double.tryParse(
-                    insights["financial_health_score"].toString(),
-                  ) ??
-                  0;
-
-              financialHealthLabel = insights["financial_health_label"] ?? "";
-
-              recommendation = insights["recommendation"] ?? "";
-
-              categoryAdvice = insights["category_advice"] ?? "";
-            });
-          } on RateLimitException catch (e) {
-            if (!mounted) return;
-
-            SnackbarHelper.showRateLimited(
-              context,
-              message: e.message,
-              remaining: e.remaining,
-              retryAfter: e.retryAfter,
-            );
-          } catch (e) {
-            debugPrint('Failed to load dashboard insights: $e');
-
-            if (!mounted) return;
-
-            SnackbarHelper.showInfo(
-              context,
-              "Unable to refresh dashboard. Showing available data.",
-            );
-          }
-        });
-      }
-    } on RateLimitException catch (e) {
       if (!mounted) return;
 
-      setState(() => isLoading = false);
+      // ------------------------------------------------------------
+      // Dashboard
+      // ------------------------------------------------------------
+      final dashboard = results[0];
+      final summary = dashboard['summary'];
+      final recent = dashboard['recent_expenses'] as List? ?? [];
+
+      final parsedExpenses = await _parseExpenses(recent);
+
+      // ------------------------------------------------------------
+      // Budget
+      // ------------------------------------------------------------
+      final budget = results[1];
+
+      // ------------------------------------------------------------
+      // Financial insights
+      // ------------------------------------------------------------
+      final insights = results[2];
+
+      if (!mounted) return;
+
+      setState(() {
+        // Dashboard
+        totalExpenses = int.tryParse(summary['total_expenses'].toString()) ?? 0;
+
+        totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
+
+        totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
+
+        recentExpenses = parsedExpenses;
+
+        // Budget
+        currentBudget = double.tryParse(budget['budget'].toString()) ?? 0;
+
+        spentThisMonth = double.tryParse(budget['spent'].toString()) ?? 0;
+
+        remainingBudget = double.tryParse(budget['remaining'].toString()) ?? 0;
+
+        budgetCount = int.tryParse(budget['budget_count'].toString()) ?? 0;
+
+        // Insights
+        budgetStatus = insights['budget_status']?.toString() ?? 'healthy';
+
+        financialHealthScore =
+            double.tryParse(insights['financial_health_score'].toString()) ?? 0;
+
+        financialHealthLabel =
+            insights['financial_health_label']?.toString() ?? '';
+
+        recommendation = insights['recommendation']?.toString() ?? '';
+
+        categoryAdvice = insights['category_advice']?.toString() ?? '';
+
+        isLoading = false;
+      });
+
+      debugPrint('Dashboard background refresh completed.');
+    } on RateLimitException catch (e) {
+      debugPrint('Dashboard refresh rate limited: ${e.message}');
+
+      // Don't replace already visible cached data with an error.
+    } catch (e) {
+      debugPrint('Dashboard background refresh failed: $e');
+
+      // The cached dashboard remains visible.
+    } finally {
+      _dashboardRefreshInProgress = false;
+
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> refreshDashboard() async {
+    if (_dashboardRefreshInProgress) return;
+
+    try {
+      await _refreshDashboardInBackground();
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
 
       SnackbarHelper.showRateLimited(
         context,
@@ -204,21 +322,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     } catch (e) {
       if (!mounted) return;
 
-      setState(() => isLoading = false);
-
-      if (e.toString().contains("No cached dashboard")) {
-        return;
-      }
-
       SnackbarHelper.showInfo(
         context,
         "Unable to refresh dashboard. Showing available data.",
       );
     }
-  }
-
-  Future<void> refreshDashboard() async {
-    await loadDashboardData();
   }
 
   String getGreeting() {

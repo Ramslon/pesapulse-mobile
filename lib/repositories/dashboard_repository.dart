@@ -1,9 +1,11 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:pesapulse_mobile/exceptions/rate_limit_exception.dart';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../services/api_services.dart';
-import 'dart:convert';
 
 class DashboardRepository extends BaseRepository {
   Map<String, dynamic> _dashboardToLocal(
@@ -26,40 +28,38 @@ class DashboardRepository extends BaseRepository {
     return {
       "summary": {
         "total_expenses": row["total_expenses"],
-
         "total_count": row["total_count"],
-
         "categories": row["total_categories"],
       },
-
       "recent_expenses": jsonDecode(row["recent_expenses"]),
     };
   }
 
-  Future<Map<String, dynamic>> getDashboard({bool useCache = false}) async {
+  Future<Map<String, dynamic>> getCachedDashboard() async {
     final database = await db.database;
     final ownerId = await this.ownerId;
 
-    // ✅ If caller requests cache only, skip API call
-    if (useCache) {
-      final cached = await database.query(
-        "dashboard_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-      );
+    final cached = await database.query(
+      "dashboard_cache",
+      where: "owner_id=?",
+      whereArgs: [ownerId],
+      limit: 1,
+    );
 
-      if (cached.isEmpty) {
-        throw Exception("No cached dashboard");
-      }
-
-      return _localToDashboard(cached.first);
+    if (cached.isEmpty) {
+      throw Exception("No cached dashboard");
     }
 
+    return _localToDashboard(cached.first);
+  }
+
+  Future<Map<String, dynamic>> refreshDashboard() async {
+    final database = await db.database;
+    final ownerId = await this.ownerId;
+
     try {
-      // Normal flow: fetch from API
       final dashboard = await ApiService.getDashboard();
 
-      // Save to cache
       await database.insert(
         "dashboard_cache",
         _dashboardToLocal(dashboard, ownerId),
@@ -69,19 +69,9 @@ class DashboardRepository extends BaseRepository {
       return dashboard;
     } on RateLimitException {
       rethrow;
-    } catch (_) {
-      // Fallback to cache if API fails
-      final cached = await database.query(
-        "dashboard_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-      );
-
-      if (cached.isEmpty) {
-        throw Exception("No cached dashboard");
-      }
-
-      return _localToDashboard(cached.first);
+    } catch (e) {
+      debugPrint('Dashboard API request failed: $e');
+      rethrow;
     }
   }
 }

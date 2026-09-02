@@ -40,6 +40,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String budgetStatus = 'healthy';
 
+  bool _preferencesSyncInProgress = false;
+
   final List<String> titles = const [
     'Dashboard',
     'Expenses',
@@ -320,7 +322,11 @@ class _HomeScreenState extends State<HomeScreen> {
   // ─────────────────────────────────────────────
 
   Future<void> _syncPreferences() async {
-    if (await SessionService.isGuest()) {
+    if (_preferencesSyncInProgress) return;
+
+    final isGuest = await SessionService.isGuest();
+
+    if (isGuest) {
       return;
     }
 
@@ -331,12 +337,28 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    _preferencesSyncInProgress = true;
+
+    try {
+      await Future.wait([
+        _syncPreferencesFromBackend(),
+        _syncThemeFromBackend(),
+      ]);
+    } finally {
+      _preferencesSyncInProgress = false;
+    }
+  }
+
+  Future<void> _syncPreferencesFromBackend() async {
     try {
       await SettingsRepository().syncPreferencesFromBackend();
+      debugPrint('Preferences synced successfully.');
     } catch (e) {
-      debugPrint('Preferences sync unavailable: $e');
+      debugPrint('Preferences background sync failed: $e');
     }
+  }
 
+  Future<void> _syncThemeFromBackend() async {
     if (!mounted) return;
 
     try {
@@ -344,8 +366,10 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         listen: false,
       ).syncWithBackend();
+
+      debugPrint('Theme synced successfully.');
     } catch (e) {
-      debugPrint('Theme sync unavailable: $e');
+      debugPrint('Theme background sync failed: $e');
     }
   }
   // ─────────────────────────────────────────────
@@ -354,7 +378,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> loadBudgetStatus() async {
     try {
-      final insights = await _financialInsightsRepository.getInsights();
+      final insights = await _financialInsightsRepository.getInsights(
+        useCache: true,
+      );
 
       if (!mounted) return;
 
@@ -362,6 +388,8 @@ class _HomeScreenState extends State<HomeScreen> {
         budgetStatus = insights['budget_status'] ?? 'healthy';
       });
     } catch (e) {
+      debugPrint('No cached budget status available: $e');
+
       if (!mounted) return;
 
       setState(() {

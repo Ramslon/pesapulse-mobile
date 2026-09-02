@@ -6,7 +6,6 @@ import '../services/session_service.dart';
 import '../services/migration_service.dart';
 import '../services/sync_service.dart';
 
-import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
@@ -28,6 +27,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool isLoading = false;
 
+  String loadingMessage = '';
+
   final _formKey = GlobalKey<FormState>();
 
   bool _autoValidate = false;
@@ -38,101 +39,111 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    FocusScope.of(context).unfocus();
-
     if (isLoading) return;
 
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
+    FocusScope.of(context).unfocus();
 
-    setState(() => isLoading = true);
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    _setLoading('Signing in...');
 
     try {
       final response = await ApiService.loginUser(email, password);
 
-      if (response.containsKey('token')) {
-        final prefs = await SharedPreferences.getInstance();
+      // ------------------------------------------------------------
+      // STEP 1: Validate authentication response.
+      // ------------------------------------------------------------
 
-        final token = response['token'];
-        final userId = response['user']['id'].toString();
+      final token = response['token'];
+      final user = response['user'];
 
-        // ------------------------------------------------------------
-        // STEP 1: Save authentication information.
-        // ------------------------------------------------------------
-
-        await prefs.setString('token', token);
-        await prefs.setString('owner_id', userId);
-
-        ApiService.token = token;
-
-        await SessionService.loginUser(userId, token);
-
-        // Start automatic syncing only after authentication.
-        SyncService.instance.startListening();
-
-        // ------------------------------------------------------------
-        // STEP 2: Migrate any guest data to this authenticated user.
-        // ------------------------------------------------------------
-
-        try {
-          await MigrationService.instance.migrateGuestData(userId);
-
-          // Cleanup guest-only sync items after successful migration.
-          await SyncService.instance.cleanupGuestQueue();
-
-          debugPrint('Guest data migration completed successfully.');
-        } on AuthException catch (e) {
-          debugPrint('Guest data migration failed: $e');
-
-          if (!mounted) return;
-
-          AuthMessageHelper.showError(
-            context,
-            'You signed in successfully, but your guest data '
-            'could not be migrated: ${e.message}',
-          );
-
-          if (e.remaining != null && e.remaining! > 0) {
-            AuthMessageHelper.showAttemptsRemaining(context, e.remaining!);
-          }
-
-          // Do NOT return.
-          // Authentication was successful.
-        } catch (migrationError) {
-          debugPrint('Guest data migration failed: $migrationError');
-
-          if (!mounted) return;
-
-          AuthMessageHelper.showError(
-            context,
-            'You signed in successfully, but your guest data '
-            'could not be migrated. You can continue using your account.',
-          );
-
-          // Do NOT return.
-        }
-
-        if (!mounted) return;
-
-        // ------------------------------------------------------------
-        // STEP 3: Continue to the application.
-        // ------------------------------------------------------------
-
-        AuthMessageHelper.showSuccess(context, "Welcome back! 👋");
-
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
-      } else {
-        if (!mounted) return;
-
-        AuthMessageHelper.showError(
-          context,
-          response["message"] ?? "Login failed.",
-        );
+      if (token is! String ||
+          token.isEmpty ||
+          user is! Map<String, dynamic> ||
+          user['id'] == null) {
+        throw AuthException(message: 'Invalid login response from server.');
       }
+
+      final userId = user['id'].toString();
+
+      // ------------------------------------------------------------
+      // STEP 2: Create authenticated session.
+      // ------------------------------------------------------------
+
+      await SessionService.loginUser(userId, token);
+
+      ApiService.token = token;
+
+      // ------------------------------------------------------------
+      // STEP 3: Start synchronization.
+      // ------------------------------------------------------------
+
+      SyncService.instance.startListening();
+
+      // ------------------------------------------------------------
+      // STEP 4: Migrate guest data.
+      // ------------------------------------------------------------
+
+      bool migrationFailed = false;
+
+      try {
+        _setLoading('Migrating your guest data...');
+
+        final migrationResult = await MigrationService.instance
+            .migrateGuestData(userId);
+
+        if (migrationResult.migrated) {
+          debugPrint(
+            'Guest migration completed: '
+            '${migrationResult.recordCount} records.',
+          );
+        } else {
+          debugPrint('No guest data found.');
+        }
+      } on AuthException catch (e) {
+        migrationFailed = true;
+
+        debugPrint('Guest migration failed: ${e.message}');
+
+        if (mounted) {
+          AuthMessageHelper.showError(
+            context,
+            'You signed in successfully, but your guest data '
+            'could not be migrated.',
+          );
+        }
+      } catch (e) {
+        migrationFailed = true;
+
+        debugPrint('Guest migration failed: $e');
+
+        if (mounted) {
+          AuthMessageHelper.showError(
+            context,
+            'You signed in successfully, but your guest data '
+            'could not be migrated.',
+          );
+        }
+      }
+
+      if (!mounted) return;
+
+      // ------------------------------------------------------------
+      // STEP 5: Continue to application.
+      // ------------------------------------------------------------
+
+      _setLoading('Opening your account...');
+
+      if (!migrationFailed) {
+        AuthMessageHelper.showSuccess(context, 'Welcome back! 👋');
+      }
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
     } on RateLimitException catch (e) {
       if (!mounted) return;
 
@@ -142,6 +153,12 @@ class _LoginScreenState extends State<LoginScreen> {
         remaining: e.remaining,
         retryAfter: e.retryAfter,
       );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+
+      debugPrint('Login authentication error: ${e.message}');
+
+      AuthMessageHelper.showError(context, e.message);
     } catch (e) {
       if (!mounted) return;
 
@@ -153,9 +170,21 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } finally {
       if (mounted) {
-        setState(() => isLoading = false);
+        setState(() {
+          isLoading = false;
+          loadingMessage = '';
+        });
       }
     }
+  }
+
+  void _setLoading(String message) {
+    if (!mounted) return;
+
+    setState(() {
+      isLoading = true;
+      loadingMessage = message;
+    });
   }
 
   @override
@@ -278,6 +307,34 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: loginUser,
                             ),
                           ),
+
+                          if (isLoading) ...[
+                            const SizedBox(height: 12),
+
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                  child: Text(
+                                    loadingMessage,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
 
                           Align(
                             alignment: Alignment.centerRight,
