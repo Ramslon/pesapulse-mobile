@@ -1,20 +1,77 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:sqflite/sqflite.dart';
+
 import '../exceptions/rate_limit_exception.dart';
 import '../services/api_services.dart';
 
 class GoalInsightsRepository extends BaseRepository {
-  Future<Map<String, dynamic>> getInsights(int goalId) async {
+  // ============================================================
+  // CACHE-FIRST
+  // ============================================================
+
+  /// Loads goal insights from the local SQLite cache.
+  ///
+  /// This method never contacts the API.
+  ///
+  /// If no cached insights exist, the insights are calculated
+  /// directly from the local goals table.
+  Future<Map<String, dynamic>> getCachedInsights(int goalId) async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final cached = await database.query(
+      "goal_insights_cache",
+      where: "goal_id=? AND owner_id=?",
+      whereArgs: [goalId, ownerId],
+      limit: 1,
+    );
+
+    if (cached.isNotEmpty) {
+      final data = cached.first["data"];
+
+      if (data is String && data.isNotEmpty) {
+        final decoded = jsonDecode(data);
+
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      }
+    }
+
+    // No cached insights available.
+    //
+    // Calculate them locally from the current SQLite goal.
+    final localInsights = await _calculateInsights(database, goalId, ownerId);
+
+    // Store the locally calculated result so subsequent reads
+    // can use the cache.
+    await database.insert(
+      "goal_insights_cache",
+      _toLocal(goalId, localInsights, ownerId),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    return localInsights;
+  }
+
+  // ============================================================
+  // API REFRESH
+  // ============================================================
+
+  /// Fetches fresh goal insights from Laravel and stores the
+  /// result in the local SQLite cache.
+  ///
+  /// Used by background refreshes and explicit manual refreshes.
+  Future<Map<String, dynamic>> refreshInsights(int goalId) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
-      // 1. Try Laravel API first.
       final insights = await ApiService.getGoalInsights(goalId);
 
-      // 2. Cache the successful server response.
       await database.insert(
         "goal_insights_cache",
         _toLocal(goalId, insights, ownerId),
@@ -23,25 +80,22 @@ class GoalInsightsRepository extends BaseRepository {
 
       return insights;
     } on RateLimitException {
-      // 3. Never swallow a 429.
-      // Let the UI display the rate-limit message.
+      // Never hide a 429 response.
       rethrow;
-    } catch (_) {
-      // 4. Other errors can fall back to cached data.
-      final cached = await database.query(
-        "goal_insights_cache",
-        where: "goal_id=? AND owner_id=?",
-        whereArgs: [goalId, ownerId],
-      );
+    } catch (e) {
+      debugPrint('Goal insights API refresh failed for goal $goalId: $e');
 
-      if (cached.isNotEmpty) {
-        return jsonDecode(cached.first["data"] as String);
-      }
-
-      // 5. No cache → calculate locally.
-      return await _calculateInsights(database, goalId, ownerId);
+      // Do not fall back to cache here.
+      //
+      // The cache-first method is responsible for providing
+      // data immediately before this background refresh runs.
+      rethrow;
     }
   }
+
+  // ============================================================
+  // LOCAL INSIGHT CALCULATION
+  // ============================================================
 
   Future<Map<String, dynamic>> _calculateInsights(
     Database database,
@@ -67,13 +121,36 @@ class GoalInsightsRepository extends BaseRepository {
 
     final remaining = (target - saved).clamp(0, double.infinity);
 
+    final now = DateTime.now();
+
     int daysRemaining = 0;
 
-    if (goal["target_date"] != null) {
-      final targetDate = DateTime.parse(goal["target_date"] as String);
+    // ----------------------------------------------------------
+    // Deadline
+    // ----------------------------------------------------------
 
-      daysRemaining = targetDate.difference(DateTime.now()).inDays;
+    if (goal["target_date"] != null &&
+        goal["target_date"].toString().isNotEmpty) {
+      try {
+        final targetDate = DateTime.parse(goal["target_date"].toString());
+
+        final today = DateTime(now.year, now.month, now.day);
+
+        final targetDay = DateTime(
+          targetDate.year,
+          targetDate.month,
+          targetDate.day,
+        );
+
+        daysRemaining = targetDay.difference(today).inDays;
+      } catch (_) {
+        daysRemaining = 0;
+      }
     }
+
+    // ----------------------------------------------------------
+    // Monthly amount required
+    // ----------------------------------------------------------
 
     double monthlyNeeded = 0;
 
@@ -81,9 +158,13 @@ class GoalInsightsRepository extends BaseRepository {
       monthlyNeeded = remaining / (daysRemaining / 30);
     }
 
+    // ----------------------------------------------------------
+    // Determine status
+    // ----------------------------------------------------------
+
     String status;
 
-    if (saved >= target) {
+    if (target > 0 && saved >= target) {
       status = "completed";
     } else if (daysRemaining <= 7) {
       status = "urgent";
@@ -101,6 +182,10 @@ class GoalInsightsRepository extends BaseRepository {
     };
   }
 
+  // ============================================================
+  // INSIGHT MESSAGE
+  // ============================================================
+
   String _insightMessage(String status, double monthlyNeeded) {
     switch (status) {
       case "completed":
@@ -115,6 +200,10 @@ class GoalInsightsRepository extends BaseRepository {
             : "You're on track toward your goal.";
     }
   }
+
+  // ============================================================
+  // SQLITE SERIALIZATION
+  // ============================================================
 
   Map<String, dynamic> _toLocal(
     int goalId,

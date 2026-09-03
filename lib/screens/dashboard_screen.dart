@@ -35,6 +35,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with AutomaticKeepAliveClientMixin {
   bool isLoading = true;
+  bool _initialLoadComplete = false;
 
   bool isGuest = false;
 
@@ -132,87 +133,140 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _loadCachedDashboard() async {
+    // ------------------------------------------------------------
+    // Load each cache independently.
+    //
+    // Missing budget / insights / dashboard cache is NOT the same
+    // thing as the entire dashboard being unavailable.
+    // ------------------------------------------------------------
+
+    Map<String, dynamic>? dashboard;
+    Map<String, dynamic>? budget;
+    Map<String, dynamic>? insights;
+
+    // ------------------------------------------------------------
+    // Dashboard cache
+    // ------------------------------------------------------------
     try {
-      // ------------------------------------------------------------
-      // Load all cached dashboard information in parallel.
-      // ------------------------------------------------------------
-      final results = await Future.wait([
-        dashboardRepository.getCachedDashboard(),
-        budgetRepository.getBudgetSummary(useCache: true),
-        insightsRepository.getInsights(useCache: true),
-      ]);
-
-      if (!mounted) return;
-
-      // ------------------------------------------------------------
-      // Dashboard
-      // ------------------------------------------------------------
-      final dashboard = results[0];
-      final summary = dashboard['summary'];
-      final recent = dashboard['recent_expenses'] as List? ?? [];
-
-      final parsedExpenses = await _parseExpenses(recent);
-
-      // ------------------------------------------------------------
-      // Budget
-      // ------------------------------------------------------------
-      final budget = results[1];
-
-      // ------------------------------------------------------------
-      // Financial insights
-      // ------------------------------------------------------------
-      final insights = results[2];
-
-      if (!mounted) return;
-
-      setState(() {
-        // Dashboard statistics
-        totalExpenses = int.tryParse(summary['total_expenses'].toString()) ?? 0;
-
-        totalCount = int.tryParse(summary['total_count'].toString()) ?? 0;
-
-        totalCategories = int.tryParse(summary['categories'].toString()) ?? 0;
-
-        recentExpenses = parsedExpenses;
-
-        // Budget
-        currentBudget = double.tryParse(budget['budget'].toString()) ?? 0;
-
-        spentThisMonth = double.tryParse(budget['spent'].toString()) ?? 0;
-
-        remainingBudget = double.tryParse(budget['remaining'].toString()) ?? 0;
-
-        budgetCount = int.tryParse(budget['budget_count'].toString()) ?? 0;
-
-        // Financial insights
-        budgetStatus = insights['budget_status']?.toString() ?? 'healthy';
-
-        financialHealthScore =
-            double.tryParse(insights['financial_health_score'].toString()) ?? 0;
-
-        financialHealthLabel =
-            insights['financial_health_label']?.toString() ?? '';
-
-        recommendation = insights['recommendation']?.toString() ?? '';
-
-        categoryAdvice = insights['category_advice']?.toString() ?? '';
-
-        // We have enough cached information to display the dashboard.
-        isLoading = false;
-      });
-
-      debugPrint('Loaded cached dashboard data.');
+      dashboard = await dashboardRepository.getCachedDashboard();
     } catch (e) {
-      // ------------------------------------------------------------
-      // It is perfectly normal for a new installation to have no
-      // cache yet. In that case the background API refresh will
-      // provide the initial data.
-      // ------------------------------------------------------------
-      debugPrint('No complete cached dashboard available: $e');
+      debugPrint('No cached dashboard available: $e');
     }
+
+    // ------------------------------------------------------------
+    // Budget cache
+    // ------------------------------------------------------------
+    try {
+      budget = await budgetRepository.getBudgetSummary(useCache: true);
+    } catch (e) {
+      debugPrint('No cached budget available: $e');
+
+      // No budget is a valid state.
+      budget = {'budget': 0, 'spent': 0, 'remaining': 0, 'budget_count': 0};
+    }
+
+    // ------------------------------------------------------------
+    // Financial insights cache
+    // ------------------------------------------------------------
+    try {
+      insights = await insightsRepository.getInsights(useCache: true);
+    } catch (e) {
+      debugPrint('No cached insights available: $e');
+
+      // Safe defaults for a dashboard with no cached insights.
+      insights = {
+        'budget_status': 'healthy',
+        'financial_health_score': 0,
+        'financial_health_label': '',
+        'recommendation': '',
+        'category_advice': '',
+      };
+    }
+
+    // ------------------------------------------------------------
+    // Parse dashboard cache if available.
+    // ------------------------------------------------------------
+    List<Map<String, dynamic>> parsedExpenses = [];
+
+    if (dashboard != null) {
+      try {
+        final summary = dashboard['summary'] as Map<String, dynamic>? ?? {};
+
+        final recent = dashboard['recent_expenses'] as List? ?? [];
+
+        parsedExpenses = await _parseExpenses(recent);
+
+        if (!mounted) return;
+
+        setState(() {
+          totalExpenses =
+              int.tryParse(summary['total_expenses']?.toString() ?? '0') ?? 0;
+
+          totalCount =
+              int.tryParse(summary['total_count']?.toString() ?? '0') ?? 0;
+
+          totalCategories =
+              int.tryParse(summary['categories']?.toString() ?? '0') ?? 0;
+
+          recentExpenses = parsedExpenses;
+        });
+      } catch (e) {
+        debugPrint('Failed to parse cached dashboard: $e');
+      }
+    }
+
+    if (!mounted) return;
+
+    // ------------------------------------------------------------
+    // Apply budget + insights independently.
+    // ------------------------------------------------------------
+    setState(() {
+      // Budget
+      currentBudget =
+          double.tryParse(budget?['budget']?.toString() ?? '0') ?? 0;
+
+      spentThisMonth =
+          double.tryParse(budget?['spent']?.toString() ?? '0') ?? 0;
+
+      remainingBudget =
+          double.tryParse(budget?['remaining']?.toString() ?? '0') ?? 0;
+
+      budgetCount =
+          int.tryParse(budget?['budget_count']?.toString() ?? '0') ?? 0;
+
+      // Insights
+      budgetStatus = insights?['budget_status']?.toString() ?? 'healthy';
+
+      financialHealthScore =
+          double.tryParse(
+            insights?['financial_health_score']?.toString() ?? '0',
+          ) ??
+          0;
+
+      financialHealthLabel =
+          insights?['financial_health_label']?.toString() ?? '';
+
+      recommendation = insights?['recommendation']?.toString() ?? '';
+
+      categoryAdvice = insights?['category_advice']?.toString() ?? '';
+
+      // ----------------------------------------------------------
+      // The first rendering attempt is now complete.
+      // Even if there is no budget or no cached dashboard,
+      // we should not remain stuck on the skeleton.
+      // ----------------------------------------------------------
+      isLoading = false;
+      _initialLoadComplete = true;
+    });
+
+    debugPrint('Finished loading available cached dashboard data.');
   }
 
   Future<void> _refreshDashboardInBackground() async {
+    if (isGuest) {
+      debugPrint('Dashboard API refresh skipped: guest user.');
+      return;
+    }
     if (_dashboardRefreshInProgress) return;
 
     _dashboardRefreshInProgress = true;
@@ -975,7 +1029,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         ? 155.0
         : 165.0;
 
-    if (isLoading && recentExpenses.isEmpty) {
+    if (!_initialLoadComplete) {
       return const DashboardLoadingSkeleton();
     }
 

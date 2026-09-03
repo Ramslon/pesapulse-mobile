@@ -180,8 +180,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // SyncService can now operate under the authenticated session.
       // ------------------------------------------------------------
 
-      SyncService.instance.startListening();
-
       if (!mounted) return;
 
       // ------------------------------------------------------------
@@ -195,6 +193,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!migrationFailed) {
         AuthMessageHelper.showSuccess(context, 'Account created successfully!');
       }
+
+      // Start authenticated synchronization after the migration
+      // attempt. SyncService only processes the authenticated
+      // user's queue, never the guest queue.
+      await SyncService.instance.startListening();
 
       await Future.delayed(const Duration(milliseconds: 700));
 

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart';
 
 import '../database/database_helper.dart';
 
@@ -72,29 +74,118 @@ class MigrationRepository {
   Future<Map<String, dynamic>> collectGuestData() async {
     final database = await db.database;
 
+    // ------------------------------------------------------------
+    // EXPENSES
+    // ------------------------------------------------------------
     final expenses = await database.query(
       'expenses',
       where: 'owner_id = ?',
       whereArgs: [guestOwnerId],
     );
 
+    // ------------------------------------------------------------
+    // GOALS
+    // ------------------------------------------------------------
     final goals = await database.query(
       'goals',
       where: 'owner_id = ?',
       whereArgs: [guestOwnerId],
     );
 
-    final budgets = await database.query(
-      'budgets',
+    // ------------------------------------------------------------
+    // BUDGET
+    //
+    // PesaPulse supports one budget per user.
+    // The current BudgetRepository stores it in
+    // budget_summary_cache rather than a budgets table.
+    // ------------------------------------------------------------
+    final budgetRows = await database.query(
+      'budget_summary_cache',
       where: 'owner_id = ?',
       whereArgs: [guestOwnerId],
+      limit: 1,
     );
 
-    final settings = await database.query(
-      'settings',
-      where: 'owner_id = ?',
-      whereArgs: [guestOwnerId],
-    );
+    final List<Map<String, dynamic>> budgets = [];
+
+    if (budgetRows.isNotEmpty) {
+      final row = budgetRows.first;
+
+      final payload = row['payload'];
+
+      if (payload is String && payload.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(payload);
+
+          if (decoded is Map) {
+            final budget = Map<String, dynamic>.from(decoded);
+
+            final amount =
+                double.tryParse(budget['budget']?.toString() ?? '') ?? 0;
+
+            if (amount > 0) {
+              final now = DateTime.now();
+
+              budgets.add({
+                'client_id': 'guest-budget-1',
+                'amount': amount,
+                'month': now.month,
+                'year': now.year,
+              });
+            }
+          }
+        } catch (e) {
+          debugPrint('Failed to decode guest budget: $e');
+        }
+      }
+    }
+
+    // ------------------------------------------------------------
+    // SETTINGS
+    //
+    // The settings table does NOT use owner_id.
+    // Only migrate actual user preferences.
+    // Cache/profile/sync keys must NOT be migrated.
+    // ------------------------------------------------------------
+    const allowedSettings = {
+      'daily_reminder',
+      'expense_alerts',
+      'weekly_summary',
+      'dark_mode',
+      'notifications_enabled',
+    };
+
+    final settingRows = await database.query('settings');
+
+    final List<Map<String, dynamic>> settings = [];
+
+    for (final row in settingRows) {
+      final key = row['key']?.toString();
+
+      if (key == null || !allowedSettings.contains(key)) {
+        continue;
+      }
+
+      final rawValue = row['value'];
+
+      bool value;
+
+      if (rawValue is bool) {
+        value = rawValue;
+      } else if (rawValue is num) {
+        value = rawValue != 0;
+      } else {
+        final stringValue = rawValue?.toString().toLowerCase();
+
+        value =
+            stringValue == 'true' ||
+            stringValue == '1' ||
+            stringValue == 'yes' ||
+            stringValue == 'on';
+      }
+
+      settings.add({'key': key, 'value': value});
+    }
 
     return {
       'expenses': expenses,

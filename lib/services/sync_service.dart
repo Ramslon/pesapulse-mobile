@@ -1,12 +1,14 @@
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../database/database_helper.dart';
 
 import 'sync_status.dart';
 import 'sync_events.dart';
+import 'session_service.dart';
 import '../repositories/settings_repository.dart';
 import '../repositories/dashboard_repository.dart';
 import '../repositories/financial_insights_repository.dart';
@@ -52,8 +54,24 @@ class SyncService {
 
   Stream<List<ConnectivityResult>>? _stream;
 
-  void startListening() {
-    syncPendingOperations();
+  bool _isListening = false;
+
+  Future<void> startListening() async {
+    if (_isListening) {
+      return;
+    }
+
+    final isGuest = await SessionService.isGuest();
+
+    // Guest data is local-only.
+    // Do not start automatic synchronization.
+    if (isGuest) {
+      return;
+    }
+
+    _isListening = true;
+
+    await syncPendingOperations();
 
     _stream ??= Connectivity().onConnectivityChanged;
 
@@ -76,13 +94,27 @@ class SyncService {
       return;
     }
 
+    final isGuest = await SessionService.isGuest();
+
+    // Guest data is local-only and must wait for explicit migration.
+    if (isGuest) {
+      await _refreshPendingCounter();
+      return;
+    }
+
     final database = await db.database;
 
-    final queue = await database.query("sync_queue", orderBy: "id ASC");
+    final ownerId = await SessionService.currentOwnerId();
+
+    final queue = await database.query(
+      "sync_queue",
+      where: "owner_id=?",
+      whereArgs: [ownerId],
+      orderBy: "id ASC",
+    );
 
     await _refreshPendingCounter();
 
-    // Don't show the spinner when there is nothing to sync.
     if (queue.isEmpty) {
       return;
     }
@@ -354,19 +386,55 @@ class SyncService {
 
   Future<void> refreshOfflineCaches({Set<String>? tables}) async {
     try {
+      final isGuest = await SessionService.isGuest();
+
+      // ----------------------------------------------------------
+      // Guest users:
+      // Never make authenticated API requests.
+      // Only refresh/read local SQLite caches.
+      // ----------------------------------------------------------
+
+      if (isGuest) {
+        if (tables == null || tables.contains("goals")) {
+          await goalsRepository.getCachedGoals();
+          await goalAnalyticsRepository.getCachedGoalAnalytics();
+          await goalDeadlineRepository.getCachedUpcomingDeadlines();
+
+          SyncEvents.instance.notifyGoalsUpdated();
+        }
+
+        // Insights is already guest-safe.
+        if (tables == null || tables.contains("insights")) {
+          await insightsRepository.getInsights(useCache: true);
+        }
+
+        // Dashboard API refresh is intentionally skipped for guests.
+        return;
+      }
+
+      // ----------------------------------------------------------
+      // Authenticated users:
+      // API refresh is allowed.
+      // ----------------------------------------------------------
+
       if (tables == null || tables.contains("dashboard")) {
         await dashboardRepository.refreshDashboard();
       }
+
       if (tables == null || tables.contains("insights")) {
         await insightsRepository.getInsights();
       }
+
       if (tables == null || tables.contains("goals")) {
-        await goalsRepository.getGoals();
-        await goalAnalyticsRepository.getGoalAnalytics();
-        await goalDeadlineRepository.getUpcomingDeadlines();
+        await goalsRepository.getCachedGoals();
+        await goalAnalyticsRepository.getCachedGoalAnalytics();
+        await goalDeadlineRepository.getCachedUpcomingDeadlines();
+
         SyncEvents.instance.notifyGoalsUpdated();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to refresh offline caches: $e');
+    }
   }
 
   Future<void> cleanupGuestQueue() async {

@@ -76,12 +76,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ApiService.token = token;
 
       // ------------------------------------------------------------
-      // STEP 3: Start synchronization.
-      // ------------------------------------------------------------
-
-      SyncService.instance.startListening();
-
-      // ------------------------------------------------------------
       // STEP 4: Migrate guest data.
       // ------------------------------------------------------------
 
@@ -100,6 +94,24 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         } else {
           debugPrint('No guest data found.');
+        }
+      } on RateLimitException catch (e) {
+        migrationFailed = true;
+
+        debugPrint(
+          'Guest data migration rate limited: '
+          'message=${e.message}, '
+          'remaining=${e.remaining}, '
+          'retryAfter=${e.retryAfter}',
+        );
+
+        if (mounted) {
+          AuthMessageHelper.showRateLimited(
+            context,
+            message: e.message,
+            remaining: e.remaining,
+            retryAfter: e.retryAfter,
+          );
         }
       } on AuthException catch (e) {
         migrationFailed = true;
@@ -138,6 +150,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!migrationFailed) {
         AuthMessageHelper.showSuccess(context, 'Welcome back! 👋');
       }
+
+      // Start authenticated synchronization after the migration
+      // attempt. SyncService only processes the authenticated
+      // user's queue, never the guest queue.
+      await SyncService.instance.startListening();
 
       Navigator.pushAndRemoveUntil(
         context,
@@ -307,32 +324,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: loginUser,
                             ),
                           ),
-
                           if (isLoading) ...[
                             const SizedBox(height: 12),
 
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Flexible(
-                                  child: Text(
-                                    loadingMessage,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              loadingMessage,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
                             ),
                           ],
 

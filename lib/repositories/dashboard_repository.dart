@@ -57,6 +57,16 @@ class DashboardRepository extends BaseRepository {
     final database = await db.database;
     final ownerId = await this.ownerId;
 
+    // ------------------------------------------------------------
+    // GUEST MODE
+    // Never call the authenticated dashboard API.
+    // ------------------------------------------------------------
+    if (ownerId == 'guest') {
+      debugPrint('Dashboard API refresh skipped: guest user.');
+
+      return getCachedDashboard();
+    }
+
     try {
       final dashboard = await ApiService.getDashboard();
 

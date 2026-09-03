@@ -16,7 +16,7 @@ void main() async {
   await NotificationService.init();
 
   // Start automatic synchronization listener.
-  SyncService.instance.startListening();
+  await SyncService.instance.startListening();
 
   runApp(
     MultiProvider(

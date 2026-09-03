@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
+import '../services/session_service.dart';
 import '../services/sync_events.dart';
 import '../services/goals_service.dart';
 
@@ -45,6 +46,8 @@ class _GoalsScreenState extends State<GoalsScreen>
     decimalDigits: 0,
   );
 
+  bool _cacheLoaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -53,8 +56,6 @@ class _GoalsScreenState extends State<GoalsScreen>
 
     goalsController.addListener(_onGoalsControllerChanged);
 
-    _initializeGoalsScreen();
-
     _goalRefreshListener = () async {
       if (!mounted) return;
 
@@ -62,7 +63,13 @@ class _GoalsScreenState extends State<GoalsScreen>
     };
 
     SyncEvents.instance.goalsRefresh.addListener(_goalRefreshListener);
+
+    _initializeGoalsScreen();
   }
+
+  // ============================================================
+  // CONTROLLER LISTENER
+  // ============================================================
 
   void _onGoalsControllerChanged() {
     if (!mounted) return;
@@ -70,20 +77,27 @@ class _GoalsScreenState extends State<GoalsScreen>
     setState(() {});
   }
 
-  @override
-  void dispose() {
-    SyncEvents.instance.goalsRefresh.removeListener(_goalRefreshListener);
-
-    goalsController.removeListener(_onGoalsControllerChanged);
-
-    goalsController.dispose();
-
-    super.dispose();
-  }
+  // ============================================================
+  // INITIALIZATION
+  // ============================================================
 
   Future<void> _initializeGoalsScreen({bool forceRefresh = false}) async {
     try {
+      final guest = await SessionService.isGuest();
+
+      if (!mounted) return;
+
+      setState(() {
+        isGuest = guest;
+      });
+
       await goalsController.initialize(forceRefresh: forceRefresh);
+
+      if (!mounted) return;
+
+      setState(() {
+        _cacheLoaded = true;
+      });
     } on RateLimitException catch (e) {
       if (!mounted) return;
 
@@ -98,15 +112,26 @@ class _GoalsScreenState extends State<GoalsScreen>
 
       if (!mounted) return;
 
-      SnackbarHelper.showError(
-        context,
-        'Unable to load goals. Please try again.',
-      );
+      // Only show the error when there is no usable data.
+      if (goalsController.goals.isEmpty) {
+        SnackbarHelper.showError(
+          context,
+          'Unable to load goals. Please try again.',
+        );
+      }
     }
   }
 
+  // ============================================================
+  // KEEP ALIVE
+  // ============================================================
+
   @override
   bool get wantKeepAlive => true;
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -120,11 +145,23 @@ class _GoalsScreenState extends State<GoalsScreen>
 
     final sectionSpacing = screenHeight * .035;
 
-    if (goalsController.isLoading) {
+    // ----------------------------------------------------------
+    // Show skeleton ONLY when there is genuinely no data yet.
+    // ----------------------------------------------------------
+
+    final showSkeleton =
+        !_cacheLoaded && goalsController.isLoading && goals.isEmpty;
+
+    if (showSkeleton) {
       return const GoalLoadingSkeleton();
     }
+
     return AppScaffold(
       appBar: const AdaptiveAppBar(title: null),
+
+      // ========================================================
+      // FAB
+      // ========================================================
       floatingActionButton: FloatingActionButton.extended(
         heroTag: "goalFab",
         elevation: 4,
@@ -139,6 +176,8 @@ class _GoalsScreenState extends State<GoalsScreen>
             MaterialPageRoute(builder: (context) => const AddGoalScreen()),
           );
 
+          if (!mounted) return;
+
           if (result == true) {
             goalsController.markNeedsRefresh();
 
@@ -147,17 +186,24 @@ class _GoalsScreenState extends State<GoalsScreen>
         },
       ),
 
+      // ========================================================
+      // BODY
+      // ========================================================
       body: RefreshIndicator(
-        onRefresh: () => _initializeGoalsScreen(forceRefresh: true),
+        onRefresh: () async {
+          await _initializeGoalsScreen(forceRefresh: true);
+        },
+
         child: goals.isEmpty
             ? ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
                   const SizedBox(height: 120),
+
                   buildEmptyState(
                     context,
                     EmptyStateType.goals,
-                    isGuest: isGuest, // optional, if you want guest awareness
+                    isGuest: isGuest,
                   ),
                 ],
               )
@@ -165,9 +211,13 @@ class _GoalsScreenState extends State<GoalsScreen>
                 key: const PageStorageKey("goals"),
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // ==================================================
+                  // OVERVIEW
+                  // ==================================================
                   GoalsOverviewCard(
                     totalGoals:
                         goalsController.goalAnalytics['total_goals'] ?? 0,
+
                     onArchivedGoals: () async {
                       final changed = await Navigator.push<bool>(
                         context,
@@ -175,6 +225,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                           builder: (_) => const ArchivedGoalsScreen(),
                         ),
                       );
+
+                      if (!mounted) return;
 
                       if (changed == true) {
                         goalsController.markNeedsRefresh();
@@ -186,25 +238,38 @@ class _GoalsScreenState extends State<GoalsScreen>
 
                   SizedBox(height: sectionSpacing),
 
+                  // ==================================================
+                  // STATISTICS
+                  // ==================================================
                   GoalsStatsGrid(
                     totalGoals:
                         goalsController.goalAnalytics['total_goals'] ?? 0,
+
                     completedGoals:
                         goalsController.goalAnalytics['completed_goals'] ?? 0,
+
                     activeGoals:
                         goalsController.goalAnalytics['active_goals'] ?? 0,
+
                     completionRate:
                         (goalsController.goalAnalytics['completion_rate'] ?? 0)
                             .toDouble(),
                   ),
 
                   SizedBox(height: sectionSpacing),
+
+                  // ==================================================
+                  // UPCOMING DEADLINES
+                  // ==================================================
                   UpcomingDeadlinesCard(
                     upcomingDeadlines: goalsController.upcomingDeadlines,
                   ),
 
                   SizedBox(height: sectionSpacing),
 
+                  // ==================================================
+                  // GOAL LIST
+                  // ==================================================
                   ...goals.map<Widget>(
                     (goal) => GoalListItem(
                       goal: goal,
@@ -216,5 +281,20 @@ class _GoalsScreenState extends State<GoalsScreen>
               ),
       ),
     );
+  }
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
+
+  @override
+  void dispose() {
+    SyncEvents.instance.goalsRefresh.removeListener(_goalRefreshListener);
+
+    goalsController.removeListener(_onGoalsControllerChanged);
+
+    goalsController.dispose();
+
+    super.dispose();
   }
 }
