@@ -1,8 +1,13 @@
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-blue?logo=flutter)
+
 ![Laravel](https://img.shields.io/badge/Laravel-12-red?logo=laravel)
+
 ![PHP](https://img.shields.io/badge/PHP-8.x-purple?logo=php)
+
 ![MySQL](https://img.shields.io/badge/MySQL-Database-blue?logo=mysql)
+
 ![License](https://img.shields.io/badge/License-MIT-green)
+
 ![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen)
 
 # 💰 PesaPulse
@@ -11,116 +16,189 @@
 
 PesaPulse is a modern personal finance application built with **Flutter** and **Laravel** that helps users manage expenses, income, budgets, savings goals, and financial insights through intelligent analytics and forecasting.
 
-Designed with an **offline-first architecture**, PesaPulse ensures you can continue managing your financial data even without internet connectivity. Data is synchronized automatically when connectivity is restored.
+Designed with an **offline-first architecture**, PesaPulse allows users to continue managing their financial data even without internet connectivity. Data is stored locally and synchronized automatically when connectivity is restored.
 
 ---
 
 ## 🚀 What's New in v1.0.0
 
-- Modern login and registration experience  
-- Secure authentication using Laravel Sanctum  
-- Guest mode with guest-to-user migration  
-- Redesigned authentication screens  
-- New onboarding experience with interactive pages  
-- Persistent onboarding completion state  
-- Smart analytics redesign with improved insights  
-- Offline-first synchronization with pending changes tracking  
-- Material 3 design system with responsive layouts  
-- Optimized performance and navigation cleanup  
+- Modern login and registration experience
+- Secure authentication using Laravel Sanctum
+- Improved authentication and session handling
+- Guest mode with guest-to-user data migration
+- Secure user-specific and guest-specific data ownership
+- Redesigned authentication screens
+- New onboarding experience with interactive pages
+- Persistent onboarding completion state
+- Smart analytics redesign with improved insights
+- Offline-first synchronization with pending changes tracking
+- Improved offline/online transition handling
+- Improved synchronization reliability and error recovery
+- API rate-limit detection and handling
+- Protected authenticated API requests
+- Centralized API request handling
+- Material 3 design system with responsive layouts
+- Cache-first data loading
+- Background API refresh
+- Reduced unnecessary network requests
+- Optimized application startup and navigation
+- Improved Dashboard and Analytics loading performance
+- Responsive Settings loading skeleton
+- Improved loading, empty and error states
+- Improved application stability and performance
 
 ---
 
 ## ✨ Features
 
 ### 💰 Expense Management
-- Add, edit, delete expenses
-- Categorization, filtering, searching, sorting
+
+- Add, edit and delete expenses
+- Categorization, filtering, searching and sorting
 - Monthly expense tracking
 - Offline expense management
-- Automatic & manual synchronization
+- Automatic and manual synchronization
 - Sync status tracking
+- Local data caching
 
 ### 💵 Income Management
+
 - Add and track income sources
 - Monthly income summary
 - Offline income management
 - Income synchronization
+- Local data persistence
 
 ### 📊 Budget Management
-- Create, edit, delete monthly budgets
-- Budget health indicators & overspending alerts
+
+- Create, edit and delete monthly budgets
+- Budget health indicators
+- Overspending alerts
 - Spending progress bars
 - Daily spending trends
-- Budget insights & recommendations
+- Budget insights and recommendations
 - Offline budget management
 - Automatic synchronization
+- Cached budget data
 
 ### 🎯 Financial Goals
-- Create, edit, delete savings goals
-- Track progress & milestones
-- Forecasting & analytics
-- Archive/restore completed goals
+
+- Create, edit and delete savings goals
+- Track progress and milestones
+- Goal forecasting and analytics
+- Archive and restore completed goals
 - Goal completion predictions
 - Offline goal management
 - Goal notifications
+- Background synchronization
 
 ### 📈 Analytics
+
 - Financial Health Score
-- Smart Recommendations
-- Spending trends & category breakdown
+- Smart financial recommendations
+- Spending trends
+- Category breakdowns
 - Goal progress analytics
-- PDF & CSV export
+- PDF and CSV export
 - Cached analytics for offline access
+- Background analytics refresh
+- Period-based analytics processing
 
 ### 🔔 Notifications
-- Daily reminders & weekly summaries
+
+- Daily reminders
+- Weekly summaries
 - Goal milestone alerts
-- Budget alerts & deadline reminders
+- Budget alerts
+- Goal deadline reminders
 - Local notification support
+- Preference change notifications
 
 ### 🔐 Security
+
 - Secure authentication with Laravel Sanctum
-- OTP verification & password reset
-- Session management & account deletion
-- User-specific & guest-specific data ownership
+- Protected authenticated API requests
+- Session management
+- OTP verification
+- Password reset
+- Account deletion
+- User-specific data ownership
+- Guest-specific data ownership
+- Guest-to-user data migration
+- API rate-limit handling
+- Sensitive endpoint protection
+- Improved authorization and validation
 - Protected local financial data
+- Secure session cleanup during logout
+
+### ⚡ Performance & Reliability
+
+- Cache-first screen initialization
+- Background API refresh
+- Reduced duplicate API requests
+- Parallel network requests where appropriate
+- Local SQLite caching
+- Offline-first data access
+- Background synchronization
+- Connectivity-aware synchronization
+- Request timeout handling
+- Rate-limit handling
+- Improved error recovery
+- Optimized application startup
+- Preserved tab state using `IndexedStack`
+- Responsive loading skeletons
+- Improved loading and empty states
 
 ---
 
 ## 🧭 Onboarding Experience
-- First-launch onboarding with interactive pages  
-- Clear introduction to PesaPulse features  
-- "Get Started" flow and "Jump In" shortcut  
-- Dedicated authentication choice screen  
-- Guest mode with migration to authenticated accounts  
+
+- First-launch onboarding with interactive pages
+- Clear introduction to PesaPulse features
+- "Get Started" flow
+- "Jump In" shortcut
+- Dedicated authentication choice screen
+- Guest mode
+- Guest-to-user data migration
+- Persistent onboarding completion state
 
 ---
 
 ## 🏗 System Architecture
 
 ```text
-┌───────────────────────────┐
-│      Flutter Mobile App   │
-│  UI / Screens / Widgets   │
-│  Repositories             │
-│  Local SQLite Database    │
-│  Offline Sync             │
-└─────────────┬─────────────┘
-              │ REST API
-              ▼
-┌───────────────────────────┐
-│       Laravel Backend     │
-│  Authentication           │
-│  Business Logic           │
-│  REST API                 │
-│  Laravel Sanctum          │
-└─────────────┬─────────────┘
-              │
-              ▼
-┌───────────────────────────┐
-│       MySQL Database      │
-└───────────────────────────┘
-```
+┌───────────────────────────────┐
+│       Flutter Mobile App      │
+│                               │
+│  UI / Screens / Widgets       │
+│  Controllers                  │
+│  Providers                    │
+│  Repositories                 │
+│  Services                     │
+│  Local SQLite Database        │
+│  Offline Sync                 │
+│  Local Caching                │
+└───────────────┬───────────────┘
+                │ REST API
+                ▼
+┌───────────────────────────────┐
+│        Laravel Backend        │
+│                               │
+│  Authentication               │
+│  Authorization                │
+│  Business Logic               │
+│  REST API                     │
+│  Laravel Sanctum              │
+│  Validation                   │
+│  Rate Limiting                │
+└───────────────┬───────────────┘
+                │
+                ▼
+┌───────────────────────────────┐
+│        MySQL Database         │
+└───────────────────────────────┘
+
+---
 
 ---
 
@@ -238,7 +316,7 @@ flutter run
 
 **PesaPulse v1.0.0**
 
-The first stable production release of PesaPulse.
+The first stable production release of PesaPulse, incorporating the core financial management system together with authentication, offline-first functionality, synchronization, security improvements, analytics, performance optimization and responsive UI improvements.
 
 ### Historical Beta Releases
 
@@ -311,6 +389,8 @@ Demo video coming soon...
 - 📱 Responsive Mobile Experience
 - 🔐 Secure Authentication
 - 📊 Personalized Financial Insights
+- 🛡️ API Security and Rate-Limit Handling
+- 🔁 Connectivity-Aware Synchronization
 
 ---
 
@@ -318,7 +398,7 @@ Demo video coming soon...
 
 | Version | Release | Highlights |
 |---------|---------|------------|
-| **v1.0.0** | Stable | Production release with onboarding, authentication, guest mode, guest-to-user migration, offline-first synchronization, analytics, budgets, goals, notifications and UI/UX improvements |
+| **v1.0.0** | Stable | Production release with authentication, onboarding, guest mode, guest-to-user migration, offline-first synchronization, security hardening, rate-limit handling, analytics, budgets, goals, notifications, caching, background refresh and performance improvements |
 | **v0.4.0-beta** | Beta | Smart Analytics redesign, Financial Health Score, Reports Center, UI polish |
 | **v0.3.0-beta** | Beta | Settings redesign, password management, notifications, branding and UX improvements |
 | **v0.2.0-beta** | Beta | Smart goals, advanced analytics, budget intelligence and financial insights |
@@ -339,6 +419,14 @@ Demo video coming soon...
 - Password reset
 - Session management
 - Account deletion
+- Secure authenticated API requests
+- User data isolation
+- Guest data isolation
+- Improved authorization and validation
+- Sensitive endpoint protection
+- API rate-limit handling
+- Improved logout reliability
+- Secure local session cleanup
 
 ---
 
@@ -349,6 +437,8 @@ Demo video coming soon...
 - Goal forecasting
 - Goal analytics
 - Financial analytics
+- Financial Health Score
+- Financial recommendations
 ---
 
 ### 📡 Offline-First
@@ -359,6 +449,8 @@ Demo video coming soon...
 - Manual synchronization
 - User-specific local data
 - Guest-specific local data
+- Connectivity-aware synchronization
+- Sync status tracking
 ---
 ### 🎨 User Experience
 - Onboarding experience
@@ -368,55 +460,71 @@ Demo video coming soon...
 - Notifications
 - Improved navigation
 - Custom application branding
+- Responsive Settings interface
+- Improved loading states
+- Improved error states
+
+---
+### ⚡ Performance & Reliability
+- Cache-first screen loading
+- Background API refresh
+- Reduced unnecessary network requests
+- Parallel API requests
+- Local data caching
+- Improved synchronization reliability
+- Improved offline/online transition handling
+- Request timeout handling
+- Rate-limit handling
+- Error recovery
+- Optimized application startup
+- Improved navigation performance
+- Responsive loading skeletons
+- Improved loading and empty states
 
 
 ---
 
-## 🚧 Version 1.1.0 — Stability, Security & Reliability
+## 🚧 Version 1.1.0 — Enhancements & Intelligence
 
-The next release will focus primarily on bug fixes, security hardening,
-API rate limiting, synchronization reliability, and overall production stability.
+The next release will focus on new capabilities, deeper financial intelligence, enhanced customization and improvements based on user feedback, rather than the foundational stability and security work already completed in v1.0.0.
 
-###  🐛 Bug Fixes & Stability
+### 🧠 Financial Intelligence
 
-- Fix bugs discovered after the v1.0.0 release
-- Improve error handling
-- Resolve edge-case synchronization issues
-- Improve offline/online transition handling
-- Fix UI inconsistencies
-- Improve loading and empty states
-- Improve application stability
-- Address user-reported issues
-- General performance improvements
+- Enhanced financial intelligence
+- More advanced financial forecasting
+- Improved spending predictions
+- Advanced financial recommendations
+- More detailed financial health analysis
+- Personalized financial planning
 
-###  🛡️ Security Hardening
-- Strengthen API security
-- Review authentication and session handling
-- Improve authorization checks
-- Review user data isolation
-- Improve input validation
-- Strengthen sensitive endpoint protection
-- Review account deletion security
-- Improve protection against unauthorized requests
-- Perform security audit and hardening
+### 📊 Analytics & Reporting
 
-### 🚦 API Rate Limiting
-- Implement API rate limiting
-- Protect authentication endpoints from excessive requests
-- Limit OTP request attempts
-- Limit password reset requests
-- Protect sensitive API endpoints
-- Improve abuse prevention
-- Monitor excessive API requests
+- Additional financial reports
+- More advanced data visualization
+- Expanded analytics dashboards
+- Additional export capabilities
+- Comparative financial analysis
+- Improved historical financial analysis
 
-### ⚡ Performance & Reliability
-- Optimize API requests
-- Improve synchronization reliability
-- Reduce unnecessary network requests
-- Improve local database performance
-- Optimize application startup
-- Improve background synchronization
-- Improve error recovery
+### 🔔 Notifications
+
+- Enhanced notification system
+- More personalized financial alerts
+- Custom notification schedules
+- Additional goal and budget notifications
+
+### 🎨 Customization
+
+- Additional customization options
+- Expanded dashboard customization
+- More personalization features
+- Enhanced theme options
+
+### ☁️ Synchronization
+
+- Further cloud synchronization improvements
+- Improved cross-device synchronization
+- Expanded data recovery capabilities
 
 ## 🔮 Future Development
 
@@ -424,15 +532,16 @@ Future releases may introduce additional improvements based on user feedback, te
 
 ###  Potential areas include:
 
-- Enhanced financial intelligence
-- More advanced financial forecasting
-- Additional financial reports
-- Improved data visualization
-- Enhanced notification system
-- Additional customization options
-- Further security improvements
-- Cloud synchronization improvements
+- Advanced financial planning
+- Investment tracking
+- Recurring transactions
+- Subscription management
+- Advanced budgeting tools
+- More intelligent financial forecasting
 - Additional platform support
+- Expanded cloud services
+- Advanced personalization
+- Further security improvements
  
 
 ---

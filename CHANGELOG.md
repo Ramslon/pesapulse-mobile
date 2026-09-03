@@ -12,7 +12,7 @@ The format is based on **Keep a Changelog** and the project follows **Semantic V
 
 PesaPulse v1.0.0 is the first stable production release of the modern PesaPulse Personal Finance Management System.
 
-This release introduces a redesigned user experience, improved authentication, guest mode, guest-to-user data migration, offline-first financial management, synchronization, intelligent analytics, budgeting, savings goals, notifications, and improved application reliability.
+This release brings together the core financial management system with redesigned authentication and onboarding, guest mode, guest-to-user data migration, offline-first functionality, synchronization, intelligent analytics, budgeting, savings goals, notifications, security improvements, API rate-limit handling, cache-first loading, background refresh, responsive UI, and improved application reliability.
 
 ---
 
@@ -31,7 +31,7 @@ This release introduces a redesigned user experience, improved authentication, g
 
 ---
 
-### 🔐 Authentication
+### 🔐 Authentication & Account Management
 
 - Added modern login experience.
 - Added modern registration experience.
@@ -45,6 +45,8 @@ This release introduces a redesigned user experience, improved authentication, g
 - Improved logout workflow.
 - Improved authentication navigation.
 - Improved user data ownership handling.
+- Improved authenticated API request protection.
+- Improved session cleanup.
 
 ---
 
@@ -56,6 +58,7 @@ This release introduces a redesigned user experience, improved authentication, g
 - Added guest-to-user migration.
 - Guest financial data can be migrated when a guest creates an account.
 - Improved separation between guest and authenticated user data.
+- Improved guest data synchronization handling.
 
 ---
 
@@ -63,38 +66,40 @@ This release introduces a redesigned user experience, improved authentication, g
 
 ### 💸 Expense Management
 
-- Add expenses.
-- Edit expenses.
-- Delete expenses.
-- Categorize expenses.
-- Search expenses.
-- Filter expenses.
-- Sort expenses.
-- Track monthly expenses.
+- Added expense creation.
+- Added expense editing.
+- Added expense deletion.
+- Added expense categorization.
+- Added expense search.
+- Added expense filtering.
+- Added expense sorting.
+- Added monthly expense tracking.
 - Added offline expense management.
 - Added automatic synchronization.
 - Added manual synchronization.
 - Added synchronization status tracking.
 - Added pending changes tracking.
+- Added local expense caching.
 
 ---
 
 ### 💵 Income Management
 
 - Added income management.
-- Add income sources.
-- Track income records.
+- Added income sources.
+- Added income records.
 - Added monthly income summaries.
 - Added offline income management.
 - Added income synchronization.
+- Added local income persistence.
 
 ---
 
 ### 📊 Budget Management
 
-- Create monthly budgets.
-- Edit budgets.
-- Delete budgets.
+- Added monthly budget creation.
+- Added budget editing.
+- Added budget deletion.
 - Added budget health indicators.
 - Added overspending alerts.
 - Added spending progress indicators.
@@ -104,6 +109,7 @@ This release introduces a redesigned user experience, improved authentication, g
 - Added smart budget status indicators.
 - Added budget synchronization.
 - Added offline budget management.
+- Added cached budget data.
 - Added pull-to-refresh support.
 - Improved budget overview presentation.
 
@@ -111,21 +117,23 @@ This release introduces a redesigned user experience, improved authentication, g
 
 ### 🎯 Financial Goals
 
-- Create savings goals.
-- Edit savings goals.
-- Delete savings goals.
-- Track goal progress.
-- Track goal milestones.
+- Added savings goal creation.
+- Added savings goal editing.
+- Added savings goal deletion.
+- Added goal progress tracking.
+- Added goal milestone tracking.
 - Added goal forecasting.
 - Added goal analytics.
 - Added goal completion predictions.
 - Added expected progress calculations.
 - Added completion estimates.
 - Added recommended monthly savings calculations.
-- Added archive and restore functionality.
+- Added goal archive and restore functionality.
 - Added completed goal presentation.
 - Added goal notifications.
-- Improved goal cards and progress visualization.
+- Improved goal cards.
+- Improved goal progress visualization.
+- Improved goal synchronization.
 
 ---
 
@@ -141,7 +149,10 @@ This release introduces a redesigned user experience, improved authentication, g
 - Added goal progress analytics.
 - Added budget insights.
 - Added financial recommendations.
+- Added period-based analytics processing.
 - Added cached analytics for offline access.
+- Added background analytics refresh.
+- Improved analytics data processing.
 
 ---
 
@@ -153,6 +164,8 @@ This release introduces a redesigned user experience, improved authentication, g
 - Added report history.
 - Added report history management.
 - Added report history clearing.
+- Improved report export actions.
+- Improved report presentation.
 
 ---
 
@@ -173,7 +186,7 @@ This release introduces a redesigned user experience, improved authentication, g
 - Improved analytics section headers.
 - Improved chart responsiveness.
 - Improved Reports Center presentation.
-- Redesigned analytics skeleton loading.
+- Added analytics skeleton loading.
 - Improved consistency with Dashboard and Budget screens.
 
 ---
@@ -190,7 +203,9 @@ This release introduces a redesigned user experience, improved authentication, g
 - Added goal completion notifications.
 - Added notification preferences.
 - Added backend notification preference synchronization.
+- Added preference change notifications.
 - Improved notification persistence.
+- Improved notification error handling.
 
 ---
 
@@ -210,7 +225,126 @@ This release introduces a redesigned user experience, improved authentication, g
 - Added synchronization status tracking.
 - Added user-specific local data ownership.
 - Added guest-specific local data ownership.
+- Added connectivity-aware synchronization.
 - Improved offline-to-online transition handling.
+- Improved synchronization reliability.
+- Improved synchronization error recovery.
+- Improved handling of pending local changes.
+
+---
+
+## 💾 Local Caching & Cache-First Loading
+
+- Added cache-first Dashboard initialization.
+- Added cache-first Analytics initialization.
+- Added cache-first Settings initialization.
+- Added cached profile data.
+- Added cached dashboard statistics.
+- Added cached budget data.
+- Added cached analytics data.
+- Added cached financial insights.
+- Added local SQLite-backed application caching.
+- Added background API refresh after cached data is displayed.
+- Reduced dependency on network availability during screen initialization.
+- Improved offline startup experience.
+- Improved local data availability.
+
+---
+
+## 🔄 Background Synchronization & Refresh
+
+- Added background API refresh.
+- Added background analytics refresh.
+- Added background Dashboard refresh.
+- Added background Settings refresh.
+- Added connectivity-aware synchronization.
+- Added automatic synchronization after connectivity recovery.
+- Reduced duplicate API requests.
+- Improved synchronization reliability.
+- Improved background error handling.
+- Improved rate-limit handling during background operations.
+- Improved silent recovery when background requests fail.
+
+---
+
+## ⚡ Performance & Reliability
+
+- Reduced unnecessary widget rebuilds.
+- Optimized application startup.
+- Optimized navigation.
+- Preserved tab state using `IndexedStack`.
+- Reduced unnecessary network requests.
+- Added parallel API requests where appropriate.
+- Improved local database performance.
+- Optimized background synchronization.
+- Improved cache-first screen loading.
+- Added background API refresh.
+- Improved request timeout handling.
+- Improved rate-limit handling.
+- Improved error recovery.
+- Improved offline/online transition handling.
+- Improved loading performance.
+- Added responsive loading skeletons.
+- Improved loading states.
+- Improved empty states.
+- Improved error states.
+- Removed unused code and variables.
+- Improved state management.
+- Improved application stability.
+
+---
+
+## 🛡️ Security
+
+- Implemented secure authentication using Laravel Sanctum.
+- Protected authenticated API routes.
+- Improved authenticated API request handling.
+- Improved session management.
+- Improved token management.
+- Added user-specific data ownership.
+- Added guest-specific data ownership.
+- Improved user data isolation.
+- Improved guest data isolation.
+- Improved input validation.
+- Improved authorization handling.
+- Added sensitive endpoint protection.
+- Improved account deletion workflow.
+- Improved password management.
+- Improved protection of local financial data.
+- Improved session cleanup during logout.
+- Improved API request security.
+- Improved authentication error handling.
+
+---
+
+## 🚦 API Rate Limiting
+
+- Added centralized API request handling.
+- Added HTTP 429 rate-limit detection.
+- Added rate-limit exception handling.
+- Added support for `Retry-After` response headers.
+- Added support for remaining request information.
+- Added rate-limit message handling from API responses.
+- Improved handling of rate limits across authenticated API requests.
+- Improved background refresh behavior when rate limits are encountered.
+- Prevented rate-limit failures from unnecessarily interrupting local cached data display.
+- Improved application resilience against excessive API requests.
+
+---
+
+## 🌐 API & Network Reliability
+
+- Added centralized HTTP request handling.
+- Added request timeout handling.
+- Added authenticated API request protection.
+- Added standardized API response handling.
+- Improved network error handling.
+- Improved API exception handling.
+- Improved background request failure recovery.
+- Improved offline request behavior.
+- Improved handling of unavailable backend services.
+- Reduced duplicate network requests.
+- Improved network-aware application behavior.
 
 ---
 
@@ -228,8 +362,10 @@ This release introduces a redesigned user experience, improved authentication, g
 - Added landscape responsiveness.
 - Added tablet-friendly layouts.
 - Added dark mode support.
+- Added responsive loading skeletons.
 - Improved loading states.
 - Improved empty states.
+- Improved error states.
 - Improved dialogs.
 - Improved snackbar messages.
 - Improved form validation.
@@ -238,34 +374,21 @@ This release introduces a redesigned user experience, improved authentication, g
 
 ---
 
-## ⚡ Performance
+## 📱 Responsive Design
 
-- Reduced unnecessary widget rebuilds.
-- Optimized navigation.
-- Improved application startup.
-- Improved background synchronization.
-- Reduced unnecessary network requests.
-- Improved local database performance.
-- Optimized animations.
-- Improved layout efficiency.
-- Improved responsive behavior.
-- Removed unused code and variables.
-- Improved state management.
-
----
-
-## 🛡️ Security
-
-- Secure authentication using Laravel Sanctum.
-- Protected API routes.
-- Improved session handling.
-- Improved token management.
-- Added user-specific data ownership.
-- Added guest-specific data ownership.
-- Improved input validation.
-- Improved account deletion workflow.
-- Improved password management.
-- Improved protection of local financial data.
+- Added responsive mobile layouts.
+- Added landscape layouts.
+- Added tablet-friendly layouts.
+- Added responsive Dashboard components.
+- Added responsive Analytics components.
+- Added responsive Settings components.
+- Added responsive loading skeletons.
+- Added centralized `ResponsiveHelper`.
+- Improved spacing across different screen sizes.
+- Improved card sizing across screen sizes.
+- Improved grid responsiveness.
+- Improved content width handling.
+- Improved orientation handling.
 
 ---
 
@@ -281,46 +404,207 @@ This release introduces a redesigned user experience, improved authentication, g
 - Fixed navigation inconsistencies.
 - Fixed session management issues.
 - Fixed authentication workflow issues.
+- Fixed guest session handling issues.
+- Fixed guest data ownership issues.
+- Fixed guest-to-user migration workflow issues.
 - Fixed goal archive and restore workflow.
 - Fixed various analytics UI issues.
 - Fixed budget alert rendering issues.
 - Fixed layout overflow issues.
+- Fixed synchronization issues.
+- Fixed offline/online transition issues.
+- Fixed background refresh handling.
 - Fixed multiple minor UI bugs.
 
 ---
 
 ## 🛠 Backend
 
-- Laravel 12 REST API.
-- Laravel Sanctum authentication.
-- MySQL database integration.
-- Authentication APIs.
-- Expense APIs.
-- Income APIs.
-- Budget APIs.
-- Financial goal APIs.
-- Analytics APIs.
-- Notification APIs.
-- User preference APIs.
-- Settings APIs.
+- Added Laravel 12 REST API.
+- Added Laravel Sanctum authentication.
+- Added MySQL database integration.
+- Added authentication APIs.
+- Added expense APIs.
+- Added income APIs.
+- Added budget APIs.
+- Added financial goal APIs.
+- Added analytics APIs.
+- Added notification APIs.
+- Added user preference APIs.
+- Added settings APIs.
+- Added guest data migration API.
 - Improved API validation.
 - Improved API responses.
 - Improved user ownership validation.
+- Improved authorization.
+- Added API rate limiting.
+- Improved authenticated endpoint protection.
+- Improved backend error handling.
 
 ---
 
 ## 📱 Mobile Application
 
-- Flutter mobile application.
-- Dart implementation.
-- Material 3 interface.
-- Repository-based architecture.
-- SQLite local database.
-- Offline-first architecture.
-- REST API integration.
-- Background synchronization.
-- Local notifications.
-- Responsive mobile layouts.
+- Added Flutter mobile application.
+- Added Dart implementation.
+- Added Material 3 interface.
+- Added repository-based architecture.
+- Added controller/service architecture.
+- Added SQLite local database.
+- Added offline-first architecture.
+- Added REST API integration.
+- Added background synchronization.
+- Added background API refresh.
+- Added local caching.
+- Added local notifications.
+- Added responsive mobile layouts.
+- Added connectivity-aware operations.
+- Improved application startup.
+- Improved navigation performance.
+- Improved screen loading performance.
+
+---
+
+## 🏗 Architecture Improvements
+
+- Improved separation between UI, controllers, repositories and services.
+- Improved repository-based data access.
+- Improved local database abstraction.
+- Improved API service centralization.
+- Improved session management architecture.
+- Improved offline synchronization architecture.
+- Added cache-first data loading strategy.
+- Added background refresh strategy.
+- Improved connectivity-aware operations.
+- Improved state management.
+- Improved error handling across application layers.
+- Improved separation between guest and authenticated user data.
+
+---
+
+## 📦 Dependencies & Platform
+
+- Updated Flutter application dependencies.
+- Updated Laravel backend dependencies.
+- Improved compatibility with current Flutter tooling.
+- Improved compatibility with Laravel 12.
+- Improved SQLite integration.
+- Improved local notification integration.
+- Improved HTTP networking integration.
+- Improved connectivity handling.
+
+---
+
+# 🗺 Roadmap
+
+## ✅ Version 1.0.0 — Stable
+
+The first stable production release includes the foundational financial management system and the major security, reliability, synchronization and performance improvements required for a stable application.
+
+### Completed
+
+- Authentication and account management
+- Guest mode
+- Guest-to-user data migration
+- Expense management
+- Income management
+- Budget management
+- Savings goals
+- Goal forecasting and analytics
+- Financial Health Score
+- Financial recommendations
+- Notifications
+- Offline-first architecture
+- Local SQLite caching
+- Automatic synchronization
+- Background synchronization
+- Cache-first screen loading
+- Background API refresh
+- Connectivity-aware operations
+- API rate-limit handling
+- Centralized API request handling
+- Secure authenticated API requests
+- User and guest data isolation
+- Responsive layouts
+- Material 3 interface
+- Onboarding experience
+- Performance optimization
+- Improved application reliability
+
+---
+
+## 🚧 Version 1.1.0 — Enhancements & Intelligence
+
+The next release will focus on **new capabilities, deeper financial intelligence, enhanced customization and improvements based on user feedback**, rather than foundational security and stability work already completed in v1.0.0.
+
+### 🧠 Financial Intelligence
+
+- Enhanced financial intelligence.
+- More advanced financial forecasting.
+- Improved spending predictions.
+- Advanced financial recommendations.
+- More detailed financial health analysis.
+- Personalized financial planning.
+
+### 📊 Analytics & Reporting
+
+- Additional financial reports.
+- More advanced data visualization.
+- Expanded analytics dashboards.
+- Additional export capabilities.
+- Comparative financial analysis.
+- Improved historical financial analysis.
+
+### 🔔 Notifications
+
+- Enhanced notification system.
+- More personalized financial alerts.
+- Custom notification schedules.
+- Additional goal and budget notifications.
+
+### 🎨 Customization
+
+- Additional customization options.
+- Expanded dashboard customization.
+- More personalization features.
+- Enhanced theme options.
+
+### ☁️ Synchronization
+
+- Further cloud synchronization improvements.
+- Improved cross-device synchronization.
+- Expanded data recovery capabilities.
+
+---
+
+# 🔮 Future Development
+
+Future releases may introduce additional improvements based on user feedback, testing and project requirements.
+
+### Potential Areas
+
+- Advanced financial planning.
+- Investment tracking.
+- Recurring transactions.
+- Subscription management.
+- Advanced budgeting tools.
+- More intelligent financial forecasting.
+- Additional platform support.
+- Expanded cloud services.
+- Advanced personalization.
+- Further security improvements.
+
+---
+
+# 📄 Release Notes
+
+## v1.0.0
+
+PesaPulse v1.0.0 represents the transition from beta development to the first stable production release.
+
+The release consolidates the core financial management features with major improvements to authentication, guest mode, offline-first operation, synchronization, analytics, caching, performance, API reliability and security.
+
+The application is now structured around a **cache-first and background-refresh architecture**, allowing locally available data to be displayed quickly while network operations continue in the background.
 
 ---
 
