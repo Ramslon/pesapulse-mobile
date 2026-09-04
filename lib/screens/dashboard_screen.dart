@@ -41,6 +41,19 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   bool _dashboardRefreshInProgress = false;
 
+  bool get hasBudget => budgetCount > 0 && currentBudget > 0;
+
+  bool get hasExpenses => totalCount > 0;
+
+  bool get hasFinancialData => hasExpenses || hasBudget;
+
+  bool get hasEnoughDataForHealth => hasExpenses && hasBudget;
+
+  bool get hasEnoughDataForInsights => hasExpenses || hasBudget;
+
+  bool get hasInsights =>
+      recommendation.trim().isNotEmpty || categoryAdvice.trim().isNotEmpty;
+
   int totalExpenses = 0;
   int totalCount = 0;
   int totalCategories = 0;
@@ -549,7 +562,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 height: cardHeight,
                 child: DashboardCard(
                   title: "Expenses",
-                  subtitle: "Total Recorded",
+                  subtitle: hasExpenses ? "Total Recorded" : "No expenses yet",
                   value: totalCount.toString(),
                   icon: Icons.account_balance_wallet,
                   iconColor: Colors.green,
@@ -564,10 +577,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                 height: cardHeight,
                 child: DashboardCard(
                   title: "Budget",
-                  subtitle: getBudgetSubtitle(),
+                  subtitle: hasBudget ? getBudgetSubtitle() : "No Budget Set",
                   value: CurrencyFormatter.format(currentBudget),
                   icon: Icons.savings,
-                  iconColor: getBudgetColor(),
+                  iconColor: hasBudget ? getBudgetColor() : Colors.grey,
                 ),
               ),
             ),
@@ -583,10 +596,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                 height: cardHeight,
                 child: DashboardCard(
                   title: "Categories",
-                  subtitle: "Expense Types",
+                  subtitle: hasExpenses ? "Expense Types" : "No categories yet",
                   value: totalCategories.toString(),
                   icon: Icons.category,
-                  iconColor: Colors.orange,
+                  iconColor: hasExpenses ? Colors.orange : Colors.grey,
                 ),
               ),
             ),
@@ -598,10 +611,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                 height: cardHeight,
                 child: DashboardCard(
                   title: "Remaining",
-                  subtitle: "Budget Left",
-                  value: CurrencyFormatter.format(remainingBudget),
+                  subtitle: hasBudget ? "Budget Left" : "No Budget",
+                  value: hasBudget
+                      ? CurrencyFormatter.format(remainingBudget)
+                      : "—",
                   icon: Icons.account_balance,
-                  iconColor: remainingBudget >= 0 ? Colors.green : Colors.red,
+                  iconColor: hasBudget
+                      ? (remainingBudget >= 0 ? Colors.green : Colors.red)
+                      : Colors.grey,
                 ),
               ),
             ),
@@ -612,44 +629,78 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildFinancialHealthCard() {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(compact ? 14 : 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               "Financial Health",
               style: TextStyle(
-                fontSize: ResponsiveHelper.useCompactLayout(context) ? 17 : 18,
+                fontSize: compact ? 17 : 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
 
             const SizedBox(height: 15),
 
-            LinearProgressIndicator(
-              value: financialHealthScore / 100,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(8),
-            ),
+            if (!hasEnoughDataForHealth)
+              _buildDashboardEmptyContent(
+                icon: Icons.health_and_safety_outlined,
+                title: !hasExpenses && !hasBudget
+                    ? "Your financial health is waiting"
+                    : !hasBudget
+                    ? "Set a budget to assess your health"
+                    : "Add expenses to assess your health",
+                message: !hasExpenses && !hasBudget
+                    ? "Add some expenses and create a budget to start analyzing your financial health."
+                    : !hasBudget
+                    ? "Create a monthly budget so PesaPulse can compare your spending with your planned limits."
+                    : "Record your expenses so PesaPulse can measure your spending against your budget.",
+                buttonText: !hasBudget ? "Set Budget" : "Add Expense",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => !hasBudget
+                          ? const BudgetPage()
+                          : const AddExpenseScreen(),
+                    ),
+                  );
+                },
+              )
+            else ...[
+              LinearProgressIndicator(
+                value: (financialHealthScore / 100).clamp(0.0, 1.0),
+                minHeight: 8,
+                borderRadius: BorderRadius.circular(8),
+              ),
 
-            const SizedBox(height: 10),
-
-            Text(
-              "$financialHealthLabel (${financialHealthScore.toInt()}/100)",
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-
-            const SizedBox(height: 15),
-
-            Text(recommendation),
-
-            if (categoryAdvice.isNotEmpty) ...[
               const SizedBox(height: 10),
-              Text(categoryAdvice, style: const TextStyle(color: Colors.grey)),
+
+              Text(
+                financialHealthLabel.isNotEmpty
+                    ? "$financialHealthLabel (${financialHealthScore.toInt()}/100)"
+                    : "${financialHealthScore.toInt()}/100",
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+
+              const SizedBox(height: 15),
+
+              if (recommendation.isNotEmpty) Text(recommendation),
+
+              if (categoryAdvice.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  categoryAdvice,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ],
             ],
           ],
         ),
@@ -678,84 +729,165 @@ class _DashboardScreenState extends State<DashboardScreen>
 
             const SizedBox(height: 20),
 
-            if (compact)
-              Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _budgetItem(
-                        "Budget",
-                        CurrencyFormatter.format(currentBudget),
-                        Colors.blue,
-                      ),
-                      _budgetItem(
-                        "Spent",
-                        CurrencyFormatter.format(spentThisMonth),
-                        Colors.orange,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  Row(
-                    children: [
-                      _budgetItem(
-                        "Remaining",
-                        CurrencyFormatter.format(remainingBudget),
-                        remainingBudget >= 0 ? Colors.green : Colors.red,
-                      ),
-                    ],
-                  ),
-                ],
+            if (!hasBudget)
+              _buildDashboardEmptyContent(
+                icon: Icons.account_balance_wallet_outlined,
+                title: "No budget set yet",
+                message:
+                    "Create a monthly budget to track your spending and see how much you have left.",
+                buttonText: "Set Budget",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BudgetPage()),
+                  );
+                },
               )
-            else
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _budgetItem(
-                    "Budget",
-                    CurrencyFormatter.format(currentBudget),
-                    Colors.blue,
-                  ),
-                  _budgetItem(
-                    "Spent",
-                    CurrencyFormatter.format(spentThisMonth),
-                    Colors.orange,
-                  ),
-                  _budgetItem(
-                    "Remaining",
-                    CurrencyFormatter.format(remainingBudget),
-                    remainingBudget >= 0 ? Colors.green : Colors.red,
-                  ),
-                ],
-              ),
+            else ...[
+              if (compact)
+                Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _budgetItem(
+                          "Budget",
+                          CurrencyFormatter.format(currentBudget),
+                          Colors.blue,
+                        ),
+                        _budgetItem(
+                          "Spent",
+                          CurrencyFormatter.format(spentThisMonth),
+                          Colors.orange,
+                        ),
+                      ],
+                    ),
 
-            const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                minHeight: 10,
-                value: budgetProgress,
-                color: budgetProgressColor,
-                backgroundColor: Colors.grey.shade300,
-              ),
-            ),
+                    Row(
+                      children: [
+                        _budgetItem(
+                          "Remaining",
+                          CurrencyFormatter.format(remainingBudget),
+                          remainingBudget >= 0 ? Colors.green : Colors.red,
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _budgetItem(
+                      "Budget",
+                      CurrencyFormatter.format(currentBudget),
+                      Colors.blue,
+                    ),
+                    _budgetItem(
+                      "Spent",
+                      CurrencyFormatter.format(spentThisMonth),
+                      Colors.orange,
+                    ),
+                    _budgetItem(
+                      "Remaining",
+                      CurrencyFormatter.format(remainingBudget),
+                      remainingBudget >= 0 ? Colors.green : Colors.red,
+                    ),
+                  ],
+                ),
 
-            const SizedBox(height: 10),
+              const SizedBox(height: 20),
 
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                budgetProgressText,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  minHeight: 10,
+                  value: budgetProgress,
                   color: budgetProgressColor,
+                  backgroundColor: Colors.grey.shade300,
                 ),
               ),
+
+              const SizedBox(height: 10),
+
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  budgetProgressText,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: budgetProgressColor,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashboardEmptyContent({
+    required IconData icon,
+    required String title,
+    required String message,
+    String? buttonText,
+    VoidCallback? onPressed,
+  }) {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          vertical: compact ? 10 : 14,
+          horizontal: compact ? 4 : 10,
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(.10),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: Colors.green, size: 26),
             ),
+
+            const SizedBox(height: 12),
+
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: compact ? 14 : 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: compact ? 12 : 13,
+                height: 1.4,
+              ),
+            ),
+
+            if (buttonText != null && onPressed != null) ...[
+              const SizedBox(height: 12),
+
+              TextButton.icon(
+                onPressed: onPressed,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(buttonText),
+              ),
+            ],
           ],
         ),
       ),
@@ -792,24 +924,24 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildSmartInsightsCard() {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(compact ? 14 : 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.lightbulb, color: Colors.amber),
-                SizedBox(width: 8),
+                const Icon(Icons.lightbulb, color: Colors.amber),
+                const SizedBox(width: 8),
                 Text(
                   "Smart Insights",
                   style: TextStyle(
-                    fontSize: ResponsiveHelper.useCompactLayout(context)
-                        ? 17
-                        : 18,
+                    fontSize: compact ? 17 : 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -818,20 +950,51 @@ class _DashboardScreenState extends State<DashboardScreen>
 
             const SizedBox(height: 18),
 
-            _buildInsightTile(
-              Icons.account_balance_wallet,
-              "Budget Recommendation",
-              recommendation,
-            ),
+            if (!hasEnoughDataForInsights)
+              _buildDashboardEmptyContent(
+                icon: Icons.auto_awesome_outlined,
+                title: "Insights will appear here",
+                message:
+                    "Record some expenses or create a budget to let PesaPulse identify patterns and provide personalized recommendations.",
+                buttonText: "Add Expense",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+                  );
+                },
+              )
+            else if (!hasInsights)
+              _buildDashboardEmptyContent(
+                icon: Icons.insights_outlined,
+                title: "Building your insights",
+                message:
+                    "Keep using PesaPulse and we'll provide personalized recommendations as more financial data becomes available.",
+                buttonText: "Add Expense",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+                  );
+                },
+              )
+            else ...[
+              if (recommendation.isNotEmpty)
+                _buildInsightTile(
+                  Icons.account_balance_wallet,
+                  "Budget Recommendation",
+                  recommendation,
+                ),
 
-            if (categoryAdvice.isNotEmpty) ...[
-              const Divider(height: 28),
+              if (categoryAdvice.isNotEmpty) ...[
+                if (recommendation.isNotEmpty) const Divider(height: 28),
 
-              _buildInsightTile(
-                Icons.category,
-                "Category Advice",
-                categoryAdvice,
-              ),
+                _buildInsightTile(
+                  Icons.category,
+                  "Category Advice",
+                  categoryAdvice,
+                ),
+              ],
             ],
           ],
         ),
@@ -975,12 +1138,69 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildRecentExpenses() {
     if (recentExpenses.isEmpty) {
+      final compact = ResponsiveHelper.useCompactLayout(context);
+      final color = Theme.of(context).colorScheme.primary;
+
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 35),
-        child: buildEmptyState(
-          context,
-          EmptyStateType.expenses,
-          isGuest: isGuest,
+        padding: EdgeInsets.symmetric(
+          vertical: compact ? 20 : 28,
+          horizontal: compact ? 8 : 16,
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: compact ? 56 : 64,
+              height: compact ? 56 : 64,
+              decoration: BoxDecoration(
+                color: color.withOpacity(.10),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: compact ? 28 : 32,
+                color: color,
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            Text(
+              "No Expenses Yet",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: compact ? 16 : 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              "Add your first expense to start tracking your spending.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: compact ? 12 : 13,
+                height: 1.4,
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            TextButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+                );
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text(
+                "Add Expense",
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
         ),
       );
     }

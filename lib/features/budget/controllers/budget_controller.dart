@@ -42,7 +42,7 @@ class BudgetController {
   }
 
   Future<BudgetState> saveBudget({required double amount}) async {
-    await budgetRepository.saveBudget(amount);
+    await budgetRepository.saveBudget(amount: amount);
 
     return await loadAll();
   }

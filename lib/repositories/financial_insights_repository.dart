@@ -90,12 +90,19 @@ class FinancialInsightsRepository extends BaseRepository {
       "spent": 0,
       "remaining": 0,
       "usage_percentage": 0,
-      "status": "healthy",
-      "budget_status": "healthy",
-      "recommendation": "Create a budget to receive financial insights.",
+
+      "status": "no_data",
+      "budget_status": "no_data",
+
+      "has_budget": false,
+      "has_expenses": false,
+      "has_enough_data_for_health": false,
+
+      "recommendation": "",
       "top_category": null,
       "category_advice": "",
       "category_breakdown": [],
+
       "daily_spending": {
         "Mon": 0,
         "Tue": 0,
@@ -105,10 +112,13 @@ class FinancialInsightsRepository extends BaseRepository {
         "Sat": 0,
         "Sun": 0,
       },
+
       "highest_spending_day": {"day": null, "amount": 0},
+
       "average_daily_spending": 0,
       "estimated_month_end_spending": 0,
-      "financial_health_score": 100,
+
+      "financial_health_score": 0,
       "financial_health_label": "No Data",
     };
   }

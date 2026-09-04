@@ -47,7 +47,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 20,
+      version: 21,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -183,10 +183,15 @@ updated_at TEXT
 CREATE TABLE budget_summary_cache(
 owner_id TEXT PRIMARY KEY,
 
+client_id TEXT,
+
 budget REAL,
 budget_count INTEGER DEFAULT 0,
 spent REAL,
 remaining REAL,
+
+month INTEGER,
+year INTEGER,
 
 payload TEXT,
 
@@ -464,6 +469,23 @@ CREATE TABLE settings(
   ''');
 
       await _assignMissingClientIds(db);
+    }
+
+    if (oldVersion < 21) {
+      await db.execute('''
+    ALTER TABLE budget_summary_cache
+    ADD COLUMN client_id TEXT
+  ''');
+
+      await db.execute('''
+    ALTER TABLE budget_summary_cache
+    ADD COLUMN month INTEGER
+  ''');
+
+      await db.execute('''
+    ALTER TABLE budget_summary_cache
+    ADD COLUMN year INTEGER
+  ''');
     }
   }
 }

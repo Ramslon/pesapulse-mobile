@@ -498,18 +498,26 @@ class ApiService {
   static Future<Map<String, dynamic>> getBudgetSummary() async {
     final response = await _request(method: 'GET', endpoint: '/budget-summary');
 
+    final body = _decodeResponseBody(response);
+
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      return body;
     }
 
-    throw Exception('Failed to load budget summary (${response.statusCode})');
+    throw Exception(
+      body['message']?.toString() ??
+          'Failed to load budget summary (${response.statusCode})',
+    );
   }
 
-  static Future<Map<String, dynamic>> setBudget(double amount) async {
+  static Future<Map<String, dynamic>> setBudget(
+    double amount,
+    String clientId,
+  ) async {
     final response = await _request(
       method: 'POST',
       endpoint: '/budget',
-      body: jsonEncode({'amount': amount}),
+      body: jsonEncode({'amount': amount, 'client_id': clientId}),
     );
 
     final body = _decodeResponseBody(response);

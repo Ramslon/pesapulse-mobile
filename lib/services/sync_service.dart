@@ -280,8 +280,17 @@ class SyncService {
         if (item["table_name"] == "budget") {
           final payload = jsonDecode(item["payload"]);
 
+          final amount = double.parse(payload["amount"].toString());
+
+          final clientId = payload["client_id"]?.toString();
+
+          if (clientId == null || clientId.trim().isEmpty) {
+            throw Exception("Budget sync failed: missing client_id.");
+          }
+
           await budgetRepository.syncOfflineBudgetUpsert(
-            double.parse(payload["amount"].toString()),
+            amount: amount,
+            clientId: clientId,
           );
         }
         break;
