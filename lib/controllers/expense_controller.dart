@@ -1,13 +1,21 @@
 import '../services/expense_service.dart';
+import 'package:flutter/foundation.dart';
+import '../repositories/expense_repository.dart';
 
 class ExpenseController {
   final ExpenseService service;
+  final ExpenseRepository expenseRepository;
 
-  ExpenseController({ExpenseService? service})
-    : service = service ?? ExpenseService();
+  ExpenseController({
+    ExpenseService? service,
+    ExpenseRepository? expenseRepository,
+  }) : service = service ?? ExpenseService(),
+       expenseRepository = expenseRepository ?? ExpenseRepository();
 
   bool isFetchingMore = false;
+
   bool hasMore = true;
+
   int currentPage = 1;
 
   Future<List<Map<String, dynamic>>> fetchExpenses() async {
@@ -18,7 +26,17 @@ class ExpenseController {
     isFetchingMore = true;
 
     try {
-      final response = await service.getExpenses(page: currentPage);
+      final Map<String, dynamic> response;
+
+      if (currentPage == 1) {
+        debugPrint(
+          'ExpenseController: using shared initial expenses request...',
+        );
+
+        response = await expenseRepository.refreshExpenses();
+      } else {
+        response = await service.getExpenses(page: currentPage);
+      }
 
       final List<Map<String, dynamic>> newExpenses =
           (response['data'] as List? ?? [])

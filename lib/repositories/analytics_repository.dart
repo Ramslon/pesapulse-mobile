@@ -1,13 +1,22 @@
 import 'dart:convert';
 
-import 'package:pesapulse_mobile/repositories/base_repository.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
+
+import 'package:pesapulse_mobile/repositories/base_repository.dart';
+import 'package:pesapulse_mobile/repositories/expense_repository.dart';
 
 import '../services/api_services.dart';
+import '../services/startup_refresh_coordinator.dart';
 import '../exceptions/rate_limit_exception.dart';
 
 class AnalyticsRepository extends BaseRepository {
+  final ExpenseRepository expenseRepository = ExpenseRepository();
+
+  // ============================================================
+  // CACHE
+  // ============================================================
+
   Future<Map<String, dynamic>> getCachedAnalytics() async {
     final ownerId = await this.ownerId;
     final database = await db.database;
@@ -23,29 +32,64 @@ class AnalyticsRepository extends BaseRepository {
       throw Exception("No cached analytics");
     }
 
-    return _fromLocal(cached.first);
+    final analytics = _fromLocal(cached.first);
+
+    // ----------------------------------------------------------
+    // IMPORTANT:
+    //
+    // Goal statistics must always reflect the current local
+    // SQLite goals table because goal mutations can occur after
+    // analytics_cache was last generated.
+    // ----------------------------------------------------------
+
+    final localGoalAnalytics = await _getLocalGoalAnalytics();
+
+    analytics["goalAnalytics"] = localGoalAnalytics;
+
+    return analytics;
   }
+
+  // ============================================================
+  // NETWORK REFRESH
+  // ============================================================
 
   Future<Map<String, dynamic>> refreshAnalytics() async {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
     try {
-      final results = await Future.wait([
-        ApiService.getExpenses(),
-        ApiService.getGoalAnalytics(),
-        ApiService.getFinancialInsights(),
-      ]);
+      debugPrint('Analytics refresh: requesting expenses...');
 
-      final expenses = results[0];
-      final goalAnalytics = results[1];
-      final financialInsights = results[2];
+      final expenses = await expenseRepository.refreshExpenses();
+
+      debugPrint('Analytics refresh: expenses completed.');
+
+      debugPrint('Analytics refresh: requesting financial insights...');
+
+      final financialInsights = await StartupRefreshCoordinator.instance.run(
+        'financial-insights',
+        () async {
+          return await ApiService.getFinancialInsights();
+        },
+      );
+
+      debugPrint('Analytics refresh: financial insights completed.');
+
+      // --------------------------------------------------------
+      // Goal analytics are derived from the current local goal
+      // database so newly completed/archived/removed goals are
+      // reflected immediately.
+      // --------------------------------------------------------
+
+      final goalAnalytics = await _getLocalGoalAnalytics();
 
       await database.insert(
         "analytics_cache",
         _toLocal(expenses, goalAnalytics, financialInsights, ownerId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+
+      debugPrint('Analytics refresh: cache updated successfully.');
 
       return {
         "expenses": expenses,
@@ -59,6 +103,97 @@ class AnalyticsRepository extends BaseRepository {
       rethrow;
     }
   }
+
+  // ============================================================
+  // CACHED GOAL ANALYTICS
+  // ============================================================
+
+  Future<Map<String, dynamic>> getCachedGoalAnalytics() async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final cached = await database.query(
+      "goal_analytics_cache",
+      where: "owner_id=?",
+      whereArgs: [ownerId],
+      limit: 1,
+    );
+
+    if (cached.isEmpty) {
+      throw Exception("No cached goal analytics");
+    }
+
+    final data = cached.first["data"];
+
+    if (data is! String) {
+      throw Exception("Invalid cached goal analytics");
+    }
+
+    final decoded = jsonDecode(data);
+
+    if (decoded is! Map) {
+      throw Exception("Invalid cached goal analytics format");
+    }
+
+    return Map<String, dynamic>.from(decoded);
+  }
+
+  // ============================================================
+  // LOCAL GOAL ANALYTICS
+  // ============================================================
+
+  /// Builds goal statistics directly from SQLite.
+  ///
+  /// This is intentionally local-only so goal mutations are
+  /// reflected immediately without requiring another API request.
+  Future<Map<String, dynamic>> _getLocalGoalAnalytics() async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final totalResult = await database.rawQuery(
+      """
+      SELECT COUNT(*)
+      FROM goals
+      WHERE owner_id = ?
+        AND is_archived = 0
+        AND is_deleted = 0
+      """,
+      [ownerId],
+    );
+
+    final completedResult = await database.rawQuery(
+      """
+      SELECT COUNT(*)
+      FROM goals
+      WHERE owner_id = ?
+        AND is_archived = 0
+        AND is_deleted = 0
+        AND completed_at IS NOT NULL
+      """,
+      [ownerId],
+    );
+
+    final totalGoals = Sqflite.firstIntValue(totalResult) ?? 0;
+
+    final completedGoals = Sqflite.firstIntValue(completedResult) ?? 0;
+
+    final activeGoals = totalGoals - completedGoals;
+
+    final completionRate = totalGoals == 0
+        ? 0.0
+        : (completedGoals / totalGoals) * 100.0;
+
+    return {
+      "total_goals": totalGoals,
+      "completed_goals": completedGoals,
+      "active_goals": activeGoals,
+      "completion_rate": completionRate,
+    };
+  }
+
+  // ============================================================
+  // CACHE SERIALIZATION
+  // ============================================================
 
   Map<String, dynamic> _toLocal(
     Map<String, dynamic> expenses,

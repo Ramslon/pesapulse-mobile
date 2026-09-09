@@ -40,6 +40,7 @@ import '../repositories/settings_repository.dart';
 import '../models/settings_state.dart';
 import '../utils/responsive_helper.dart';
 import '../utils/settings_error_message.dart';
+import '../services/sync_events.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -74,7 +75,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     settingsController.onStateChanged = _handleSettingsStateChanged;
 
+    SyncEvents.instance.settingsRefresh.addListener(_onSettingsDataChanged);
+
     settingsController.initialize();
+  }
+
+  void _onSettingsDataChanged() {
+    if (!mounted) return;
+
+    debugPrint(
+      'Settings: synchronized data changed. '
+      'Reloading local statistics.',
+    );
+
+    settingsController.loadDashboardStatsFromCache();
   }
 
   void _handleSettingsStateChanged() {
@@ -137,7 +151,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    SyncEvents.instance.settingsRefresh.removeListener(_onSettingsDataChanged);
+
     settingsController.dispose();
+
     super.dispose();
   }
 

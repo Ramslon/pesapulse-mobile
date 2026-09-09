@@ -3,8 +3,11 @@ import 'package:pesapulse_mobile/exceptions/rate_limit_exception.dart';
 import '../services/api_services.dart';
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
+import 'package:pesapulse_mobile/services/startup_refresh_coordinator.dart';
+import 'package:flutter/foundation.dart';
 
 import '../services/sync_service.dart';
+import '../services/sync_events.dart';
 import 'base_repository.dart';
 
 class ExpenseRepository extends BaseRepository {
@@ -36,25 +39,29 @@ class ExpenseRepository extends BaseRepository {
   }
 
   /// Get expenses
+  /// Get expenses from the API and update the local database.
   Future<Map<String, dynamic>> getExpenses({int page = 1}) async {
+    // The initial page is the canonical shared startup refresh.
+    //
+    // This means ExpenseController, AnalyticsRepository, or any
+    // other startup component asking for the initial expenses will
+    // share the same API request.
+    if (page == 1) {
+      return await refreshExpenses();
+    }
+
+    // Preserve the existing behavior for later pages.
     final ownerId = await this.ownerId;
+
     try {
       final response = await ApiService.getExpenses();
 
       final database = await db.database;
 
-      if (page == 1) {
-        await database.delete(
-          "expenses",
-          where: "owner_id = ?",
-          whereArgs: [ownerId],
-        );
-      }
-
       for (final expense in response["data"]) {
         await database.insert(
           "expenses",
-          _expenseToLocal(expense, ownerId),
+          _expenseToLocal(Map<String, dynamic>.from(expense), ownerId),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
@@ -76,6 +83,79 @@ class ExpenseRepository extends BaseRepository {
 
       return {"data": cached, "next_page_url": null};
     }
+  }
+
+  /// Shared initial expenses refresh.
+  ///
+  /// This method returns the same API response used by
+  /// Analytics and other startup consumers.
+  Future<Map<String, dynamic>> refreshExpenses() async {
+    return await StartupRefreshCoordinator.instance.run('expenses', () async {
+      final ownerId = await this.ownerId;
+
+      try {
+        debugPrint('ExpenseRepository: requesting expenses from API...');
+
+        final response = await ApiService.getExpenses();
+
+        final database = await db.database;
+
+        final expenses = (response["data"] as List? ?? [])
+            .map((expense) => Map<String, dynamic>.from(expense))
+            .toList();
+
+        await database.transaction((txn) async {
+          // Remove only records that were already synced.
+          //
+          // IMPORTANT:
+          // is_synced = 0 records are local/offline changes and
+          // must never be deleted by a server refresh.
+          await txn.delete(
+            "expenses",
+            where: "owner_id = ? AND is_synced = 1",
+            whereArgs: [ownerId],
+          );
+
+          for (final expense in expenses) {
+            await txn.insert(
+              "expenses",
+              _expenseToLocal(expense, ownerId),
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+        });
+
+        debugPrint(
+          'ExpenseRepository: cached ${expenses.length} server expenses.',
+        );
+
+        // Preserve the existing offline-sync behavior.
+        await SyncService.instance.getPendingChanges();
+
+        debugPrint('ExpenseRepository: expenses refresh completed.');
+
+        return response;
+      } on RateLimitException {
+        rethrow;
+      } catch (e) {
+        debugPrint('ExpenseRepository: API refresh failed, using cache: $e');
+
+        final database = await db.database;
+
+        final cached = await database.query(
+          "expenses",
+          where: "owner_id = ?",
+          whereArgs: [ownerId],
+          orderBy: "expense_date DESC",
+        );
+
+        debugPrint(
+          'ExpenseRepository: returning ${cached.length} cached expenses.',
+        );
+
+        return {"data": cached, "next_page_url": null};
+      }
+    });
   }
 
   Future<void> createExpense({
@@ -137,9 +217,9 @@ class ExpenseRepository extends BaseRepository {
       );
     } on RateLimitException {
       rethrow;
-    } catch (_) {
-      // Offline fallback
+    } catch (e) {
       final id = await database.insert("expenses", expense);
+
       await database.insert("sync_queue", {
         "owner_id": ownerId,
         "table_name": "expenses",
@@ -147,7 +227,19 @@ class ExpenseRepository extends BaseRepository {
         "operation": "create",
         "payload": jsonEncode(expense),
       });
+
       await SyncService.instance.getPendingChanges();
+
+      SyncEvents.instance.notifyFinancialDataUpdated();
+
+      if (ownerId != "guest") {
+        await SyncService.instance.requestSync();
+      }
+
+      debugPrint(
+        'ExpenseRepository: expense saved locally and '
+        'automatic synchronization requested.',
+      );
     }
   }
 
@@ -219,36 +311,82 @@ class ExpenseRepository extends BaseRepository {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
+    final serverId = await getServerExpenseId(id);
+
     final expense = {
       "title": title,
-      "amount": amount,
+      "amount": double.tryParse(amount) ?? 0,
       "category": category,
       "expense_date": expenseDate,
       "description": description,
+      "updated_at": DateTime.now().toIso8601String(),
     };
 
     try {
-      await ApiService.updateExpense(
-        id,
-        title,
-        amount,
-        category,
-        expenseDate,
-        description,
-      );
+      // If the record exists on the server, update the server record.
+      if (serverId != null) {
+        await ApiService.updateExpense(
+          serverId,
+          title,
+          amount,
+          category,
+          expenseDate,
+          description,
+        );
+      } else {
+        // No server record yet. Keep the change local and sync later.
+        await database.update(
+          "expenses",
+          {...expense, "is_synced": 0},
+          where: "id=? AND owner_id=?",
+          whereArgs: [id, ownerId],
+        );
 
+        await database.insert("sync_queue", {
+          "owner_id": ownerId,
+          "table_name": "expenses",
+          "record_id": id,
+          "operation": "update",
+          "payload": jsonEncode({...expense, "server_id": null}),
+        });
+
+        await SyncService.instance.getPendingChanges();
+
+        SyncEvents.instance.notifyFinancialDataUpdated();
+
+        if (ownerId != "guest") {
+          await SyncService.instance.requestSync();
+        }
+
+        debugPrint(
+          'ExpenseRepository: local expense update queued '
+          'because server_id is not available.',
+        );
+
+        return;
+      }
+
+      // Server update succeeded.
       await database.update(
         "expenses",
-        expense,
+        {...expense, "server_id": serverId, "is_synced": 1, "is_deleted": 0},
         where: "id=? AND owner_id=?",
         whereArgs: [id, ownerId],
       );
+
+      SyncEvents.instance.notifyFinancialDataUpdated();
+
+      debugPrint(
+        'ExpenseRepository: expense updated successfully '
+        '(localId=$id, serverId=$serverId).',
+      );
     } on RateLimitException {
       rethrow;
-    } catch (_) {
+    } catch (e) {
+      // Keep the modification locally and queue it for retry.
       await database.update(
         "expenses",
-        expense,
+        {...expense, "is_synced": 0},
         where: "id=? AND owner_id=?",
         whereArgs: [id, ownerId],
       );
@@ -258,10 +396,21 @@ class ExpenseRepository extends BaseRepository {
         "table_name": "expenses",
         "record_id": id,
         "operation": "update",
-        "payload": jsonEncode(expense),
+        "payload": jsonEncode({...expense, "server_id": serverId}),
       });
 
       await SyncService.instance.getPendingChanges();
+
+      SyncEvents.instance.notifyFinancialDataUpdated();
+
+      if (ownerId != "guest") {
+        await SyncService.instance.requestSync();
+      }
+
+      debugPrint(
+        'ExpenseRepository: expense update failed remotely; '
+        'change queued for automatic sync: $e',
+      );
     }
   }
 
@@ -290,15 +439,22 @@ class ExpenseRepository extends BaseRepository {
       "expenses",
       {
         "title": title,
-        "amount": amount,
+        "amount": double.tryParse(amount) ?? 0,
         "category": category,
         "expense_date": expenseDate,
         "description": description,
+        "server_id": serverId,
         "updated_at": DateTime.now().toIso8601String(),
         "is_synced": 1,
+        "is_deleted": 0,
       },
       where: "id=? AND owner_id=?",
       whereArgs: [localId, ownerId],
+    );
+
+    debugPrint(
+      'ExpenseRepository: offline expense update synced '
+      '(localId=$localId, serverId=$serverId).',
     );
   }
 
@@ -323,17 +479,32 @@ class ExpenseRepository extends BaseRepository {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
-    try {
-      await ApiService.deleteExpense(id);
+    final serverId = await getServerExpenseId(id);
 
+    try {
+      // If the expense exists on the server, delete it there first.
+      if (serverId != null) {
+        await ApiService.deleteExpense(serverId);
+      }
+
+      // Remove the local record after successful server deletion.
       await database.delete(
         "expenses",
         where: "id=? AND owner_id=?",
         whereArgs: [id, ownerId],
       );
+
+      SyncEvents.instance.notifyFinancialDataUpdated();
+
+      debugPrint(
+        'ExpenseRepository: expense deleted successfully '
+        '(localId=$id, serverId=$serverId).',
+      );
     } on RateLimitException {
       rethrow;
-    } catch (_) {
+    } catch (e) {
+      // If server deletion failed, remove it locally and queue the
+      // deletion for automatic synchronization.
       await database.delete(
         "expenses",
         where: "id=? AND owner_id=?",
@@ -345,9 +516,21 @@ class ExpenseRepository extends BaseRepository {
         "table_name": "expenses",
         "record_id": id,
         "operation": "delete",
-        "payload": "{}",
+        "payload": jsonEncode({"server_id": serverId}),
       });
+
       await SyncService.instance.getPendingChanges();
+
+      SyncEvents.instance.notifyFinancialDataUpdated();
+
+      if (ownerId != "guest") {
+        await SyncService.instance.requestSync();
+      }
+
+      debugPrint(
+        'ExpenseRepository: expense deletion failed remotely; '
+        'queued for automatic sync: $e',
+      );
     }
   }
 
@@ -364,6 +547,11 @@ class ExpenseRepository extends BaseRepository {
       "expenses",
       where: "id=? AND owner_id=?",
       whereArgs: [localId, ownerId],
+    );
+
+    debugPrint(
+      'ExpenseRepository: offline expense deletion synced '
+      '(localId=$localId, serverId=$serverId).',
     );
   }
 
@@ -396,5 +584,19 @@ class ExpenseRepository extends BaseRepository {
       return existing.first["id"] as int?;
     }
     return null;
+  }
+
+  Future<List<Map<String, dynamic>>> getExpensesFromLocal() async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final rows = await database.query(
+      "expenses",
+      where: "owner_id = ? AND is_deleted = 0",
+      whereArgs: [ownerId],
+      orderBy: "expense_date DESC",
+    );
+
+    return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 }

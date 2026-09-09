@@ -59,9 +59,25 @@ class _GoalsScreenState extends State<GoalsScreen>
     _goalRefreshListener = () async {
       if (!mounted) return;
 
-      await _initializeGoalsScreen(forceRefresh: true);
-    };
+      if (goalsController.mutationInProgress) {
+        debugPrint(
+          'GoalsScreen: goal mutation is already refreshing the local cache. '
+          'Skipping duplicate goals reload.',
+        );
+        return;
+      }
 
+      debugPrint(
+        'GoalsScreen: synchronized/local goal data changed. '
+        'Reloading from local cache only.',
+      );
+
+      try {
+        await goalsController.reloadFromCache();
+      } catch (e) {
+        debugPrint('GoalsScreen: failed to reload goals from cache: $e');
+      }
+    };
     SyncEvents.instance.goalsRefresh.addListener(_goalRefreshListener);
 
     _initializeGoalsScreen();
@@ -73,6 +89,12 @@ class _GoalsScreenState extends State<GoalsScreen>
 
   void _onGoalsControllerChanged() {
     if (!mounted) return;
+
+    debugPrint(
+      'GoalsScreen: controller notified. '
+      'goals=${goalsController.goals.length}, '
+      'ids=${goalsController.goals.map((g) => g.id).toList()}',
+    );
 
     setState(() {});
   }

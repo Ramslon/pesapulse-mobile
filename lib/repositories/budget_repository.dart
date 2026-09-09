@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:pesapulse_mobile/services/api_services.dart';
 import 'package:pesapulse_mobile/services/sync_service.dart';
+import 'package:pesapulse_mobile/services/sync_events.dart';
 import 'package:pesapulse_mobile/exceptions/rate_limit_exception.dart';
 
 class BudgetRepository extends BaseRepository {
@@ -295,7 +296,18 @@ class BudgetRepository extends BaseRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      debugPrint('Guest budget saved locally. client_id=$clientId');
+      debugPrint(
+        'Budget saved locally and queued for sync. '
+        'client_id=$clientId',
+      );
+
+      await SyncService.instance.getPendingChanges();
+
+      SyncEvents.instance.notifyFinancialDataUpdated();
+
+      if (ownerId != "guest") {
+        await SyncService.instance.requestSync();
+      }
 
       return;
     }
@@ -333,6 +345,8 @@ class BudgetRepository extends BaseRepository {
       );
 
       debugPrint('Budget saved online. client_id=$finalClientId');
+
+      SyncEvents.instance.notifyFinancialDataUpdated();
     } on RateLimitException {
       // -----------------------------------------------------------------------
       // Rate limiting is NOT an offline condition.
@@ -473,7 +487,15 @@ class BudgetRepository extends BaseRepository {
         whereArgs: [ownerId, "budget"],
       );
 
-      debugPrint('Guest budget deleted locally.');
+      debugPrint('Budget deleted locally and deletion queued.');
+
+      await SyncService.instance.getPendingChanges();
+
+      SyncEvents.instance.notifyFinancialDataUpdated();
+
+      if (ownerId != "guest") {
+        await SyncService.instance.requestSync();
+      }
 
       return;
     }
@@ -492,6 +514,8 @@ class BudgetRepository extends BaseRepository {
       );
 
       debugPrint('Budget deleted online.');
+
+      SyncEvents.instance.notifyFinancialDataUpdated();
     } on RateLimitException {
       rethrow;
     } on http.ClientException {

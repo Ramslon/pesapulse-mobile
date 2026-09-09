@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../screens/edit_expense_screen.dart';
+import '../exceptions/rate_limit_exception.dart';
 import '../repositories/expense_repository.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
@@ -44,12 +45,26 @@ class _ExpenseDetailsScreenState extends State<ExpenseDetailsScreen> {
       ),
     );
 
-    if (confirmed == true) {
-      await repository.deleteExpense(expense["id"]);
+    if (confirmed != true) return;
+
+    try {
+      await repository.deleteExpense(expense["id"] as int);
 
       if (!mounted) return;
 
       Navigator.pop(context, true);
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to delete expense: $e")));
     }
   }
 

@@ -5,6 +5,7 @@ import '../models/goal.dart';
 import '../services/goals_service.dart';
 import '../services/notification_service.dart';
 import '../services/session_service.dart';
+import '../services/startup_refresh_coordinator.dart';
 
 import '../../exceptions/rate_limit_exception.dart';
 
@@ -26,6 +27,10 @@ class GoalsController extends ChangeNotifier {
   bool _refreshInProgress = false;
 
   bool _cacheLoaded = false;
+
+  bool _mutationInProgress = false;
+
+  bool get mutationInProgress => _mutationInProgress;
 
   List<Goal> goals = [];
 
@@ -101,6 +106,26 @@ class GoalsController extends ChangeNotifier {
   // ============================================================
   // CACHE-FIRST DATA LOADING
   // ============================================================
+  Future<void> reloadFromCache() async {
+    try {
+      debugPrint('GoalsController: reloading goals from local cache.');
+
+      await _loadCachedData();
+
+      debugPrint(
+        'GoalsController: local cache reload completed. '
+        'goals=${goals.length}, '
+        'ids=${goals.map((g) => g.id).toList()}',
+      );
+
+      notifyListeners();
+    } catch (e, stackTrace) {
+      debugPrint('GoalsController: failed to reload local cache: $e');
+      debugPrint('$stackTrace');
+
+      rethrow;
+    }
+  }
 
   Future<void> _loadCachedData() async {
     try {
@@ -111,20 +136,43 @@ class GoalsController extends ChangeNotifier {
       ]);
 
       final cachedGoals = results[0] as List<Goal>;
-
       final cachedAnalytics = results[1] as Map<String, dynamic>;
-
       final cachedDeadlines = results[2] as List<Map<String, dynamic>>;
+
+      // ----------------------------------------------------------
+      // Goals are the source of truth for the current goal counts.
+      // ----------------------------------------------------------
 
       goals = cachedGoals;
 
-      _goalAnalytics = cachedAnalytics;
+      final totalGoals = cachedGoals.length;
+
+      final completedGoals = cachedGoals
+          .where((goal) => goal.percentage >= 100)
+          .length;
+
+      final activeGoals = totalGoals - completedGoals;
+
+      final completionRate = totalGoals == 0
+          ? 0.0
+          : (completedGoals / totalGoals) * 100.0;
+
+      // Preserve other cached analytics fields, but always
+      // overwrite the goal statistics with the current SQLite state.
+      _goalAnalytics = {
+        ...cachedAnalytics,
+        'total_goals': totalGoals,
+        'completed_goals': completedGoals,
+        'active_goals': activeGoals,
+        'completion_rate': completionRate,
+      };
 
       _upcomingDeadlines = cachedDeadlines;
 
-      // Forecasts and insights are derived data.
-      //
-      // Load them from memory/SQLite/local calculation.
+      // ----------------------------------------------------------
+      // Forecasts and insights remain derived/cache data.
+      // ----------------------------------------------------------
+
       final derivedResults = await Future.wait([
         goalsService.loadCachedForecasts(goals),
         goalsService.loadCachedInsights(goals),
@@ -135,47 +183,60 @@ class GoalsController extends ChangeNotifier {
       insights = Map<int, dynamic>.from(derivedResults[1] as Map);
 
       _cacheLoaded = true;
-
       needsRefresh = false;
 
-      debugPrint('Loaded cached goals data.');
+      debugPrint(
+        'Loaded cached goals data. '
+        'total=$totalGoals, '
+        'completed=$completedGoals, '
+        'active=$activeGoals, '
+        'completionRate=$completionRate',
+      );
     } catch (e) {
       debugPrint('Failed to load cached goals data: $e');
 
-      // If cached goals cannot be loaded, allow the screen to
-      // continue into the background/API refresh path.
-      //
-      // Do not throw here because cache-first loading should
-      // degrade gracefully.
+      // Cache-first loading should degrade gracefully.
     }
   }
-
   // ============================================================
   // BACKGROUND REFRESH
   // ============================================================
 
   Future<void> _refreshInBackground({bool forceRefresh = false}) async {
     if (_refreshInProgress) {
+      debugPrint('Goals background refresh skipped: already in progress.');
       return;
     }
 
     if (isGuest) {
+      debugPrint('Goals background refresh skipped: guest user.');
       return;
     }
 
     _refreshInProgress = true;
 
     try {
+      // --------------------------------------------------------
+      // CLEAR CACHES FOR FORCED REFRESH
+      // --------------------------------------------------------
+
       if (forceRefresh) {
+        debugPrint('Goals forced refresh: clearing caches.');
         goalsService.clearCaches();
       }
 
       // --------------------------------------------------------
-      // Refresh goals first
+      // REFRESH GOALS
       // --------------------------------------------------------
 
-      final refreshedGoals = await goalsService.refreshGoals();
+      debugPrint('Goals refresh: requesting goals...');
 
+      final refreshedGoals = await StartupRefreshCoordinator.instance.run(
+        'goals',
+        () async {
+          return await goalsService.refreshGoals();
+        },
+      );
       if (!hasListeners) {
         return;
       }
@@ -186,30 +247,128 @@ class GoalsController extends ChangeNotifier {
 
       notifyListeners();
 
+      debugPrint('Goals refresh: goals completed (${goals.length} goals).');
+
       // --------------------------------------------------------
-      // Refresh derived goal data in parallel
+      // REFRESH ALL DERIVED DATA WITH ONE API REQUEST
+      // --------------------------------------------------------
+      //
+      // This replaces:
+      //
+      // /goals/{id}/forecast
+      // /goals/{id}/insights
+      // /goals/analytics
+      // /goals/upcoming-deadlines
+      //
+      // with:
+      //
+      // /goals/derived-data
+      //
       // --------------------------------------------------------
 
-      final derivedResults = await Future.wait([
-        goalsService.refreshForecasts(goals),
-        goalsService.refreshInsights(goals),
-        goalsService.refreshAnalytics(),
-        goalsService.refreshUpcomingDeadlines(),
-      ]);
+      debugPrint('Goals refresh: requesting derived data...');
+
+      final derivedData = await StartupRefreshCoordinator.instance.run(
+        'goals-derived-data',
+        () async {
+          return await goalsService.refreshDerivedData();
+        },
+      );
 
       if (!hasListeners) {
         return;
       }
 
-      forecasts = Map<int, dynamic>.from(derivedResults[0] as Map);
+      // --------------------------------------------------------
+      // FORECASTS
+      // --------------------------------------------------------
 
-      insights = Map<int, dynamic>.from(derivedResults[1] as Map);
+      final rawForecasts = derivedData['forecasts'];
 
-      _goalAnalytics = Map<String, dynamic>.from(derivedResults[2] as Map);
+      if (rawForecasts is Map) {
+        final parsedForecasts = <int, dynamic>{};
 
-      _upcomingDeadlines = (derivedResults[3] as List)
-          .map<Map<String, dynamic>>((item) => Map<String, dynamic>.from(item))
-          .toList();
+        for (final entry in rawForecasts.entries) {
+          final goalId = int.tryParse(entry.key.toString());
+
+          if (goalId == null) {
+            debugPrint(
+              'Goals refresh: ignoring invalid forecast goal ID '
+              '${entry.key}.',
+            );
+
+            continue;
+          }
+
+          parsedForecasts[goalId] = entry.value;
+        }
+
+        forecasts = parsedForecasts;
+      } else {
+        forecasts = {};
+      }
+
+      // --------------------------------------------------------
+      // INSIGHTS
+      // --------------------------------------------------------
+
+      final rawInsights = derivedData['insights'];
+
+      if (rawInsights is Map) {
+        final parsedInsights = <int, dynamic>{};
+
+        for (final entry in rawInsights.entries) {
+          final goalId = int.tryParse(entry.key.toString());
+
+          if (goalId == null) {
+            debugPrint(
+              'Goals refresh: ignoring invalid insight goal ID '
+              '${entry.key}.',
+            );
+
+            continue;
+          }
+
+          parsedInsights[goalId] = entry.value;
+        }
+
+        insights = parsedInsights;
+      } else {
+        insights = {};
+      }
+
+      // --------------------------------------------------------
+      // GOAL ANALYTICS
+      // --------------------------------------------------------
+
+      final rawAnalytics = derivedData['analytics'];
+
+      if (rawAnalytics is Map) {
+        _goalAnalytics = Map<String, dynamic>.from(rawAnalytics);
+      } else {
+        _goalAnalytics = {};
+      }
+
+      // --------------------------------------------------------
+      // UPCOMING DEADLINES
+      // --------------------------------------------------------
+
+      final rawDeadlines = derivedData['upcoming_deadlines'];
+
+      if (rawDeadlines is List) {
+        _upcomingDeadlines = rawDeadlines
+            .whereType<Map>()
+            .map<Map<String, dynamic>>(
+              (item) => Map<String, dynamic>.from(item),
+            )
+            .toList();
+      } else {
+        _upcomingDeadlines = [];
+      }
+
+      // --------------------------------------------------------
+      // PROCESS DEADLINE NOTIFICATIONS
+      // --------------------------------------------------------
 
       await _processDeadlineNotifications();
 
@@ -217,21 +376,25 @@ class GoalsController extends ChangeNotifier {
         return;
       }
 
+      // --------------------------------------------------------
+      // COMPLETE
+      // --------------------------------------------------------
+
       isLoading = false;
 
       notifyListeners();
 
-      debugPrint('Goals background refresh completed.');
+      debugPrint('Goals background refresh completed successfully.');
     } on RateLimitException catch (e) {
       debugPrint('Goals background refresh rate limited: ${e.message}');
 
       // Keep cached data visible.
-      //
-      // Do not replace it with an error state.
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Goals background refresh failed: $e');
 
-      // Cached data remains available.
+      debugPrint('Goals background refresh stack trace: $stackTrace');
+
+      // Keep cached data visible.
     } finally {
       _refreshInProgress = false;
 
@@ -241,7 +404,6 @@ class GoalsController extends ChangeNotifier {
       }
     }
   }
-
   // ============================================================
   // MANUAL REFRESH
   // ============================================================
@@ -474,123 +636,105 @@ class GoalsController extends ChangeNotifier {
     required double amount,
     required bool isOnline,
   }) async {
-    final goal = goals.firstWhere((goal) => goal.id == goalId);
+    try {
+      debugPrint(
+        'GoalsController: adding savings '
+        'goal=$goalId, amount=$amount, online=$isOnline',
+      );
 
-    final response = await goalsService.addSavings(
-      goal: goal,
-      amount: amount,
-      isOnline: isOnline,
-    );
+      // Find the current goal from the controller's cached list.
+      final index = goals.indexWhere((goal) => goal.id == goalId);
 
-    // ----------------------------------------------------------
-    // Update the goal immediately when the operation is offline.
-    // ----------------------------------------------------------
-
-    final isGuest = await SessionService.isGuest();
-
-    if (!isOnline || isGuest) {
-      final updatedGoals = List<Goal>.from(goals);
-
-      final index = updatedGoals.indexWhere((item) => item.id == goalId);
-
-      if (index != -1) {
-        final current = updatedGoals[index];
-
-        final savedAmount = current.savedAmount + amount;
-
-        final percentage = current.targetAmount <= 0
-            ? 0.0
-            : ((savedAmount / current.targetAmount) * 100)
-                  .clamp(0.0, 100.0)
-                  .toDouble();
-
-        updatedGoals[index] = Goal(
-          id: current.id,
-          serverId: current.serverId,
-          isSynced: 0,
-          title: current.title,
-          targetAmount: current.targetAmount,
-          savedAmount: savedAmount,
-          targetDate: current.targetDate,
-          achievement: current.achievement,
-          completedPercentage: percentage,
-          createdAt: current.createdAt,
-          completedAt: savedAmount >= current.targetAmount
-              ? DateTime.now().toIso8601String()
-              : current.completedAt,
-          updatedAt: DateTime.now().toIso8601String(),
-          isArchived: current.isArchived,
-          isDeleted: current.isDeleted,
-        );
-
-        goals = updatedGoals;
+      if (index == -1) {
+        throw Exception('Goal not found.');
       }
 
+      final goal = goals[index];
+
+      // The service/repository is responsible for all savings business logic:
+      // - calculating the new saved amount
+      // - calculating percentage
+      // - determining completion
+      // - setting completed_at
+      // - persisting the change locally
+      // - marking offline changes as unsynced
+      // - queuing offline synchronization
+      final response = await goalsService.addSavings(
+        goal: goal,
+        amount: amount,
+        isOnline: isOnline,
+      );
+
+      await reloadFromCache();
+      // Savings can make this goal's forecast/insight cache stale.
       clearGoalCache(goalId);
 
-      if (hasListeners) {
-        notifyListeners();
-      }
+      notifyListeners();
+
+      debugPrint(
+        'GoalsController: savings added successfully '
+        'goal=$goalId',
+      );
 
       return response;
+    } catch (e) {
+      debugPrint(
+        'GoalsController: failed to add savings '
+        'goal=$goalId: $e',
+      );
+
+      rethrow;
     }
-
-    // ----------------------------------------------------------
-    // Online operation
-    // ----------------------------------------------------------
-
-    clearGoalCache(goalId);
-
-    await refreshSingleGoal(goalId);
-
-    return response;
   }
-
   // ============================================================
   // DELETE
   // ============================================================
 
   Future<void> deleteGoal({required Goal goal, required bool isOnline}) async {
-    await goalsService.deleteGoal(goal: goal, isOnline: isOnline);
+    _mutationInProgress = true;
 
-    removeGoal(goal.id);
+    try {
+      await goalsService.deleteGoal(goal: goal, isOnline: isOnline);
+
+      await reloadFromCache();
+
+      needsRefresh = false;
+    } finally {
+      _mutationInProgress = false;
+    }
   }
-
   // ============================================================
   // RESTORE
   // ============================================================
 
   Future<void> restoreGoal({required Goal goal, required bool isOnline}) async {
-    await goalsService.restoreGoal(goal: goal, isOnline: isOnline);
+    _mutationInProgress = true;
 
-    clearGoalCache(goal.id);
+    try {
+      await goalsService.restoreGoal(goal: goal, isOnline: isOnline);
 
-    if (!goals.any((item) => item.id == goal.id)) {
-      goals.insert(0, goal);
-    }
+      await reloadFromCache();
 
-    needsRefresh = true;
-
-    if (hasListeners) {
-      notifyListeners();
+      needsRefresh = false;
+    } finally {
+      _mutationInProgress = false;
     }
   }
-
   // ============================================================
   // ARCHIVE
   // ============================================================
 
   Future<void> archiveGoal({required Goal goal, required bool isOnline}) async {
-    await goalsService.archiveGoal(goal: goal, isOnline: isOnline);
+    _mutationInProgress = true;
 
-    clearGoalCache(goal.id);
+    try {
+      await goalsService.archiveGoal(goal: goal, isOnline: isOnline);
 
-    goals.removeWhere((item) => item.id == goal.id);
+      await reloadFromCache();
 
-    needsRefresh = true;
-
-    if (hasListeners) {
-      notifyListeners();
+      needsRefresh = false;
+    } finally {
+      _mutationInProgress = false;
     }
   }
 

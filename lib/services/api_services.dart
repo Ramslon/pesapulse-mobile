@@ -3,12 +3,14 @@ import 'dart:async';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_preferences.dart';
 import '../exceptions/rate_limit_exception.dart';
 import '../exceptions/auth_exception.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://pesapulse-t9hk.onrender.com/api';
+  static const String baseUrl =
+      'https://pesapulse-api-frankfurt-test.onrender.com/api';
   static String token = '';
   static const Duration _requestTimeout = Duration(seconds: 15);
 
@@ -31,6 +33,10 @@ class ApiService {
     Object? body,
     bool authenticated = true,
   }) async {
+    final requestStart = DateTime.now();
+
+    debugPrint('API START: ${method.toUpperCase()} $endpoint');
+
     final requestHeaders = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
@@ -38,7 +44,15 @@ class ApiService {
     };
 
     if (authenticated) {
+      final tokenStart = DateTime.now();
+
       final storedToken = await getToken();
+
+      final tokenDuration = DateTime.now()
+          .difference(tokenStart)
+          .inMilliseconds;
+
+      debugPrint('API TOKEN: $endpoint took ${tokenDuration}ms');
 
       final authToken = storedToken != null && storedToken.isNotEmpty
           ? storedToken
@@ -51,48 +65,60 @@ class ApiService {
 
     final uri = Uri.parse('$baseUrl$endpoint');
 
+    debugPrint('API HTTP START: ${method.toUpperCase()} $endpoint');
+
     try {
       late http.Response response;
+
+      final httpStart = DateTime.now();
 
       switch (method.toUpperCase()) {
         case 'GET':
           response = await http
               .get(uri, headers: requestHeaders)
               .timeout(_requestTimeout);
-
           break;
 
         case 'POST':
           response = await http
               .post(uri, headers: requestHeaders, body: body)
               .timeout(_requestTimeout);
-
           break;
 
         case 'PUT':
           response = await http
               .put(uri, headers: requestHeaders, body: body)
               .timeout(_requestTimeout);
-
           break;
 
         case 'PATCH':
           response = await http
               .patch(uri, headers: requestHeaders, body: body)
               .timeout(_requestTimeout);
-
           break;
 
         case 'DELETE':
           response = await http
               .delete(uri, headers: requestHeaders, body: body)
               .timeout(_requestTimeout);
-
           break;
 
         default:
           throw UnsupportedError('Unsupported HTTP method: $method');
       }
+
+      final httpDuration = DateTime.now().difference(httpStart).inMilliseconds;
+
+      final totalDuration = DateTime.now()
+          .difference(requestStart)
+          .inMilliseconds;
+
+      debugPrint(
+        'API HTTP COMPLETE: ${method.toUpperCase()} $endpoint '
+        'status=${response.statusCode} '
+        'http=${httpDuration}ms '
+        'total=${totalDuration}ms',
+      );
 
       _checkRateLimit(response);
 
@@ -104,10 +130,28 @@ class ApiService {
 
       return response;
     } on TimeoutException {
+      final totalDuration = DateTime.now()
+          .difference(requestStart)
+          .inMilliseconds;
+
+      debugPrint(
+        'API TIMEOUT: ${method.toUpperCase()} $endpoint '
+        'after ${totalDuration}ms',
+      );
+
       throw Exception(
         'The request timed out. Please check your internet connection and try again.',
       );
-    } on http.ClientException {
+    } on http.ClientException catch (e) {
+      final totalDuration = DateTime.now()
+          .difference(requestStart)
+          .inMilliseconds;
+
+      debugPrint(
+        'API CLIENT ERROR: ${method.toUpperCase()} $endpoint '
+        'after ${totalDuration}ms: $e',
+      );
+
       rethrow;
     }
   }
@@ -748,6 +792,21 @@ class ApiService {
     final body = _decodeResponseBody(response);
 
     throw Exception(body['message']?.toString() ?? 'Failed to delete goal.');
+  }
+
+  static Future<Map<String, dynamic>> getGoalsDerivedData() async {
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/goals/derived-data',
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception(
+      'Failed to load goals derived data (${response.statusCode})',
+    );
   }
 
   static Future<void> changePassword({

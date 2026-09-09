@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
 import 'package:pesapulse_mobile/services/session_service.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/user_preferences.dart';
 import '../services/api_services.dart';
 import '../services/settings_service.dart';
+import '../services/startup_refresh_coordinator.dart';
 import '../database/database_helper.dart';
 import '../exceptions/rate_limit_exception.dart';
 
@@ -16,9 +18,31 @@ class SettingsRepository extends BaseRepository {
 
   Map<String, dynamic>? _dashboardCache;
 
+  bool _toBool(dynamic value) {
+    if (value is bool) {
+      return value;
+    }
+
+    if (value is int) {
+      return value == 1;
+    }
+
+    if (value is double) {
+      return value == 1;
+    }
+
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+
+      return normalized == 'true' || normalized == '1' || normalized == 'yes';
+    }
+
+    return false;
+  }
+
   // PROFILE
   Future<Map<String, dynamic>> getProfile({bool forceRefresh = false}) async {
-    // Guest users should never see another user's cached profile
+    // Guest users should never see another user's cached profile.
     if (await SessionService.isGuest()) {
       final guestProfile = {"name": "Guest Account", "email": ""};
 
@@ -27,14 +51,23 @@ class SettingsRepository extends BaseRepository {
       return guestProfile;
     }
 
+    // Use in-memory cache when a forced network refresh is not required.
     if (!forceRefresh && _profileCache != null) {
       return _profileCache!;
     }
 
     try {
-      final profile = await ApiService.getProfile();
+      final profile = await StartupRefreshCoordinator.instance.run(
+        'profile',
+        () async {
+          debugPrint('SettingsRepository: requesting profile from API...');
+
+          return await ApiService.getProfile();
+        },
+      );
 
       await _saveSetting("profile_name", profile["name"] ?? "");
+
       await _saveSetting("profile_email", profile["email"] ?? "");
 
       _profileCache = profile;
@@ -42,8 +75,11 @@ class SettingsRepository extends BaseRepository {
       return profile;
     } on RateLimitException {
       rethrow;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('SettingsRepository: profile API failed, using cache: $e');
+
       final name = await _getSetting("profile_name") ?? "";
+
       final email = await _getSetting("profile_email") ?? "";
 
       final local = {"name": name, "email": email};
@@ -227,27 +263,45 @@ class SettingsRepository extends BaseRepository {
       };
     }
 
+    // ------------------------------------------------------------
+    // Use cached dashboard statistics when a refresh is not needed.
+    // Always reconcile goals and expenses with the current local DB.
+    // ------------------------------------------------------------
     if (!forceRefresh && _dashboardCache != null) {
-      return _dashboardCache!;
+      final goalStats = await _getLocalGoalStatistics();
+      final localExpenseCount = await _getLocalExpenseCount();
+
+      final stats = {
+        ..._dashboardCache!,
+        "totalGoals": goalStats["totalGoals"],
+        "completedGoals": goalStats["completedGoals"],
+        "totalExpenses": localExpenseCount,
+      };
+
+      _dashboardCache = stats;
+
+      return stats;
     }
 
     try {
-      final results = await Future.wait([
-        ApiService.getGoalAnalytics(),
-        ApiService.getExpenses(),
-        ApiService.getBudgetSummary(),
-      ]);
+      // ----------------------------------------------------------
+      // Budget still comes from the backend because budget data
+      // is not being calculated from the expenses table here.
+      // ----------------------------------------------------------
+      final budgetSummary = await ApiService.getBudgetSummary();
 
-      final goalsAnalytics = results[0];
+      // ----------------------------------------------------------
+      // Goals and expenses use the local SQLite database as the
+      // current source of truth.
+      // ----------------------------------------------------------
+      final goalStats = await _getLocalGoalStatistics();
 
-      final expenses = results[1];
-
-      final budgetSummary = results[2];
+      final localExpenseCount = await _getLocalExpenseCount();
 
       final stats = {
-        "totalGoals": goalsAnalytics["total_goals"] ?? 0,
-        "completedGoals": goalsAnalytics["completed_goals"] ?? 0,
-        "totalExpenses": (expenses["data"] as List).length,
+        "totalGoals": goalStats["totalGoals"],
+        "completedGoals": goalStats["completedGoals"],
+        "totalExpenses": localExpenseCount,
         "totalBudgets": budgetSummary["budget_count"] ?? 0,
       };
 
@@ -258,19 +312,37 @@ class SettingsRepository extends BaseRepository {
       return stats;
     } on RateLimitException {
       rethrow;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Settings dashboard statistics refresh failed: $e');
+
+      // ----------------------------------------------------------
+      // Fall back to stored statistics.
+      // Always reconcile goals and expenses with local SQLite.
+      // ----------------------------------------------------------
       final cached = await _getSetting("dashboard_stats_$ownerId");
 
-      if (cached != null) {
-        _dashboardCache = jsonDecode(cached) as Map<String, dynamic>;
+      final goalStats = await _getLocalGoalStatistics();
 
-        return _dashboardCache!;
+      final localExpenseCount = await _getLocalExpenseCount();
+
+      if (cached != null && cached.isNotEmpty) {
+        final decoded = jsonDecode(cached) as Map<String, dynamic>;
+
+        decoded["totalGoals"] = goalStats["totalGoals"];
+
+        decoded["completedGoals"] = goalStats["completedGoals"];
+
+        decoded["totalExpenses"] = localExpenseCount;
+
+        _dashboardCache = decoded;
+
+        return decoded;
       }
 
       return {
-        "totalGoals": 0,
-        "completedGoals": 0,
-        "totalExpenses": 0,
+        "totalGoals": goalStats["totalGoals"],
+        "completedGoals": goalStats["completedGoals"],
+        "totalExpenses": localExpenseCount,
         "totalBudgets": 0,
       };
     }
@@ -296,29 +368,48 @@ class SettingsRepository extends BaseRepository {
   }
 
   Future<Map<String, dynamic>> getCachedDashboardStatistics() async {
-    if (_dashboardCache != null) {
-      return _dashboardCache!;
-    }
-
     final ownerId = await this.ownerId;
 
-    final cached = await _getSetting("dashboard_stats_$ownerId");
+    Map<String, dynamic> stats;
 
-    if (cached == null || cached.isEmpty) {
-      throw Exception("No cached dashboard statistics");
+    if (_dashboardCache != null) {
+      stats = Map<String, dynamic>.from(_dashboardCache!);
+    } else {
+      final cached = await _getSetting("dashboard_stats_$ownerId");
+
+      if (cached == null || cached.isEmpty) {
+        throw Exception("No cached dashboard statistics");
+      }
+
+      final decoded = jsonDecode(cached);
+
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception("Invalid cached dashboard statistics");
+      }
+
+      stats = Map<String, dynamic>.from(decoded);
     }
 
-    final decoded = jsonDecode(cached);
+    // ------------------------------------------------------------
+    // Always reconcile goals with local SQLite.
+    // ------------------------------------------------------------
+    final goalStats = await _getLocalGoalStatistics();
 
-    if (decoded is! Map<String, dynamic>) {
-      throw Exception("Invalid cached dashboard statistics");
-    }
+    stats["totalGoals"] = goalStats["totalGoals"];
 
-    _dashboardCache = decoded;
+    stats["completedGoals"] = goalStats["completedGoals"];
 
-    return decoded;
+    // ------------------------------------------------------------
+    // Always reconcile expenses with local SQLite.
+    // ------------------------------------------------------------
+    final localExpenseCount = await _getLocalExpenseCount();
+
+    stats["totalExpenses"] = localExpenseCount;
+
+    _dashboardCache = stats;
+
+    return stats;
   }
-
   // ==========================
   // LOCAL SETTINGS
   // ==========================
@@ -385,27 +476,82 @@ class SettingsRepository extends BaseRepository {
     if (await SessionService.isGuest()) {
       return;
     }
-    final preferences = await ApiService.getPreferences();
 
-    await SettingsService.setDailyReminder(
-      preferences["daily_reminder"] ?? false,
+    final preferences = await StartupRefreshCoordinator.instance.run(
+      'preferences',
+      () async {
+        return await ApiService.getPreferences();
+      },
     );
 
-    await SettingsService.setExpenseAlerts(
-      preferences["expense_alerts"] ?? false,
-    );
+    final dailyReminder = _toBool(preferences["daily_reminder"]);
 
-    await SettingsService.setWeeklySummary(
-      preferences["weekly_summary"] ?? false,
-    );
+    final expenseAlerts = _toBool(preferences["expense_alerts"]);
+
+    final weeklySummary = _toBool(preferences["weekly_summary"]);
+
+    await SettingsService.setDailyReminder(dailyReminder);
+
+    await SettingsService.setExpenseAlerts(expenseAlerts);
+
+    await SettingsService.setWeeklySummary(weeklySummary);
 
     _preferencesCache = UserPreferences(
       darkMode: false,
       notificationsEnabled: true,
-      dailyReminder: preferences["daily_reminder"] ?? false,
-      expenseAlerts: preferences["expense_alerts"] ?? false,
-      weeklySummary: preferences["weekly_summary"] ?? false,
+      dailyReminder: dailyReminder,
+      expenseAlerts: expenseAlerts,
+      weeklySummary: weeklySummary,
     );
+  }
+
+  Future<Map<String, int>> _getLocalGoalStatistics() async {
+    final database = await db.database;
+    final ownerId = await this.ownerId;
+
+    final totalResult = await database.rawQuery(
+      """
+    SELECT COUNT(*)
+    FROM goals
+    WHERE owner_id = ?
+      AND is_archived = 0
+      AND is_deleted = 0
+    """,
+      [ownerId],
+    );
+
+    final completedResult = await database.rawQuery(
+      """
+    SELECT COUNT(*)
+    FROM goals
+    WHERE owner_id = ?
+      AND is_archived = 0
+      AND is_deleted = 0
+      AND completed_at IS NOT NULL
+    """,
+      [ownerId],
+    );
+
+    return {
+      "totalGoals": Sqflite.firstIntValue(totalResult) ?? 0,
+      "completedGoals": Sqflite.firstIntValue(completedResult) ?? 0,
+    };
+  }
+
+  Future<int> _getLocalExpenseCount() async {
+    final database = await db.database;
+    final ownerId = await this.ownerId;
+
+    final result = await database.rawQuery(
+      """
+    SELECT COUNT(*)
+    FROM expenses
+    WHERE owner_id = ?
+    """,
+      [ownerId],
+    );
+
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   void clearCache() {

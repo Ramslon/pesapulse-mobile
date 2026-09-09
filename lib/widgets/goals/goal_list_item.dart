@@ -4,7 +4,6 @@ import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 
 import '../../models/goal.dart';
 import '../../controllers/goals_controller.dart';
-import '../../services/sync_events.dart';
 import '../../utils/responsive_helper.dart';
 import '../../exceptions/rate_limit_exception.dart';
 import '../../utils/snackbar_helper.dart';
@@ -82,8 +81,6 @@ class GoalListItem extends StatelessWidget {
         isOnline: connectivity.isOnline,
       );
 
-      SyncEvents.instance.notifyGoalsUpdated();
-
       if (!context.mounted) return;
 
       GoalActionHelpers.showMessage(
@@ -114,13 +111,21 @@ class GoalListItem extends StatelessWidget {
   Future<void> _handleSwipeDelete(BuildContext context) async {
     final connectivity = GoalActionHelpers.getConnectivity(context);
 
-    // Optimistically remove the goal from the visible list.
-    goalsController.removeGoal(goal.id);
+    // The Dismissible has already been dismissed visually.
+    // Remove the goal from the controller on the next frame so Flutter
+    // has completed the dismiss animation before the list is rebuilt.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+
+      goalsController.removeGoal(goal.id);
+    });
 
     final isCompact = ResponsiveHelper.useCompactLayout(context);
 
     final horizontalMargin = isCompact ? 12.0 : 16.0;
     final bottomMargin = isCompact ? 12.0 : 16.0;
+
+    bool undoPressed = false;
 
     final snackBar = SnackBar(
       behavior: SnackBarBehavior.floating,
@@ -155,24 +160,8 @@ class GoalListItem extends StatelessWidget {
       duration: const Duration(seconds: 5),
       action: SnackBarAction(
         label: 'Undo',
-        onPressed: () async {
-          try {
-            await goalsController.restoreGoal(
-              goal: goal,
-              isOnline: connectivity.isOnline,
-            );
-
-            if (!context.mounted) return;
-
-            GoalActionHelpers.showMessage(context, 'Goal restored');
-          } catch (e) {
-            if (!context.mounted) return;
-
-            GoalActionHelpers.showMessage(
-              context,
-              'Failed to restore goal: $e',
-            );
-          }
+        onPressed: () {
+          undoPressed = true;
         },
       ),
     );
@@ -181,9 +170,36 @@ class GoalListItem extends StatelessWidget {
       context,
     ).showSnackBar(snackBar).closed;
 
-    if (reason == SnackBarClosedReason.action) {
+    // ------------------------------------------------------------
+    // UNDO
+    // ------------------------------------------------------------
+    //
+    // Nothing has been deleted from SQLite/server yet.
+    // Therefore do NOT call restoreGoal().
+    //
+    // Simply reload the current local cache after the dismissible
+    // has completely finished its removal.
+    // ------------------------------------------------------------
+
+    if (undoPressed || reason == SnackBarClosedReason.action) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      if (!context.mounted) return;
+
+      try {
+        await goalsController.reloadFromCache();
+      } catch (e) {
+        if (!context.mounted) return;
+
+        GoalActionHelpers.showMessage(context, 'Unable to restore the goal');
+      }
+
       return;
     }
+
+    // ------------------------------------------------------------
+    // PERMANENT DELETE
+    // ------------------------------------------------------------
 
     try {
       await goalsController.deleteGoal(
@@ -193,12 +209,15 @@ class GoalListItem extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
 
-      GoalActionHelpers.showMessage(context, 'Failed to delete goal: $e');
+      GoalActionHelpers.showMessage(context, 'Failed to delete goal');
 
-      await goalsController.restoreGoal(
-        goal: goal,
-        isOnline: connectivity.isOnline,
-      );
+      // The actual delete failed, so reload the local cache and put
+      // the goal back into the visible list.
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      if (!context.mounted) return;
+
+      await goalsController.reloadFromCache();
     }
   }
 

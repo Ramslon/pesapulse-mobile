@@ -29,6 +29,7 @@ import '../services/session_service.dart';
 import '../services/analytics_service.dart';
 import '../services/report_manager_service.dart';
 import '../services/analytics_export_service.dart';
+import '../services/sync_events.dart';
 
 import '../models/analytics_summary.dart';
 import '../models/analytics_period.dart';
@@ -77,9 +78,46 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     _network = context.read<ConnectivityProvider>();
     _wasOnline = _network.isOnline;
+
     _network.addListener(_onConnectivityChanged);
 
+    SyncEvents.instance.analyticsRefresh.addListener(_onAnalyticsDataChanged);
+
     _initializeAnalytics();
+  }
+
+  void _onAnalyticsDataChanged() {
+    if (!mounted) return;
+
+    debugPrint(
+      'Analytics: synchronized data changed. '
+      'Reloading analytics from local cache.',
+    );
+
+    _reloadAnalyticsFromCache();
+  }
+
+  Future<void> _reloadAnalyticsFromCache() async {
+    try {
+      final analytics = await analyticsRepository.getCachedAnalytics();
+
+      final processed = await analyticsService.processAnalyticsData(
+        analytics: analytics,
+        period: selectedPeriod,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        summary = processed;
+        isLoading = false;
+        _analyticsError = null;
+      });
+
+      debugPrint('Analytics: local analytics cache reloaded successfully.');
+    } catch (e) {
+      debugPrint('Analytics: failed to reload analytics from local cache: $e');
+    }
   }
 
   Future<void> _initializeAnalytics() async {
@@ -116,6 +154,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+
       _refreshAnalyticsInBackground();
     });
 
@@ -223,6 +262,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   @override
   void dispose() {
     _network.removeListener(_onConnectivityChanged);
+
+    SyncEvents.instance.analyticsRefresh.removeListener(
+      _onAnalyticsDataChanged,
+    );
+
     super.dispose();
   }
 

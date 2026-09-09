@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/settings_state.dart';
 import '../repositories/settings_repository.dart';
 import '../services/session_service.dart';
+import '../services/sync_events.dart';
 import 'settings_preferences_controller.dart';
 import 'settings_session_controller.dart';
 import '../exceptions/rate_limit_exception.dart';
@@ -21,11 +22,30 @@ class SettingsController {
 
   VoidCallback? onStateChanged;
 
+  late final VoidCallback _financialRefreshListener;
+
   SettingsController({
     required this.settingsRepository,
     required this.settingsPreferencesController,
     required this.settingsSessionController,
-  });
+  }) {
+    _financialRefreshListener = () async {
+      debugPrint(
+        'SettingsController: financial data changed. '
+        'Reloading local dashboard statistics.',
+      );
+
+      try {
+        await loadDashboardStatsFromCache();
+      } catch (e) {
+        debugPrint(
+          'SettingsController: failed to refresh dashboard statistics: $e',
+        );
+      }
+    };
+
+    SyncEvents.instance.settingsRefresh.addListener(_financialRefreshListener);
+  }
 
   void _setState(
     SettingsState Function(SettingsState state) update, {
@@ -106,12 +126,19 @@ class SettingsController {
     _refreshInProgress = true;
 
     try {
+      // Settings owns only its own backend data here.
+      //
+      // Dashboard statistics are intentionally NOT refreshed from
+      // the backend here because that would duplicate API requests
+      // already handled by Dashboard, Analytics, and Goals.
       await Future.wait([
         loadSettings(notify: false),
         loadProfile(notify: false),
-        loadDashboardStats(notify: false),
         loadLastSyncTime(notify: false),
       ]);
+
+      // Dashboard statistics remain cache-first.
+      await loadDashboardStatsFromCache(notify: false);
 
       _setState(
         (state) => state.clearLoadingError().copyWith(isLoading: false),
@@ -119,16 +146,13 @@ class SettingsController {
 
       debugPrint('Settings background refresh completed.');
     } on RateLimitException catch (e) {
-      // Background refresh should not disturb the UI.
       debugPrint('Settings background refresh rate limited: ${e.message}');
     } catch (e) {
-      // Cached settings remain visible.
       debugPrint('Settings background refresh failed: $e');
     } finally {
       _refreshInProgress = false;
     }
   }
-
   // ============================================================
   // RETRY
   // ============================================================
@@ -322,15 +346,21 @@ class SettingsController {
       return;
     }
 
+    if (_state.isGuest) {
+      return;
+    }
+
     _refreshInProgress = true;
 
     try {
       await Future.wait([
         loadSettings(notify: false),
         loadProfile(notify: false),
-        loadDashboardStats(notify: false),
         loadLastSyncTime(notify: false),
       ]);
+
+      // Keep dashboard statistics cache-first.
+      await loadDashboardStatsFromCache(notify: false);
     } catch (e) {
       debugPrint('Failed to refresh settings: $e');
 
@@ -389,6 +419,10 @@ class SettingsController {
   // ============================================================
 
   void dispose() {
+    SyncEvents.instance.settingsRefresh.removeListener(
+      _financialRefreshListener,
+    );
+
     onStateChanged = null;
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'services/notification_service.dart';
-import 'services/sync_service.dart';
 import 'screens/splash_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
@@ -14,9 +13,6 @@ void main() async {
   await Permission.notification.request();
 
   await NotificationService.init();
-
-  // Start automatic synchronization listener.
-  await SyncService.instance.startListening();
 
   runApp(
     MultiProvider(

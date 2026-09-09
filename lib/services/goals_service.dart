@@ -429,6 +429,10 @@ class GoalsService {
     _forecastCache.clear();
     _insightCache.clear();
   }
+
+  Future<Map<String, dynamic>> refreshDerivedData() async {
+    return await goalsRepository.refreshDerivedData();
+  }
 }
 
 class GoalRefreshResult {

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/goals_controller.dart';
 import '../../services/notification_service.dart';
-import '../../services/sync_events.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../utils/responsive_helper.dart';
 import '../../utils/snackbar_helper.dart';
@@ -57,8 +56,6 @@ class _AddSavingsDialogState extends State<AddSavingsDialog> {
         amount: amount,
         isOnline: connectivity.isOnline,
       );
-
-      SyncEvents.instance.notifyGoalsUpdated();
 
       if (!mounted) return;
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 
 import 'dashboard_screen.dart';
 import 'expense_list_content.dart';
@@ -9,12 +8,7 @@ import 'analytics_screen.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
 
-import '../repositories/settings_repository.dart';
 import '../repositories/financial_insights_repository.dart';
-
-import '../providers/theme_provider.dart';
-import '../providers/connectivity_provider.dart';
-import '../services/session_service.dart';
 
 import '../../utils/responsive_helper.dart';
 
@@ -39,8 +33,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late final List<Widget> screens;
 
   String budgetStatus = 'healthy';
-
-  bool _preferencesSyncInProgress = false;
 
   final List<String> titles = const [
     'Dashboard',
@@ -83,7 +75,10 @@ class _HomeScreenState extends State<HomeScreen> {
       const SettingsScreen(),
     ];
 
-    _syncPreferences();
+    // Load only locally cached data needed by the navigation UI.
+    //
+    // Backend synchronization is handled by the appropriate
+    // screen/repository/SyncService rather than by HomeScreen.
     loadBudgetStatus();
   }
 
@@ -317,61 +312,6 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
-  // ─────────────────────────────────────────────
-  // Preferences
-  // ─────────────────────────────────────────────
-
-  Future<void> _syncPreferences() async {
-    if (_preferencesSyncInProgress) return;
-
-    final isGuest = await SessionService.isGuest();
-
-    if (isGuest) {
-      return;
-    }
-
-    final connectivity = context.read<ConnectivityProvider>();
-
-    if (!connectivity.isOnline) {
-      debugPrint('Preferences sync skipped: device is offline.');
-      return;
-    }
-
-    _preferencesSyncInProgress = true;
-
-    try {
-      await Future.wait([
-        _syncPreferencesFromBackend(),
-        _syncThemeFromBackend(),
-      ]);
-    } finally {
-      _preferencesSyncInProgress = false;
-    }
-  }
-
-  Future<void> _syncPreferencesFromBackend() async {
-    try {
-      await SettingsRepository().syncPreferencesFromBackend();
-      debugPrint('Preferences synced successfully.');
-    } catch (e) {
-      debugPrint('Preferences background sync failed: $e');
-    }
-  }
-
-  Future<void> _syncThemeFromBackend() async {
-    if (!mounted) return;
-
-    try {
-      await Provider.of<ThemeProvider>(
-        context,
-        listen: false,
-      ).syncWithBackend();
-
-      debugPrint('Theme synced successfully.');
-    } catch (e) {
-      debugPrint('Theme background sync failed: $e');
-    }
-  }
   // ─────────────────────────────────────────────
   // Budget status
   // ─────────────────────────────────────────────

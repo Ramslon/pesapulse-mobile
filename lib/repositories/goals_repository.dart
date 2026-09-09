@@ -1,10 +1,15 @@
 import 'dart:convert';
 
 import 'package:pesapulse_mobile/repositories/base_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/goal.dart';
 import '../services/api_services.dart';
+import '../services/sync_service.dart';
+import '../services/sync_events.dart';
+import '../exceptions/rate_limit_exception.dart';
 
 class GoalsRepository extends BaseRepository {
   double _toDouble(dynamic value) {
@@ -76,16 +81,38 @@ class GoalsRepository extends BaseRepository {
     final database = await db.database;
 
     try {
-      final results = await Future.wait([
-        ApiService.getGoals(),
-        ApiService.getArchivedGoals(),
-      ]);
+      // --------------------------------------------------------
+      // Refresh active goals
+      // --------------------------------------------------------
 
-      final activeGoals = results[0] as List<Map<String, dynamic>>;
+      debugPrint('Goals repository: requesting active goals...');
 
-      final archivedGoals = results[1] as List<Map<String, dynamic>>;
+      final activeGoals = await ApiService.getGoals();
+
+      debugPrint('Goals repository: active goals completed.');
+
+      // --------------------------------------------------------
+      // Refresh archived goals
+      // --------------------------------------------------------
+
+      debugPrint('Goals repository: requesting archived goals...');
+
+      final archivedGoals = await ApiService.getArchivedGoals();
+
+      debugPrint('Goals repository: archived goals completed.');
+
+      // --------------------------------------------------------
+      // Combine server goals
+      // --------------------------------------------------------
 
       final allServerGoals = [...activeGoals, ...archivedGoals];
+
+      debugPrint(
+        'Goals repository: '
+        'active=${activeGoals.length}, '
+        'archived=${archivedGoals.length}, '
+        'total=${allServerGoals.length}',
+      );
 
       await database.transaction((txn) async {
         final serverIds = allServerGoals
@@ -106,19 +133,19 @@ class GoalsRepository extends BaseRepository {
             "goals",
             where:
                 """
-              owner_id=?
-              AND server_id IS NOT NULL
-              AND is_synced=1
-              AND server_id NOT IN (
-                ${List.filled(serverIds.length, "?").join(",")}
-              )
-            """,
+            owner_id=?
+            AND server_id IS NOT NULL
+            AND is_synced=1
+            AND server_id NOT IN (
+              ${List.filled(serverIds.length, "?").join(",")}
+            )
+          """,
             whereArgs: [ownerId, ...serverIds],
           );
         }
 
         // --------------------------------------------------------
-        // Insert/update server goals.
+        // Insert/update server goals
         // --------------------------------------------------------
 
         for (final goal in allServerGoals) {
@@ -200,6 +227,7 @@ class GoalsRepository extends BaseRepository {
       // - offline
       // - timeout
       // - another API failure
+
       rethrow;
     }
   }
@@ -235,19 +263,25 @@ class GoalsRepository extends BaseRepository {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
+    const uuid = Uuid();
+
     final now = DateTime.now().toIso8601String();
 
     final localId = -DateTime.now().millisecondsSinceEpoch;
 
+    // ------------------------------------------------------------
+    // DUPLICATE CHECK
+    // ------------------------------------------------------------
+
     final existing = await database.query(
       "goals",
       where: """
-        owner_id=?
-        AND LOWER(title)=LOWER(?)
-        AND target_amount=?
-        AND is_deleted=0
-        AND is_archived=0
-      """,
+      owner_id=?
+      AND LOWER(title)=LOWER(?)
+      AND target_amount=?
+      AND is_deleted=0
+      AND is_archived=0
+    """,
       whereArgs: [ownerId, title.trim(), targetAmount],
       limit: 1,
     );
@@ -256,13 +290,17 @@ class GoalsRepository extends BaseRepository {
       throw Exception("A goal with this title already exists.");
     }
 
+    // ------------------------------------------------------------
+    // CHECK FOR ALREADY QUEUED CREATE
+    // ------------------------------------------------------------
+
     final queued = await database.query(
       "sync_queue",
       where: """
-        owner_id=?
-        AND table_name=?
-        AND operation=?
-      """,
+      owner_id=?
+      AND table_name=?
+      AND operation=?
+    """,
       whereArgs: [ownerId, "goals", "create"],
     );
 
@@ -277,18 +315,34 @@ class GoalsRepository extends BaseRepository {
       throw Exception("This goal is already waiting to be synced.");
     }
 
+    // ------------------------------------------------------------
+    // GENERATE STABLE CLIENT ID
+    // ------------------------------------------------------------
+
+    final clientId = uuid.v4();
+
+    // ------------------------------------------------------------
+    // SYNC QUEUE PAYLOAD
+    // ------------------------------------------------------------
+
     final payload = {
+      "client_id": clientId,
       "owner_id": ownerId,
-      "title": title,
+      "title": title.trim(),
       "target_amount": targetAmount,
       "target_date": targetDate,
     };
 
+    // ------------------------------------------------------------
+    // LOCAL GOAL
+    // ------------------------------------------------------------
+
     await database.insert("goals", {
       "id": localId,
+      "client_id": clientId,
       "owner_id": ownerId,
       "server_id": null,
-      "title": title,
+      "title": title.trim(),
       "target_amount": targetAmount,
       "target_date": targetDate,
       "saved_amount": 0,
@@ -302,6 +356,10 @@ class GoalsRepository extends BaseRepository {
       "is_archived": 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
 
+    // ------------------------------------------------------------
+    // QUEUE CREATE OPERATION
+    // ------------------------------------------------------------
+
     await database.insert("sync_queue", {
       "owner_id": ownerId,
       "table_name": "goals",
@@ -310,6 +368,15 @@ class GoalsRepository extends BaseRepository {
       "payload": jsonEncode(payload),
       "created_at": now,
     });
+
+    await SyncService.instance.getPendingChanges();
+
+    SyncEvents.instance.notifyGoalDataUpdated();
+
+    // Guests remain local until authentication.
+    if (ownerId != "guest") {
+      await SyncService.instance.requestSync();
+    }
   }
 
   // ============================================================
@@ -332,6 +399,7 @@ class GoalsRepository extends BaseRepository {
 
     await database.insert("goals", {
       "server_id": goal["id"],
+      "client_id": goal["client_id"],
       "owner_id": ownerId,
       "title": goal["title"],
       "target_amount": goal["target_amount"],
@@ -346,6 +414,8 @@ class GoalsRepository extends BaseRepository {
       "is_deleted": 0,
       "is_archived": 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    SyncEvents.instance.notifyGoalDataUpdated();
   }
 
   // ============================================================
@@ -371,6 +441,7 @@ class GoalsRepository extends BaseRepository {
       "goals",
       {
         "server_id": goal["id"],
+        "client_id": goal["client_id"],
         "title": goal["title"],
         "target_amount": goal["target_amount"],
         "target_date": goal["target_date"],
@@ -499,6 +570,14 @@ class GoalsRepository extends BaseRepository {
       "created_at": now,
     });
 
+    await SyncService.instance.getPendingChanges();
+
+    SyncEvents.instance.notifyGoalDataUpdated();
+
+    if (ownerId != "guest") {
+      await SyncService.instance.requestSync();
+    }
+
     Map<String, dynamic>? milestone;
 
     const milestones = [25, 50, 75, 100];
@@ -570,6 +649,8 @@ class GoalsRepository extends BaseRepository {
       whereArgs: [localGoalId, ownerId],
     );
 
+    SyncEvents.instance.notifyGoalDataUpdated();
+
     return response;
   }
 
@@ -603,6 +684,14 @@ class GoalsRepository extends BaseRepository {
       "payload": "{}",
       "created_at": now,
     });
+    await SyncService.instance.getPendingChanges();
+
+    SyncEvents.instance.notifyGoalDataUpdated();
+    SyncEvents.instance.notifyArchivedUpdated();
+
+    if (ownerId != "guest") {
+      await SyncService.instance.requestSync();
+    }
   }
 
   Future<void> archiveGoalOnline(int goalId) async {
@@ -622,6 +711,9 @@ class GoalsRepository extends BaseRepository {
       where: "server_id=? AND owner_id=?",
       whereArgs: [goalId, ownerId],
     );
+
+    SyncEvents.instance.notifyGoalDataUpdated();
+    SyncEvents.instance.notifyArchivedUpdated();
   }
 
   Future<void> archiveGoal(
@@ -667,6 +759,14 @@ class GoalsRepository extends BaseRepository {
       "payload": "{}",
       "created_at": now,
     });
+    await SyncService.instance.getPendingChanges();
+
+    SyncEvents.instance.notifyGoalDataUpdated();
+    SyncEvents.instance.notifyArchivedUpdated();
+
+    if (ownerId != "guest") {
+      await SyncService.instance.requestSync();
+    }
   }
 
   Future<void> restoreGoalOnline(int localGoalId, int serverGoalId) async {
@@ -681,19 +781,57 @@ class GoalsRepository extends BaseRepository {
       }
     }
 
+    // Read the existing local goal before changing its archive state.
+    final rows = await database.query(
+      "goals",
+      where: "owner_id=? AND id=?",
+      whereArgs: [ownerId, localGoalId],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      throw Exception('Cannot restore goal: local goal not found.');
+    }
+
+    final existingGoal = rows.first;
+
+    final savedAmount = _toDouble(existingGoal["saved_amount"]);
+    final targetAmount = _toDouble(existingGoal["target_amount"]);
+
+    final isCompleted = targetAmount > 0 && savedAmount >= targetAmount;
+
+    final completedPercentage = targetAmount <= 0
+        ? 0.0
+        : ((savedAmount / targetAmount) * 100).clamp(0.0, 100.0);
+
+    final existingCompletedAt = existingGoal["completed_at"]?.toString();
+
+    final now = DateTime.now().toIso8601String();
+
     await database.update(
       "goals",
       {
         "is_archived": 0,
         "is_deleted": 0,
-        "updated_at": DateTime.now().toIso8601String(),
+        "completed_percentage": completedPercentage,
+        "completed_at": isCompleted ? (existingCompletedAt ?? now) : null,
+        "updated_at": now,
         "is_synced": 1,
       },
       where: "owner_id=? AND id=?",
       whereArgs: [ownerId, localGoalId],
     );
-  }
 
+    debugPrint(
+      'GoalsRepository: restored goal '
+      '(localId=$localGoalId, serverId=$serverGoalId, '
+      'completed=$isCompleted, '
+      'percentage=$completedPercentage).',
+    );
+
+    SyncEvents.instance.notifyGoalDataUpdated();
+    SyncEvents.instance.notifyArchivedUpdated();
+  }
   // ============================================================
   // DELETE
   // ============================================================
@@ -719,6 +857,14 @@ class GoalsRepository extends BaseRepository {
       "payload": "{}",
       "created_at": now,
     });
+    await SyncService.instance.getPendingChanges();
+
+    SyncEvents.instance.notifyGoalDataUpdated();
+    SyncEvents.instance.notifyArchivedUpdated();
+
+    if (ownerId != "guest") {
+      await SyncService.instance.requestSync();
+    }
   }
 
   Future<void> deleteGoalOnline(int serverGoalId) async {
@@ -727,7 +873,7 @@ class GoalsRepository extends BaseRepository {
 
     await ApiService.deleteGoal(serverGoalId);
 
-    await database.update(
+    final rowsUpdated = await database.update(
       "goals",
       {
         "owner_id": ownerId,
@@ -738,6 +884,26 @@ class GoalsRepository extends BaseRepository {
       where: "server_id=? AND owner_id=?",
       whereArgs: [serverGoalId, ownerId],
     );
+
+    debugPrint(
+      'GoalsRepository: delete local update '
+      'serverId=$serverGoalId rowsUpdated=$rowsUpdated',
+    );
+
+    final remaining = await database.query(
+      "goals",
+      where: "server_id=? AND owner_id=?",
+      whereArgs: [serverGoalId, ownerId],
+      limit: 1,
+    );
+
+    debugPrint(
+      'GoalsRepository: post-delete local row: '
+      '${remaining.isNotEmpty ? remaining.first : "NOT FOUND"}',
+    );
+
+    SyncEvents.instance.notifyGoalDataUpdated();
+    SyncEvents.instance.notifyArchivedUpdated();
   }
 
   Future<void> deleteGoal(
@@ -749,6 +915,173 @@ class GoalsRepository extends BaseRepository {
       await deleteGoalOnline(serverGoalId);
     } else {
       await deleteGoalOffline(localGoalId);
+    }
+  }
+
+  Future<Map<String, dynamic>> refreshDerivedData() async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    try {
+      debugPrint('Goals derived data refresh: requesting API...');
+
+      final data = await ApiService.getGoalsDerivedData();
+
+      final now = DateTime.now().toIso8601String();
+
+      await database.transaction((txn) async {
+        // ------------------------------------------------------------
+        // Find locally unsynchronized goals.
+        //
+        // These goals may contain newer local changes than the server.
+        // Their forecast/insight cache must therefore be preserved.
+        // ------------------------------------------------------------
+        final unsyncedGoals = await txn.query(
+          'goals',
+          columns: ['server_id'],
+          where: '''
+          owner_id = ?
+          AND is_synced = 0
+          AND is_deleted = 0
+          AND server_id IS NOT NULL
+        ''',
+          whereArgs: [ownerId],
+        );
+
+        final unsyncedServerIds = unsyncedGoals
+            .map((row) => row['server_id'])
+            .whereType<int>()
+            .toSet();
+
+        debugPrint(
+          'Goals derived data refresh: '
+          'unsynced server goals=${unsyncedServerIds.length}',
+        );
+
+        // ------------------------------------------------------------
+        // ANALYTICS
+        //
+        // Analytics is global derived data rather than data belonging
+        // to one specific goal, so it can still be refreshed from the
+        // server.
+        // ------------------------------------------------------------
+        final analytics = data['analytics'];
+
+        if (analytics is Map) {
+          await txn.insert('goal_analytics_cache', {
+            'owner_id': ownerId,
+            'data': jsonEncode(Map<String, dynamic>.from(analytics)),
+            'updated_at': now,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+
+        // ------------------------------------------------------------
+        // FORECASTS
+        //
+        // Do NOT delete/rewrite forecasts belonging to unsynced goals.
+        // ------------------------------------------------------------
+
+        final forecasts = data['forecasts'];
+
+        if (forecasts is Map) {
+          for (final entry in forecasts.entries) {
+            final goalId = int.tryParse(entry.key.toString());
+
+            if (goalId == null || entry.value is! Map) {
+              continue;
+            }
+
+            // Server-derived data must not overwrite a local goal's
+            // derived cache while that goal still has unsynced changes.
+            if (unsyncedServerIds.contains(goalId)) {
+              debugPrint(
+                'Goals derived data refresh: preserving local '
+                'forecast for unsynced goal server_id=$goalId',
+              );
+
+              continue;
+            }
+
+            await txn.insert('goal_forecasts_cache', {
+              'goal_id': goalId,
+              'owner_id': ownerId,
+              'data': jsonEncode(Map<String, dynamic>.from(entry.value)),
+              'updated_at': now,
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+
+        // ------------------------------------------------------------
+        // INSIGHTS
+        //
+        // Same protection as forecasts.
+        // ------------------------------------------------------------
+
+        final insights = data['insights'];
+
+        if (insights is Map) {
+          for (final entry in insights.entries) {
+            final goalId = int.tryParse(entry.key.toString());
+
+            if (goalId == null || entry.value is! Map) {
+              continue;
+            }
+
+            if (unsyncedServerIds.contains(goalId)) {
+              debugPrint(
+                'Goals derived data refresh: preserving local '
+                'insight for unsynced goal server_id=$goalId',
+              );
+
+              continue;
+            }
+
+            await txn.insert('goal_insights_cache', {
+              'goal_id': goalId,
+              'owner_id': ownerId,
+              'data': jsonEncode(Map<String, dynamic>.from(entry.value)),
+              'updated_at': now,
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+
+        // ------------------------------------------------------------
+        // DEADLINES
+        //
+        // This remains global derived data and can be refreshed normally.
+        // ------------------------------------------------------------
+
+        final deadlines = data['upcoming_deadlines'];
+
+        if (deadlines is List) {
+          await txn.insert('goal_deadlines_cache', {
+            'owner_id': ownerId,
+            'data': jsonEncode(
+              deadlines
+                  .whereType<Map>()
+                  .map((item) => Map<String, dynamic>.from(item))
+                  .toList(),
+            ),
+            'updated_at': now,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        } else {
+          await txn.insert('goal_deadlines_cache', {
+            'owner_id': ownerId,
+            'data': jsonEncode([]),
+            'updated_at': now,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      });
+
+      debugPrint('Goals derived data refresh: cache updated successfully.');
+
+      return data;
+    } on RateLimitException {
+      rethrow;
+    } catch (e) {
+      debugPrint('Goals derived data API refresh failed: $e');
+
+      rethrow;
     }
   }
 }

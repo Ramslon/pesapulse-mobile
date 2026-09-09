@@ -1,6 +1,8 @@
 import 'package:pesapulse_mobile/repositories/budget_repository.dart';
 import 'package:pesapulse_mobile/repositories/financial_insights_repository.dart';
+import 'package:pesapulse_mobile/services/startup_refresh_coordinator.dart';
 import '../models/budget_state.dart';
+import 'package:flutter/foundation.dart';
 
 class BudgetController {
   final BudgetRepository budgetRepository;
@@ -26,16 +28,30 @@ class BudgetController {
   }
 
   Future<BudgetState> loadAll() async {
-    final budgetData = await budgetRepository.getBudgetSummary();
+    debugPrint('BudgetController: requesting budget-summary...');
+
+    final budgetData = await StartupRefreshCoordinator.instance.run(
+      'budget-summary',
+      () async {
+        return await budgetRepository.getBudgetSummary();
+      },
+    );
+
+    debugPrint('BudgetController: budget-summary completed.');
 
     BudgetState state = BudgetState.fromBudgetSummary(budgetData);
 
     try {
-      final insights = await insightsRepository.getInsights();
+      final insights = await StartupRefreshCoordinator.instance.run(
+        'financial-insights',
+        () async {
+          return await insightsRepository.getInsights();
+        },
+      );
 
       state = state.copyWithInsights(insights);
     } catch (_) {
-      // Keep the budget visible even if insights fail
+      // Keep the budget visible even if insights fail.
     }
 
     return state;

@@ -7,6 +7,7 @@ import 'home_screen.dart';
 
 import '../services/api_services.dart';
 import '../services/session_service.dart';
+import '../services/sync_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -43,6 +44,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (token != null && token.isNotEmpty) {
       ApiService.token = token;
+
+      await SyncService.instance.startListening();
+
+      if (!mounted) return;
 
       Navigator.pushReplacement(
         context,

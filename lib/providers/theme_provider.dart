@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_services.dart';
+import '../models/user_preferences.dart';
+import '../services/startup_refresh_coordinator.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.light;
@@ -42,7 +44,14 @@ class ThemeProvider extends ChangeNotifier {
 
   Future<void> syncWithBackend() async {
     try {
-      final prefs = await ApiService.getUserPreferences();
+      final data = await StartupRefreshCoordinator.instance.run(
+        'preferences',
+        () async {
+          return await ApiService.getPreferences();
+        },
+      );
+
+      final prefs = UserPreferences.fromJson(data);
 
       _themeMode = prefs.darkMode ? ThemeMode.dark : ThemeMode.light;
 
@@ -52,7 +61,9 @@ class ThemeProvider extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      // fallback already handled by local prefs
+      debugPrint('Theme sync failed: $e');
+
+      rethrow;
     }
   }
 }

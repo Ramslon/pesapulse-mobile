@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../services/sync_service.dart';
+import '../services/startup_refresh_coordinator.dart';
+
+import '../services/sync_events.dart';
+import '../repositories/expense_repository.dart';
 
 import '../actions/expense_actions.dart';
 import '../controllers/expense_controller.dart';
@@ -41,6 +45,8 @@ class ExpenseListContentState extends State<ExpenseListContent>
   List<Map<String, dynamic>> filteredExpenses = [];
 
   final ExpenseController expenseController = ExpenseController();
+
+  final ExpenseRepository expenseRepository = ExpenseRepository();
 
   String selectedDateFilter = 'All';
 
@@ -176,7 +182,9 @@ class ExpenseListContentState extends State<ExpenseListContent>
   void initState() {
     super.initState();
 
-    fetchExpenses();
+    SyncEvents.instance.expensesRefresh.addListener(_handleExpensesRefresh);
+
+    _initialFetchExpenses();
 
     widget.onRefreshReady?.call(refreshExpenses);
 
@@ -186,6 +194,60 @@ class ExpenseListContentState extends State<ExpenseListContent>
         fetchExpenses();
       }
     });
+  }
+
+  void _handleExpensesRefresh() {
+    if (!mounted) return;
+
+    _reloadExpensesFromLocal();
+  }
+
+  Future<void> _reloadExpensesFromLocal() async {
+    try {
+      final localExpenses = await expenseRepository.getExpensesFromLocal();
+
+      if (!mounted) return;
+
+      setState(() {
+        expenses = localExpenses;
+        filterExpenses();
+        isLoading = false;
+      });
+
+      debugPrint(
+        'ExpenseListContent: reloaded ${localExpenses.length} expenses from local cache.',
+      );
+    } catch (e) {
+      debugPrint('ExpenseListContent: failed to reload local expenses: $e');
+    }
+  }
+
+  Future<void> _initialFetchExpenses() async {
+    try {
+      debugPrint('ExpenseController: requesting initial expenses...');
+
+      final newExpenses = await expenseController.fetchExpenses();
+
+      if (!mounted) return;
+
+      setState(() {
+        expenses.addAll(newExpenses);
+
+        filterExpenses();
+
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   Future<void> fetchExpenses() async {
@@ -319,8 +381,9 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
   @override
   void dispose() {
-    scrollController.dispose();
+    SyncEvents.instance.expensesRefresh.removeListener(_handleExpensesRefresh);
 
+    scrollController.dispose();
     searchController.dispose();
 
     super.dispose();
@@ -586,16 +649,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
       onRefresh: refreshExpenses,
 
       onEdit: (expense) async {
-        final result = await ExpenseActions.editExpense(context, expense);
-
-        if (result == true) {
-          expenses.clear();
-          filteredExpenses.clear();
-
-          expenseController.resetPagination();
-
-          await fetchExpenses();
-        }
+        await ExpenseActions.editExpense(context, expense);
       },
       onDelete: (expense) async {
         recentlyDeletedExpense = expense;

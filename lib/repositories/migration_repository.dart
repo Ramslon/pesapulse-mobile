@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../database/database_helper.dart';
 
@@ -73,6 +74,14 @@ class MigrationRepository {
   /// It contains local synchronization instructions, not actual user data.
   Future<Map<String, dynamic>> collectGuestData() async {
     final database = await db.database;
+
+    // ------------------------------------------------------------
+    // REPAIR LEGACY GUEST RECORDS
+    // Older locally-created records may not have a client_id.
+    // Every record sent to the migration API must have one.
+    // ------------------------------------------------------------
+
+    await _ensureGuestClientIds(database);
 
     // ------------------------------------------------------------
     // EXPENSES
@@ -268,11 +277,37 @@ class MigrationRepository {
       where: 'owner_id = ?',
       whereArgs: [guestOwnerId],
     );
+
+    debugPrint('MigrationRepository: cleared all guest sync queue items.');
   }
 
   Future<List<Map<String, dynamic>>> getPendingQueue() async {
     final database = await db.database;
 
     return await database.query('sync_queue', orderBy: 'id ASC');
+  }
+
+  Future<void> _ensureGuestClientIds(Database database) async {
+    const uuid = Uuid();
+
+    const tables = ['expenses', 'goals', 'budgets', 'savings'];
+
+    for (final table in tables) {
+      final records = await database.query(
+        table,
+        columns: ['id'],
+        where: 'owner_id = ? AND client_id IS NULL',
+        whereArgs: [guestOwnerId],
+      );
+
+      for (final record in records) {
+        await database.update(
+          table,
+          {'client_id': uuid.v4()},
+          where: 'id = ? AND owner_id = ?',
+          whereArgs: [record['id'], guestOwnerId],
+        );
+      }
+    }
   }
 }
