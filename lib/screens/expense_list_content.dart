@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../services/sync_service.dart';
-import '../services/startup_refresh_coordinator.dart';
 
 import '../services/sync_events.dart';
 import '../repositories/expense_repository.dart';
@@ -55,6 +54,11 @@ class ExpenseListContentState extends State<ExpenseListContent>
   String selectedCategory = 'All';
 
   bool filtersExpanded = false;
+
+  bool get hasNoExpenses => expenses.isEmpty;
+
+  bool get hasNoFilteredResults =>
+      expenses.isNotEmpty && filteredExpenses.isEmpty;
 
   final List<String> filterCategories = [
     'All',

@@ -28,6 +28,8 @@ Widget buildEmptyState(
   bool isGuest = false,
   VoidCallback? refreshBudgetData,
   VoidCallback? showCreateBudgetDialog,
+  VoidCallback? refreshExpenses,
+  VoidCallback? refreshGoals,
 }) {
   final theme = Theme.of(context);
   final colorScheme = theme.colorScheme;
@@ -42,18 +44,26 @@ Widget buildEmptyState(
   // Reusable navigation helpers
   // ─────────────────────────────────────────────
 
-  void openAddExpense() {
-    Navigator.push(
+  Future<void> openAddExpense() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
     );
+
+    if (result == true) {
+      refreshExpenses?.call();
+    }
   }
 
-  void openAddGoal() {
-    Navigator.push(
+  Future<void> openAddGoal() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const AddGoalScreen()),
     );
+
+    if (result == true) {
+      refreshGoals?.call();
+    }
   }
 
   void openRegister() {
