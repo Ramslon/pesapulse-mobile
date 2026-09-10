@@ -122,7 +122,7 @@ class ApiService {
 
       _checkRateLimit(response);
 
-      if (response.statusCode == 401) {
+      if (response.statusCode == 401 && authenticated) {
         throw AuthException(
           message: 'Your session has expired. Please log in again.',
         );

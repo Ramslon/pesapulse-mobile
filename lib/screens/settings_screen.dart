@@ -39,6 +39,7 @@ import '../widgets/app/app_error_helper.dart';
 import '../repositories/settings_repository.dart';
 import '../models/settings_state.dart';
 import '../utils/responsive_helper.dart';
+import '../utils/snackbar_helper.dart';
 import '../utils/settings_error_message.dart';
 import '../services/sync_events.dart';
 
@@ -406,19 +407,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             try {
                               await settingsController.logout();
+
+                              if (!mounted) return;
+
+                              SnackbarHelper.showSuccess(
+                                context,
+                                'Logged out successfully.',
+                              );
+
+                              await Future<void>.delayed(
+                                const Duration(milliseconds: 500),
+                              );
+
+                              if (!mounted) return;
+
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AuthChoiceScreen(),
+                                ),
+                                (route) => false,
+                              );
                             } catch (e) {
                               debugPrint('Logout error: $e');
+
+                              if (!mounted) return;
+
+                              SnackbarHelper.showError(
+                                context,
+                                'Unable to log out. Please try again.',
+                              );
                             }
-
-                            if (!mounted) return;
-
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AuthChoiceScreen(),
-                              ),
-                              (route) => false,
-                            );
                           },
 
                           onDeleteAccount: () {
