@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 // Reusable responsive layout helper for PesaPulse.
-
+//
 // Centralizes screen-size and orientation decisions so individual
 // widgets do not need to repeat MediaQuery/LayoutBuilder logic.
 class ResponsiveHelper {
@@ -29,13 +29,14 @@ class ResponsiveHelper {
   }
 
   static bool isTablet(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
     final shortestSide = MediaQuery.sizeOf(context).shortestSide;
 
-    return shortestSide >= mobileBreakpoint && shortestSide < tabletBreakpoint;
+    return shortestSide >= mobileBreakpoint && width < desktopBreakpoint;
   }
 
   static bool isDesktop(BuildContext context) {
-    return MediaQuery.sizeOf(context).shortestSide >= desktopBreakpoint;
+    return MediaQuery.sizeOf(context).width >= desktopBreakpoint;
   }
 
   // ─────────────────────────────────────────────
@@ -86,10 +87,6 @@ class ResponsiveHelper {
   // Content width
   // ─────────────────────────────────────────────
 
-  /// Maximum width for main content.
-  ///
-  /// Prevents cards and sections from becoming excessively wide
-  /// on tablets and desktop screens.
   static double contentMaxWidth(BuildContext context) {
     if (isDesktop(context)) {
       return 1100;
@@ -102,7 +99,6 @@ class ResponsiveHelper {
     return double.infinity;
   }
 
-  /// Standard horizontal screen padding.
   static double horizontalPadding(BuildContext context) {
     if (isDesktop(context)) {
       return 32;
@@ -119,10 +115,6 @@ class ResponsiveHelper {
   // Grid columns
   // ─────────────────────────────────────────────
 
-  /// Determines the recommended number of columns for a grid.
-  ///
-  /// The orientation is considered so landscape layouts can
-  /// take advantage of additional horizontal space.
   static int gridColumns(
     BuildContext context, {
     int mobilePortrait = 2,
@@ -198,8 +190,6 @@ class ResponsiveHelper {
   // Compact layout
   // ─────────────────────────────────────────────
 
-  /// Useful for deciding whether a widget should use
-  /// a compact layout.
   static bool useCompactLayout(BuildContext context) {
     return isMobile(context) && isPortrait(context);
   }

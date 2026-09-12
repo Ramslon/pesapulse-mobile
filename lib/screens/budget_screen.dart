@@ -233,7 +233,7 @@ class BudgetScreenState extends State<BudgetScreen>
 
     final compact = ResponsiveHelper.useCompactLayout(context);
     final landscape = ResponsiveHelper.isLandscape(context);
-
+    final desktop = ResponsiveHelper.isDesktop(context);
     final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
     final spacing = ResponsiveHelper.spacing(context);
 
@@ -243,6 +243,8 @@ class BudgetScreenState extends State<BudgetScreen>
 
     return AppScaffold(
       appBar: const AdaptiveAppBar(title: null),
+
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
       floatingActionButton: state.isLoading || state.budget <= 0
           ? null
@@ -255,6 +257,7 @@ class BudgetScreenState extends State<BudgetScreen>
         context,
         compact: compact,
         landscape: landscape,
+        desktop: desktop,
         sectionSpacing: sectionSpacing,
         spacing: spacing,
         cardPadding: cardPadding,
@@ -267,6 +270,7 @@ class BudgetScreenState extends State<BudgetScreen>
     BuildContext context, {
     required bool compact,
     required bool landscape,
+    required bool desktop,
     required double sectionSpacing,
     required double spacing,
     required double cardPadding,
@@ -291,6 +295,21 @@ class BudgetScreenState extends State<BudgetScreen>
 
     final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
 
+    final mediaQuery = MediaQuery.of(context);
+
+    final bottomSafeArea = mediaQuery.padding.bottom;
+
+    /// Space required for the FAB + comfortable separation.
+    /// This allows the final budget card to scroll completely
+    /// above the floating action button.
+    final fabClearance = landscape && !desktop
+        ? 120.0
+        : compact
+        ? 180.0
+        : 190.0;
+
+    final bottomContentPadding = fabClearance + bottomSafeArea;
+
     return RefreshIndicator(
       onRefresh: refreshBudgetData,
       child: SingleChildScrollView(
@@ -302,7 +321,7 @@ class BudgetScreenState extends State<BudgetScreen>
           horizontalPadding,
           compact ? 8 : 12,
           horizontalPadding,
-          compact ? 90 : 100,
+          bottomContentPadding + bottomSafeArea,
         ),
         child: Center(
           child: ConstrainedBox(
