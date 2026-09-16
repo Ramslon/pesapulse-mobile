@@ -17,14 +17,14 @@ class BudgetHeader extends StatelessWidget {
 
     final landscape = ResponsiveHelper.isLandscape(context);
 
-    final titleSize = compact
-        ? 24.0
+    final titleSize = desktop
+        ? 32.0
         : tablet
         ? 28.0
-        : desktop
-        ? 32.0
         : landscape
         ? 26.0
+        : compact
+        ? 24.0
         : 30.0;
 
     final subtitleSize = compact

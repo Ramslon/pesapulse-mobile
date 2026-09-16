@@ -183,7 +183,7 @@ class FinancialHealthCard extends StatelessWidget {
                       ),
                     ),
 
-                    SizedBox(height: compact ? 10 : 14),
+                    SizedBox(height: compact ? 7 : 12),
 
                     // Label deliberately OUTSIDE the circular gauge.
                     Container(
@@ -211,7 +211,7 @@ class FinancialHealthCard extends StatelessWidget {
               },
             ),
 
-            SizedBox(height: compact ? 18 : 24),
+            SizedBox(height: compact ? 14 : 20),
 
             // ─────────────────────────────────────────────
             // Overall score
@@ -311,11 +311,11 @@ class FinancialHealthCard extends StatelessWidget {
     required bool landscape,
     required bool desktop,
   }) {
-    if (desktop) return 24;
-    if (landscape) return 18;
-    if (compact) return 14;
+    if (desktop) return 20;
+    if (landscape) return 14;
+    if (compact) return 10;
 
-    return 20;
+    return 16;
   }
 
   double _gaugeSize(
@@ -364,7 +364,7 @@ class FinancialHealthCard extends StatelessWidget {
     required bool tablet,
     required bool desktop,
   }) {
-    if (compact) return 34;
+    if (compact) return 30;
     if (desktop) return 48;
     if (tablet) return 43;
 

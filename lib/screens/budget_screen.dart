@@ -297,6 +297,10 @@ class BudgetScreenState extends State<BudgetScreen>
 
     final mediaQuery = MediaQuery.of(context);
 
+    final effectiveSectionSpacing = landscape && !desktop
+        ? 12.0
+        : sectionSpacing;
+
     final bottomSafeArea = mediaQuery.padding.bottom;
 
     /// Space required for the FAB + comfortable separation.
@@ -321,7 +325,7 @@ class BudgetScreenState extends State<BudgetScreen>
           horizontalPadding,
           compact ? 8 : 12,
           horizontalPadding,
-          bottomContentPadding + bottomSafeArea,
+          bottomContentPadding,
         ),
         child: Center(
           child: ConstrainedBox(
@@ -344,14 +348,14 @@ class BudgetScreenState extends State<BudgetScreen>
                   statusColor: statusColor,
                 ),
 
-                SizedBox(height: sectionSpacing),
+                SizedBox(height: effectiveSectionSpacing),
 
                 BudgetStatusBar(
                   statusText: statusText,
                   statusColor: statusColor,
                 ),
 
-                SizedBox(height: sectionSpacing),
+                SizedBox(height: effectiveSectionSpacing),
 
                 const BudgetSectionHeader(
                   title: "Monthly Budget Overview",
@@ -368,7 +372,7 @@ class BudgetScreenState extends State<BudgetScreen>
                   sectionSpacing: sectionSpacing,
                 ),
 
-                SizedBox(height: sectionSpacing),
+                SizedBox(height: effectiveSectionSpacing),
 
                 _buildAnalyticsSection(
                   context,
@@ -408,11 +412,9 @@ class BudgetScreenState extends State<BudgetScreen>
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(flex: 5, child: overviewCard),
-
+          Expanded(child: overviewCard),
           SizedBox(width: compact ? 12 : 20),
-
-          Expanded(flex: 6, child: breakdownCard),
+          Expanded(child: breakdownCard),
         ],
       );
     }
@@ -464,11 +466,9 @@ class BudgetScreenState extends State<BudgetScreen>
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(flex: 6, child: analytics),
-
+          Expanded(child: analytics),
           SizedBox(width: compact ? 12 : 20),
-
-          Expanded(flex: 5, child: health),
+          Expanded(child: health),
         ],
       );
     }
