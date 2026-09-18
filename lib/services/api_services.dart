@@ -717,6 +717,50 @@ class ApiService {
     throw Exception('Failed to load goal analytics (${response.statusCode})');
   }
 
+  static Future<Map<String, dynamic>> getSubscription() async {
+    final response = await _request(method: 'GET', endpoint: '/subscription');
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    throw Exception(
+      body['message']?.toString() ??
+          'Failed to load subscription (${response.statusCode}).',
+    );
+  }
+
+  static Future<Map<String, dynamic>> getAdvancedAnalytics({
+    int months = 6,
+  }) async {
+    final safeMonths = months.clamp(1, 12);
+
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/advanced/analytics?months=$safeMonths',
+    );
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    if (response.statusCode == 403 &&
+        body['code']?.toString() == 'premium_required') {
+      throw Exception(
+        'This feature requires an active PesaPulse Premium subscription.',
+      );
+    }
+
+    throw Exception(
+      body['message']?.toString() ??
+          'Failed to load advanced analytics (${response.statusCode}).',
+    );
+  }
+
   static Future<Map<String, dynamic>> getGoalForecast(int goalId) async {
     final response = await _request(
       method: 'GET',

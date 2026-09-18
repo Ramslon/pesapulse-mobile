@@ -4,6 +4,7 @@ import '../repositories/settings_repository.dart';
 import '../services/api_services.dart';
 import '../services/session_service.dart';
 import '../exceptions/rate_limit_exception.dart';
+import '../subscription/services/subscription_service.dart';
 
 class SettingsSessionController {
   final SettingsRepository settingsRepository;
@@ -20,6 +21,7 @@ class SettingsSessionController {
     }
 
     await SessionService.logout();
+    SubscriptionService.instance.reset();
     settingsRepository.clearCache();
   }
 }

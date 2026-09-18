@@ -23,6 +23,8 @@ import '../widgets/analytics/report_details_dialog.dart';
 import '../widgets/analytics/analytics_period_selector.dart';
 import '../widgets/analytics/analytics_error_state.dart';
 import '../widgets/analytics/analytics_refresh_error_banner.dart';
+import '../widgets/premium/premium_feature_card.dart';
+import '../widgets/premium/premium_feature_guard.dart';
 
 import '../services/guest_dialog_service.dart';
 import '../services/session_service.dart';
@@ -30,9 +32,13 @@ import '../services/analytics_service.dart';
 import '../services/report_manager_service.dart';
 import '../services/analytics_export_service.dart';
 import '../services/sync_events.dart';
+import '../services/api_services.dart';
 
 import '../models/analytics_summary.dart';
 import '../models/analytics_period.dart';
+
+import '../subscription/controllers/subscription_controller.dart';
+import '../subscription/models/premium_feature.dart';
 
 import '../utils/analytics_theme_helper.dart';
 import '../utils/responsive_helper.dart';
@@ -40,6 +46,8 @@ import '../utils/snackbar_helper.dart';
 
 import '../repositories/analytics_repository.dart';
 import '../exceptions/rate_limit_exception.dart';
+
+import 'advanced_analytics_screen.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -72,6 +80,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   late ConnectivityProvider _network;
 
+  final SubscriptionController _subscriptionController =
+      SubscriptionController();
+
+  bool _subscriptionLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +97,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     SyncEvents.instance.analyticsRefresh.addListener(_onAnalyticsDataChanged);
 
     _initializeAnalytics();
+
+    _subscriptionController.addListener(_onSubscriptionChanged);
   }
 
   void _onAnalyticsDataChanged() {
@@ -95,6 +110,36 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
 
     _reloadAnalyticsFromCache();
+  }
+
+  void _onSubscriptionChanged() {
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
+  Future<void> _loadSubscription() async {
+    if (isGuest == true) return;
+
+    if (_subscriptionController.state.isLoading) {
+      return;
+    }
+
+    setState(() {
+      _subscriptionLoading = true;
+    });
+
+    try {
+      await _subscriptionController.loadSubscription();
+    } catch (e) {
+      debugPrint('Analytics: failed to load subscription: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _subscriptionLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _reloadAnalyticsFromCache() async {
@@ -156,6 +201,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       if (!mounted) return;
 
       _refreshAnalyticsInBackground();
+      _loadSubscription();
     });
 
     loadReports();
@@ -181,6 +227,46 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       debugPrint('Loaded cached analytics data.');
     } catch (e) {
       debugPrint('No cached analytics available: $e');
+    }
+  }
+
+  Future<void> _openAdvancedAnalytics() async {
+    final allowed = await PremiumFeatureGuard.check(
+      context: context,
+      feature: PremiumFeature.advancedAnalytics,
+    );
+
+    if (!allowed || !mounted) return;
+
+    try {
+      final data = await ApiService.getAdvancedAnalytics(months: 6);
+
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdvancedAnalyticsScreen(analytics: data),
+        ),
+      );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      debugPrint('Advanced Analytics failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to load Advanced Analytics. Please try again.',
+      );
     }
   }
 
@@ -266,6 +352,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     SyncEvents.instance.analyticsRefresh.removeListener(
       _onAnalyticsDataChanged,
     );
+
+    _subscriptionController.removeListener(_onSubscriptionChanged);
+    _subscriptionController.dispose();
 
     super.dispose();
   }
@@ -630,6 +719,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         // ─────────────────────────────
                         AnalyticsOverviewCard(
                           totalSpending: analytics.totalSpending,
+                        ),
+
+                        SizedBox(height: sectionSpacing),
+
+                        //─────────────────────────────
+                        //Premium
+                        //─────────────────────────────
+                        PremiumFeatureCard(
+                          feature: PremiumFeature.advancedAnalytics,
+                          isPremium: _subscriptionController.isPremium,
+                          isLoading: _subscriptionLoading,
+                          onPressed: _openAdvancedAnalytics,
                         ),
 
                         SizedBox(height: sectionSpacing),
