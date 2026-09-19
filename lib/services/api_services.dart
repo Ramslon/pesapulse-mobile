@@ -815,6 +815,37 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> getSpendingForecast({
+    int months = 6,
+    int forecastMonths = 3,
+  }) async {
+    final response = await _request(
+      method: 'GET',
+      endpoint:
+          '/advanced/spending-forecast'
+          '?months=$months'
+          '&forecast_months=$forecastMonths',
+    );
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    if (response.statusCode == 403 &&
+        body['code']?.toString() == 'premium_required') {
+      throw Exception(
+        body['message']?.toString() ??
+            'This feature requires an active PesaPulse Premium subscription.',
+      );
+    }
+
+    throw Exception(
+      body['message']?.toString() ?? 'Failed to load spending forecast.',
+    );
+  }
+
   static Future<Map<String, dynamic>> getGoalForecast(int goalId) async {
     final response = await _request(
       method: 'GET',

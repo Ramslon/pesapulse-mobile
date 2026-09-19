@@ -48,6 +48,7 @@ import '../repositories/analytics_repository.dart';
 import '../exceptions/rate_limit_exception.dart';
 
 import 'advanced_analytics_screen.dart';
+import 'spending_forecast_screen.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -268,6 +269,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         'Unable to load Advanced Analytics. Please try again.',
       );
     }
+  }
+
+  Future<void> _openSpendingForecast() async {
+    final allowed = await PremiumFeatureGuard.check(
+      context: context,
+      feature: PremiumFeature.spendingForecast,
+    );
+
+    if (!allowed || !mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SpendingForecastScreen()),
+    );
   }
 
   void _onConnectivityChanged() {
@@ -731,6 +746,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           isPremium: _subscriptionController.isPremium,
                           isLoading: _subscriptionLoading,
                           onPressed: _openAdvancedAnalytics,
+                        ),
+
+                        SizedBox(height: sectionSpacing),
+
+                        PremiumFeatureCard(
+                          feature: PremiumFeature.spendingForecast,
+                          isPremium: _subscriptionController.isPremium,
+                          isLoading: _subscriptionLoading,
+                          onPressed: _openSpendingForecast,
                         ),
 
                         SizedBox(height: sectionSpacing),
