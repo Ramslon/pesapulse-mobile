@@ -30,6 +30,13 @@ import '../widgets/app/app_scaffold.dart';
 import '../utils/responsive_helper.dart';
 import '../utils/snackbar_helper.dart';
 
+import '../widgets/premium/premium_feature_card.dart';
+import '../widgets/premium/premium_feature_guard.dart';
+import '../subscription/models/premium_feature.dart';
+import '../subscription/services/subscription_service.dart';
+
+import '../screens/advanced_budget_insights_screen.dart';
+
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
 
@@ -47,6 +54,9 @@ class BudgetScreenState extends State<BudgetScreen>
   BudgetState state = const BudgetState();
 
   final TextEditingController budgetController = TextEditingController();
+
+  bool _subscriptionLoading = true;
+  bool _isPremium = false;
 
   double get percentageUsed =>
       BudgetCalculator.percentageUsed(budget: state.budget, spent: state.spent);
@@ -82,13 +92,76 @@ class BudgetScreenState extends State<BudgetScreen>
 
         budgetController.text = state.budget.toStringAsFixed(0);
       });
+
+      await _loadSubscription();
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
         state = state.copyWith(isLoading: false, hasCachedBudget: false);
       });
+
+      await _loadSubscription();
     }
+  }
+
+  Future<void> _loadSubscription() async {
+    // Guests should not see Premium features.
+    if (state.isGuest) {
+      if (!mounted) return;
+
+      setState(() {
+        _subscriptionLoading = false;
+        _isPremium = false;
+      });
+
+      return;
+    }
+
+    try {
+      final service = SubscriptionService.instance;
+
+      await service.loadSubscription();
+
+      if (!mounted) return;
+
+      setState(() {
+        _subscriptionLoading = false;
+        _isPremium = service.state.isPremium;
+      });
+    } catch (e) {
+      debugPrint('BudgetScreen: failed to load subscription: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _subscriptionLoading = false;
+        _isPremium = false;
+      });
+    }
+  }
+
+  Future<void> _openAdvancedBudgetInsights() async {
+    final allowed = await PremiumFeatureGuard.check(
+      context: context,
+      feature: PremiumFeature.advancedBudgetInsights,
+    );
+
+    if (!allowed || !mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AdvancedBudgetInsightsScreen()),
+    );
+  }
+
+  Widget _buildAdvancedBudgetFeature() {
+    return PremiumFeatureCard(
+      feature: PremiumFeature.advancedBudgetInsights,
+      isPremium: _isPremium,
+      isLoading: _subscriptionLoading,
+      onPressed: _openAdvancedBudgetInsights,
+    );
   }
 
   Future<void> saveBudget() async {
@@ -151,12 +224,14 @@ class BudgetScreenState extends State<BudgetScreen>
 
     if (!network.isOnline) {
       await loadBudget();
+
       if (!mounted) return;
 
       SnackbarHelper.showInfo(
         context,
         "Offline mode • Showing cached budget data.",
       );
+
       return;
     }
 
@@ -186,6 +261,7 @@ class BudgetScreenState extends State<BudgetScreen>
       );
     } catch (e) {
       if (!mounted) return;
+
       SnackbarHelper.showError(context, "Error deleting budget: $e");
     }
   }
@@ -232,9 +308,13 @@ class BudgetScreenState extends State<BudgetScreen>
     super.build(context);
 
     final compact = ResponsiveHelper.useCompactLayout(context);
+
     final landscape = ResponsiveHelper.isLandscape(context);
+
     final desktop = ResponsiveHelper.isDesktop(context);
+
     final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
+
     final spacing = ResponsiveHelper.spacing(context);
 
     final cardPadding = ResponsiveHelper.cardPadding(context);
@@ -297,15 +377,12 @@ class BudgetScreenState extends State<BudgetScreen>
 
     final mediaQuery = MediaQuery.of(context);
 
-    final effectiveSectionSpacing = landscape && !desktop
-        ? 12.0
-        : sectionSpacing;
-
     final bottomSafeArea = mediaQuery.padding.bottom;
 
-    /// Space required for the FAB + comfortable separation.
-    /// This allows the final budget card to scroll completely
-    /// above the floating action button.
+    /*
+     * Give the final content enough clearance to scroll
+     * completely above the floating action button.
+     */
     final fabClearance = landscape && !desktop
         ? 120.0
         : compact
@@ -325,7 +402,7 @@ class BudgetScreenState extends State<BudgetScreen>
           horizontalPadding,
           compact ? 8 : 12,
           horizontalPadding,
-          bottomContentPadding,
+          bottomContentPadding + bottomSafeArea,
         ),
         child: Center(
           child: ConstrainedBox(
@@ -348,14 +425,14 @@ class BudgetScreenState extends State<BudgetScreen>
                   statusColor: statusColor,
                 ),
 
-                SizedBox(height: effectiveSectionSpacing),
+                SizedBox(height: sectionSpacing),
 
                 BudgetStatusBar(
                   statusText: statusText,
                   statusColor: statusColor,
                 ),
 
-                SizedBox(height: effectiveSectionSpacing),
+                SizedBox(height: sectionSpacing),
 
                 const BudgetSectionHeader(
                   title: "Monthly Budget Overview",
@@ -372,7 +449,7 @@ class BudgetScreenState extends State<BudgetScreen>
                   sectionSpacing: sectionSpacing,
                 ),
 
-                SizedBox(height: effectiveSectionSpacing),
+                SizedBox(height: sectionSpacing),
 
                 _buildAnalyticsSection(
                   context,
@@ -381,6 +458,14 @@ class BudgetScreenState extends State<BudgetScreen>
                   sectionSpacing: sectionSpacing,
                   cardPadding: cardPadding,
                 ),
+
+                // Premium Budget Intelligence
+                // Only authenticated users see this feature.
+                if (!state.isGuest) ...[
+                  SizedBox(height: sectionSpacing),
+
+                  _buildAdvancedBudgetFeature(),
+                ],
               ],
             ),
           ),
@@ -408,13 +493,21 @@ class BudgetScreenState extends State<BudgetScreen>
       totalSpent: state.spent,
     );
 
+    /*
+     * ResponsiveHelper controls the overall breakpoint logic.
+     *
+     * On landscape layouts, the overview and breakdown
+     * cards are placed side-by-side.
+     */
     if (landscape) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: overviewCard),
+          Expanded(flex: 5, child: overviewCard),
+
           SizedBox(width: compact ? 12 : 20),
-          Expanded(child: breakdownCard),
+
+          Expanded(flex: 6, child: breakdownCard),
         ],
       );
     }
@@ -462,13 +555,21 @@ class BudgetScreenState extends State<BudgetScreen>
       categoryAdvice: state.categoryAdvice,
     );
 
+    /*
+     * Landscape:
+     * Analytics gets slightly more width than
+     * Financial Health because the analytics content
+     * is usually more data-dense.
+     */
     if (landscape) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: analytics),
+          Expanded(flex: 6, child: analytics),
+
           SizedBox(width: compact ? 12 : 20),
-          Expanded(child: health),
+
+          Expanded(flex: 5, child: health),
         ],
       );
     }

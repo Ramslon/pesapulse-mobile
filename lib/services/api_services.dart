@@ -704,6 +704,60 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> getAdvancedGoalTracking({
+    int? goalId,
+  }) async {
+    final endpoint = goalId == null
+        ? '/advanced/goal-tracking'
+        : '/advanced/goal-tracking?goal_id=$goalId';
+
+    final response = await _request(method: 'GET', endpoint: endpoint);
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    if (response.statusCode == 403 &&
+        body['code']?.toString() == 'premium_required') {
+      throw Exception(
+        'This feature requires an active PesaPulse Premium subscription.',
+      );
+    }
+
+    throw Exception(
+      body['message']?.toString() ??
+          'Failed to load advanced goal tracking '
+              '(${response.statusCode}).',
+    );
+  }
+
+  static Future<Map<String, dynamic>> getAdvancedBudgetInsights() async {
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/advanced/budget-insights',
+    );
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    if (response.statusCode == 403 &&
+        body['code']?.toString() == 'premium_required') {
+      throw Exception(
+        body['message']?.toString() ??
+            'This feature requires an active PesaPulse Premium subscription.',
+      );
+    }
+
+    throw Exception(
+      body['message']?.toString() ?? 'Failed to load advanced budget insights.',
+    );
+  }
+
   static Future<Map<String, dynamic>> getGoalAnalytics() async {
     final response = await _request(
       method: 'GET',

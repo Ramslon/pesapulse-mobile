@@ -70,12 +70,20 @@ class PremiumFeatureCard extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: isLoading ? null : onPressed,
                     icon: Icon(
-                      isPremium
+                      isLoading
+                          ? Icons.sync_rounded
+                          : isPremium
                           ? Icons.open_in_new_rounded
                           : Icons.workspace_premium_rounded,
                       size: 18,
                     ),
-                    label: Text(isPremium ? 'Open' : 'Unlock Premium'),
+                    label: Text(
+                      isLoading
+                          ? 'Checking Access...'
+                          : isPremium
+                          ? 'Open'
+                          : 'Unlock Premium',
+                    ),
                   ),
                 ],
               ),

@@ -5,6 +5,7 @@ import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
 import '../services/session_service.dart';
 import '../services/sync_events.dart';
 import '../services/goals_service.dart';
+import '../services/api_services.dart';
 
 import '../widgets/goal_loading_skeleton.dart';
 import '../widgets/empty_state_helper.dart';
@@ -14,9 +15,15 @@ import '../widgets/goals/goals_overview_card.dart';
 import '../widgets/goals/goals_stats_grid.dart';
 import '../widgets/goals/upcoming_deadlines_card.dart';
 import '../widgets/goals/goal_list_item.dart';
+import '../widgets/premium/premium_feature_card.dart';
+import '../widgets/premium/premium_feature_guard.dart';
+
+import '../subscription/controllers/subscription_controller.dart';
+import '../subscription/models/premium_feature.dart';
 
 import 'add_goals_screen.dart';
 import 'archived_goals_screen.dart';
+import 'advanced_goal_tracking_screen.dart';
 
 import '../controllers/goals_controller.dart';
 
@@ -38,6 +45,9 @@ class _GoalsScreenState extends State<GoalsScreen>
 
   late final GoalsController goalsController;
 
+  final SubscriptionController subscriptionController =
+      SubscriptionController();
+
   late VoidCallback _goalRefreshListener;
 
   final currency = NumberFormat.currency(
@@ -48,6 +58,8 @@ class _GoalsScreenState extends State<GoalsScreen>
 
   bool _cacheLoaded = false;
 
+  bool _subscriptionLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +67,8 @@ class _GoalsScreenState extends State<GoalsScreen>
     goalsController = GoalsController(goalsService: goalsService);
 
     goalsController.addListener(_onGoalsControllerChanged);
+
+    subscriptionController.addListener(_onSubscriptionChanged);
 
     _goalRefreshListener = () async {
       if (!mounted) return;
@@ -78,6 +92,7 @@ class _GoalsScreenState extends State<GoalsScreen>
         debugPrint('GoalsScreen: failed to reload goals from cache: $e');
       }
     };
+
     SyncEvents.instance.goalsRefresh.addListener(_goalRefreshListener);
 
     _initializeGoalsScreen();
@@ -99,6 +114,12 @@ class _GoalsScreenState extends State<GoalsScreen>
     setState(() {});
   }
 
+  void _onSubscriptionChanged() {
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
   // ============================================================
   // INITIALIZATION
   // ============================================================
@@ -112,6 +133,11 @@ class _GoalsScreenState extends State<GoalsScreen>
       setState(() {
         isGuest = guest;
       });
+
+      if (!guest) {
+        // Start subscription verification immediately.
+        _loadSubscription();
+      }
 
       await goalsController.initialize(forceRefresh: forceRefresh);
 
@@ -134,13 +160,86 @@ class _GoalsScreenState extends State<GoalsScreen>
 
       if (!mounted) return;
 
-      // Only show the error when there is no usable data.
       if (goalsController.goals.isEmpty) {
         SnackbarHelper.showError(
           context,
           'Unable to load goals. Please try again.',
         );
       }
+    }
+  }
+
+  // ============================================================
+  // SUBSCRIPTION
+  // ============================================================
+
+  Future<void> _loadSubscription() async {
+    if (isGuest) return;
+
+    if (subscriptionController.state.isLoading) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _subscriptionLoading = true;
+      });
+    }
+
+    try {
+      await subscriptionController.loadSubscription();
+    } catch (e) {
+      debugPrint('GoalsScreen: failed to load subscription: $e');
+    } finally {
+      if (!mounted) return;
+
+      setState(() {
+        _subscriptionLoading = false;
+      });
+    }
+  }
+
+  // ============================================================
+  // ADVANCED GOAL TRACKING
+  // ============================================================
+
+  Future<void> _openAdvancedGoalTracking() async {
+    final allowed = await PremiumFeatureGuard.check(
+      context: context,
+      feature: PremiumFeature.advancedGoalTracking,
+    );
+
+    if (!allowed || !mounted) return;
+
+    try {
+      final data = await ApiService.getAdvancedGoalTracking();
+
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdvancedGoalTrackingScreen(tracking: data),
+        ),
+      );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      debugPrint('Advanced Goal Tracking failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to load Advanced Goal Tracking. Please try again.',
+      );
     }
   }
 
@@ -219,6 +318,7 @@ class _GoalsScreenState extends State<GoalsScreen>
         child: goals.isEmpty
             ? ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 140),
                 children: [
                   const SizedBox(height: 120),
 
@@ -231,7 +331,7 @@ class _GoalsScreenState extends State<GoalsScreen>
               )
             : ListView(
                 key: const PageStorageKey("goals"),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
                 children: [
                   // ==================================================
                   // OVERVIEW
@@ -239,7 +339,6 @@ class _GoalsScreenState extends State<GoalsScreen>
                   GoalsOverviewCard(
                     totalGoals:
                         goalsController.goalAnalytics['total_goals'] ?? 0,
-
                     onArchivedGoals: () async {
                       final changed = await Navigator.push<bool>(
                         context,
@@ -266,13 +365,10 @@ class _GoalsScreenState extends State<GoalsScreen>
                   GoalsStatsGrid(
                     totalGoals:
                         goalsController.goalAnalytics['total_goals'] ?? 0,
-
                     completedGoals:
                         goalsController.goalAnalytics['completed_goals'] ?? 0,
-
                     activeGoals:
                         goalsController.goalAnalytics['active_goals'] ?? 0,
-
                     completionRate:
                         (goalsController.goalAnalytics['completion_rate'] ?? 0)
                             .toDouble(),
@@ -286,6 +382,22 @@ class _GoalsScreenState extends State<GoalsScreen>
                   UpcomingDeadlinesCard(
                     upcomingDeadlines: goalsController.upcomingDeadlines,
                   ),
+
+                  // ==================================================
+                  // PREMIUM ADVANCED GOAL TRACKING
+                  // ==================================================
+                  if (!isGuest) ...[
+                    SizedBox(height: sectionSpacing),
+
+                    PremiumFeatureCard(
+                      feature: PremiumFeature.advancedGoalTracking,
+                      isPremium: subscriptionController.isPremium,
+                      isLoading:
+                          _subscriptionLoading ||
+                          !subscriptionController.state.hasLoaded,
+                      onPressed: _openAdvancedGoalTracking,
+                    ),
+                  ],
 
                   SizedBox(height: sectionSpacing),
 
@@ -314,6 +426,10 @@ class _GoalsScreenState extends State<GoalsScreen>
     SyncEvents.instance.goalsRefresh.removeListener(_goalRefreshListener);
 
     goalsController.removeListener(_onGoalsControllerChanged);
+
+    subscriptionController.removeListener(_onSubscriptionChanged);
+
+    subscriptionController.dispose();
 
     goalsController.dispose();
 
