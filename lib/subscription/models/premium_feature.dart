@@ -3,7 +3,7 @@ enum PremiumFeature {
   advancedAnalytics,
   spendingForecast,
   advancedGoalTracking,
-  goalForecast,
+  advancedGoalForecast,
   budgetSimulation,
   historicalInsights,
 }
@@ -23,7 +23,7 @@ extension PremiumFeatureExtension on PremiumFeature {
       case PremiumFeature.advancedGoalTracking:
         return 'Advanced Goal Tracking';
 
-      case PremiumFeature.goalForecast:
+      case PremiumFeature.advancedGoalForecast:
         return 'Goal Forecast';
 
       case PremiumFeature.budgetSimulation:
@@ -48,7 +48,7 @@ extension PremiumFeatureExtension on PremiumFeature {
       case PremiumFeature.advancedGoalTracking:
         return 'Track goal progress with advanced savings insights.';
 
-      case PremiumFeature.goalForecast:
+      case PremiumFeature.advancedGoalForecast:
         return 'Predict when you are likely to reach your savings goal.';
 
       case PremiumFeature.budgetSimulation:

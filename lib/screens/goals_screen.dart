@@ -24,6 +24,7 @@ import '../subscription/models/premium_feature.dart';
 import 'add_goals_screen.dart';
 import 'archived_goals_screen.dart';
 import 'advanced_goal_tracking_screen.dart';
+import 'goal_forecast_screen.dart';
 
 import '../controllers/goals_controller.dart';
 
@@ -244,6 +245,51 @@ class _GoalsScreenState extends State<GoalsScreen>
   }
 
   // ============================================================
+  // GOAL FORECAST
+  // ============================================================
+
+  Future<void> _openAdvancedGoalForecast() async {
+    final allowed = await PremiumFeatureGuard.check(
+      context: context,
+      feature: PremiumFeature.advancedGoalForecast,
+    );
+
+    if (!allowed || !mounted) return;
+
+    try {
+      final data = await ApiService.getAdvancedGoalForecast();
+
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              GoalForecastScreen(key: const ValueKey('goalForecastScreen')),
+        ),
+      );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
+
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      debugPrint('Goal Forecast failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to load Goal Forecast. Please try again.',
+      );
+    }
+  }
+
+  // ============================================================
   // KEEP ALIVE
   // ============================================================
 
@@ -384,7 +430,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                   ),
 
                   // ==================================================
-                  // PREMIUM ADVANCED GOAL TRACKING
+                  // PREMIUM ADVANCED GOAL TRACKING AND GOAL FORECAST
                   // ==================================================
                   if (!isGuest) ...[
                     SizedBox(height: sectionSpacing),
@@ -395,7 +441,20 @@ class _GoalsScreenState extends State<GoalsScreen>
                       isLoading:
                           _subscriptionLoading ||
                           !subscriptionController.state.hasLoaded,
+                      accentColor: Colors.amber,
                       onPressed: _openAdvancedGoalTracking,
+                    ),
+
+                    SizedBox(height: sectionSpacing),
+
+                    PremiumFeatureCard(
+                      feature: PremiumFeature.advancedGoalForecast,
+                      isPremium: subscriptionController.isPremium,
+                      isLoading:
+                          _subscriptionLoading ||
+                          !subscriptionController.state.hasLoaded,
+                      accentColor: Colors.amber,
+                      onPressed: _openAdvancedGoalForecast,
                     ),
                   ],
 

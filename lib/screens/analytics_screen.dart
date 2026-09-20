@@ -745,6 +745,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           feature: PremiumFeature.advancedAnalytics,
                           isPremium: _subscriptionController.isPremium,
                           isLoading: _subscriptionLoading,
+                          accentColor: Colors.teal,
                           onPressed: _openAdvancedAnalytics,
                         ),
 
@@ -754,6 +755,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           feature: PremiumFeature.spendingForecast,
                           isPremium: _subscriptionController.isPremium,
                           isLoading: _subscriptionLoading,
+                          accentColor: Colors.teal,
                           onPressed: _openSpendingForecast,
                         ),
 

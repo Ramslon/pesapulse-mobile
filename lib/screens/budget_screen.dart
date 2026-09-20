@@ -36,6 +36,7 @@ import '../subscription/models/premium_feature.dart';
 import '../subscription/services/subscription_service.dart';
 
 import '../screens/advanced_budget_insights_screen.dart';
+import '../screens/budget_simulation_screen.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -155,12 +156,37 @@ class BudgetScreenState extends State<BudgetScreen>
     );
   }
 
+  Future<void> _openBudgetSimulation() async {
+    final allowed = await PremiumFeatureGuard.check(
+      context: context,
+      feature: PremiumFeature.budgetSimulation,
+    );
+
+    if (!allowed || !mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BudgetSimulationScreen()),
+    );
+  }
+
   Widget _buildAdvancedBudgetFeature() {
     return PremiumFeatureCard(
       feature: PremiumFeature.advancedBudgetInsights,
       isPremium: _isPremium,
       isLoading: _subscriptionLoading,
+      accentColor: Colors.blue,
       onPressed: _openAdvancedBudgetInsights,
+    );
+  }
+
+  Widget _buildAdvancedBudgetSimulation() {
+    return PremiumFeatureCard(
+      feature: PremiumFeature.budgetSimulation,
+      isPremium: _isPremium,
+      isLoading: _subscriptionLoading,
+      accentColor: Colors.blue,
+      onPressed: _openBudgetSimulation,
     );
   }
 
@@ -465,6 +491,10 @@ class BudgetScreenState extends State<BudgetScreen>
                   SizedBox(height: sectionSpacing),
 
                   _buildAdvancedBudgetFeature(),
+
+                  SizedBox(height: sectionSpacing),
+
+                  _buildAdvancedBudgetSimulation(),
                 ],
               ],
             ),

@@ -846,6 +846,87 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> getAdvancedGoalForecast({
+    int? goalId,
+  }) async {
+    final endpoint = goalId == null
+        ? '/advanced/goal-forecast'
+        : '/advanced/goal-forecast?goal_id=$goalId';
+
+    final response = await _request(method: 'GET', endpoint: endpoint);
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    if (response.statusCode == 403 &&
+        body['code']?.toString() == 'premium_required') {
+      throw Exception(
+        body['message']?.toString() ??
+            'This feature requires an active PesaPulse Premium subscription.',
+      );
+    }
+
+    throw Exception(
+      body['message']?.toString() ?? 'Failed to load goal forecast.',
+    );
+  }
+
+  static Future<Map<String, dynamic>> simulateBudget({
+    double? budgetAmount,
+    double spendingAdjustmentPercentage = 0,
+  }) async {
+    final payload = <String, dynamic>{
+      'spending_adjustment_percentage': spendingAdjustmentPercentage,
+    };
+
+    if (budgetAmount != null) {
+      payload['budget_amount'] = budgetAmount;
+    }
+
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/advanced/budget-simulation',
+      body: jsonEncode(payload),
+    );
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    if (response.statusCode == 403 &&
+        body['code']?.toString() == 'premium_required') {
+      throw Exception(
+        body['message']?.toString() ??
+            'This feature requires an active PesaPulse Premium subscription.',
+      );
+    }
+
+    if (response.statusCode == 422) {
+      final errors = body['errors'];
+
+      if (errors is Map && errors.isNotEmpty) {
+        final firstError = errors.values.first;
+
+        if (firstError is List && firstError.isNotEmpty) {
+          throw Exception(firstError.first.toString());
+        }
+      }
+
+      throw Exception(
+        body['message']?.toString() ?? 'Invalid budget simulation parameters.',
+      );
+    }
+
+    throw Exception(
+      body['message']?.toString() ?? 'Failed to run budget simulation.',
+    );
+  }
+
   static Future<Map<String, dynamic>> getGoalForecast(int goalId) async {
     final response = await _request(
       method: 'GET',

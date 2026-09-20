@@ -19,7 +19,7 @@ class SubscriptionService {
       case PremiumFeature.advancedAnalytics:
       case PremiumFeature.spendingForecast:
       case PremiumFeature.advancedGoalTracking:
-      case PremiumFeature.goalForecast:
+      case PremiumFeature.advancedGoalForecast:
       case PremiumFeature.budgetSimulation:
       case PremiumFeature.historicalInsights:
         return isPremium;
