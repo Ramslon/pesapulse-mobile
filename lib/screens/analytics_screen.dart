@@ -49,6 +49,7 @@ import '../exceptions/rate_limit_exception.dart';
 
 import 'advanced_analytics_screen.dart';
 import 'spending_forecast_screen.dart';
+import '../screens/historical_insights_screen.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -282,6 +283,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const SpendingForecastScreen()),
+    );
+  }
+
+  Future<void> _openHistoricalInsights() async {
+    final allowed = await PremiumFeatureGuard.check(
+      context: context,
+      feature: PremiumFeature.historicalInsights,
+    );
+
+    if (!allowed || !mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const HistoricalInsightsScreen()),
     );
   }
 
@@ -757,6 +772,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                           isLoading: _subscriptionLoading,
                           accentColor: Colors.teal,
                           onPressed: _openSpendingForecast,
+                        ),
+
+                        SizedBox(height: sectionSpacing),
+
+                        PremiumFeatureCard(
+                          feature: PremiumFeature.historicalInsights,
+                          isPremium: _subscriptionController.isPremium,
+                          isLoading: _subscriptionLoading,
+                          accentColor: Colors.teal,
+                          onPressed: _openHistoricalInsights,
                         ),
 
                         SizedBox(height: sectionSpacing),

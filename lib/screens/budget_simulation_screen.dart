@@ -6,6 +6,12 @@ import '../utils/responsive_helper.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
 
+const Color _premiumPurple = Color(0xFF6D3FD9);
+const Color _premiumPurpleDark = Color(0xFF34205F);
+
+const Color _budgetBlue = Color(0xFF3B82F6);
+const Color _budgetBlueDark = Color(0xFF2563EB);
+
 class BudgetSimulationScreen extends StatefulWidget {
   const BudgetSimulationScreen({super.key});
 
@@ -251,7 +257,7 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
         return Colors.grey;
 
       default:
-        return Theme.of(context).colorScheme.primary;
+        return _budgetBlue;
     }
   }
 
@@ -356,53 +362,126 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
   // ============================================================
 
   Widget _buildHero(ThemeData theme, bool compact) {
-    final scheme = theme.colorScheme;
-
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(compact ? 20 : 24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [scheme.primaryContainer, scheme.surface],
+          colors: [_premiumPurple, _premiumPurpleDark],
         ),
-        border: Border.all(color: scheme.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: _premiumPurple.withOpacity(.18),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: compact ? 46 : 52,
-            height: compact ? 46 : 52,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: scheme.primary,
-              borderRadius: BorderRadius.circular(15),
+              color: Colors.white.withOpacity(.14),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(.18)),
             ),
-            child: Icon(
-              Icons.tune_rounded,
-              color: scheme.onPrimary,
-              size: compact ? 24 : 28,
-            ),
-          ),
-          SizedBox(width: compact ? 12 : 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                Icon(
+                  Icons.workspace_premium_rounded,
+                  size: 15,
+                  color: Colors.white,
+                ),
+                SizedBox(width: 6),
                 Text(
-                  'Budget Simulation',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  'Premium',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  'Explore what could happen if you change your monthly budget or spending pace.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurface.withOpacity(.70),
-                    height: 1.45,
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: compact ? 46 : 52,
+                height: compact ? 46 : 52,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(.14),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.white.withOpacity(.16)),
+                ),
+                child: Icon(
+                  Icons.tune_rounded,
+                  color: Colors.white,
+                  size: compact ? 24 : 28,
+                ),
+              ),
+
+              SizedBox(width: compact ? 12 : 16),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Budget Simulation',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Explore what could happen if you change your monthly budget or spending pace.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withOpacity(.82),
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(.08),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 18,
+                  color: Colors.white.withOpacity(.9),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    'Test different scenarios without changing your actual budget or recorded expenses.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withOpacity(.82),
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ],
@@ -427,11 +506,29 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Simulation Inputs',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: _budgetBlue.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(
+                    Icons.tune_rounded,
+                    color: _budgetBlue,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Simulation Inputs',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 6),
@@ -456,7 +553,10 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
                 labelText: 'Simulated Monthly Budget',
                 hintText: 'e.g. 25000',
                 prefixText: 'KES ',
-                prefixIcon: const Icon(Icons.account_balance_wallet_rounded),
+                prefixIcon: const Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: _budgetBlue,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -495,7 +595,7 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: scheme.primary.withOpacity(.10),
+                    color: _budgetBlue.withOpacity(.10),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -503,7 +603,7 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
                         ? '+${_percentage(_spendingAdjustment)}'
                         : _percentage(_spendingAdjustment),
                     style: theme.textTheme.labelLarge?.copyWith(
-                      color: scheme.primary,
+                      color: _budgetBlue,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -513,21 +613,28 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
 
             const SizedBox(height: 8),
 
-            Slider(
-              value: _spendingAdjustment,
-              min: -100,
-              max: 200,
-              divisions: 60,
-              label: _spendingAdjustment > 0
-                  ? '+${_percentage(_spendingAdjustment)}'
-                  : _percentage(_spendingAdjustment),
-              onChanged: _isSimulating
-                  ? null
-                  : (value) {
-                      setState(() {
-                        _spendingAdjustment = value;
-                      });
-                    },
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: _budgetBlue,
+                thumbColor: _budgetBlueDark,
+                overlayColor: _budgetBlue.withOpacity(.12),
+              ),
+              child: Slider(
+                value: _spendingAdjustment,
+                min: -100,
+                max: 200,
+                divisions: 60,
+                label: _spendingAdjustment > 0
+                    ? '+${_percentage(_spendingAdjustment)}'
+                    : _percentage(_spendingAdjustment),
+                onChanged: _isSimulating
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _spendingAdjustment = value;
+                        });
+                      },
+              ),
             ),
 
             Row(
@@ -550,6 +657,7 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
               width: double.infinity,
               height: 48,
               child: FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: _budgetBlue),
                 onPressed: _isSimulating ? null : _runSimulation,
                 icon: _isSimulating
                     ? const SizedBox(
@@ -603,7 +711,7 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
       theme: theme,
       title: 'Simulation',
       subtitle: 'What-if scenario',
-      color: theme.colorScheme.primary,
+      color: _budgetBlue,
       budget: simulation['budget'],
       projectedSpending: simulation['projected_month_end_spending'],
       remaining: simulation['projected_remaining'],
@@ -615,11 +723,29 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Current vs Simulation',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: _budgetBlue.withOpacity(.10),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                Icons.compare_arrows_rounded,
+                color: _budgetBlue,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Current vs Simulation',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
 
         const SizedBox(height: 12),
@@ -807,10 +933,10 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.primary.withOpacity(.045),
+      color: _budgetBlue.withOpacity(.045),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.primary.withOpacity(.10)),
+        side: BorderSide(color: _budgetBlue.withOpacity(.10)),
       ),
       child: Padding(
         padding: EdgeInsets.all(compact ? 16 : 20),
@@ -819,10 +945,7 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.compare_arrows_rounded,
-                  color: theme.colorScheme.primary,
-                ),
+                Icon(Icons.compare_arrows_rounded, color: _budgetBlue),
                 const SizedBox(width: 8),
                 Text(
                   'Simulation Impact',
@@ -907,7 +1030,7 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 22, color: theme.colorScheme.primary),
+          Icon(icon, size: 22, color: _budgetBlue),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -958,10 +1081,7 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  color: theme.colorScheme.primary,
-                ),
+                Icon(Icons.info_outline_rounded, color: _budgetBlue),
                 const SizedBox(width: 8),
                 Text(
                   'How the simulation works',

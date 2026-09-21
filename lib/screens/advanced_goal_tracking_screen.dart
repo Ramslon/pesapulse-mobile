@@ -4,6 +4,12 @@ import '../utils/responsive_helper.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
 
+const Color _premiumPurple = Color(0xFF6D3FD9);
+const Color _premiumPurpleDark = Color(0xFF34205F);
+
+const Color _goalAmber = Color(0xFFFFC107);
+const Color _goalAmberDark = Color(0xFFF59E0B);
+
 class AdvancedGoalTrackingScreen extends StatelessWidget {
   final Map<String, dynamic> tracking;
   final String currencySymbol;
@@ -117,19 +123,25 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
 
   Widget _buildHeroHeader(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context) + 2),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        borderRadius: BorderRadius.circular(26),
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [colorScheme.primaryContainer, colorScheme.surface],
+          colors: [_premiumPurple, _premiumPurpleDark],
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colorScheme.primary.withOpacity(.12)),
+        border: Border.all(color: Colors.white.withOpacity(.12)),
+        boxShadow: [
+          BoxShadow(
+            color: _premiumPurple.withOpacity(.18),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,43 +149,50 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(.12),
+              color: Colors.white.withOpacity(.10),
               shape: BoxShape.circle,
             ),
-            child: Icon(
+            child: const Icon(
               Icons.track_changes_rounded,
-              color: colorScheme.primary,
-              size: 26,
+              color: Colors.white,
+              size: 27,
             ),
           ),
+
           const SizedBox(width: 14),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
                         'Premium Goal Intelligence',
                         style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
+
+                    const SizedBox(width: 10),
+
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 9,
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: colorScheme.primary.withOpacity(.10),
+                        color: Colors.white.withOpacity(.10),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text(
+                      child: const Text(
                         'PREMIUM',
                         style: TextStyle(
-                          color: colorScheme.primary,
+                          color: Colors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                           letterSpacing: .5,
@@ -182,12 +201,14 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+
+                const SizedBox(height: 7),
+
                 Text(
                   'Understand your progress, saving pace, '
                   'deadline risk and projected completion.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(.70),
+                    color: Colors.white.withOpacity(.72),
                     height: 1.4,
                   ),
                 ),
@@ -203,8 +224,6 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
     BuildContext context,
     Map<String, dynamic> summary,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     final totalTarget = _moneyCompact(summary['total_target_amount']);
 
     final totalSaved = _moneyCompact(summary['total_saved_amount']);
@@ -246,7 +265,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
                     icon: Icons.savings_outlined,
                     label: 'Saved',
                     value: totalSaved,
-                    valueColor: colorScheme.primary,
+                    valueColor: _goalAmber,
                   ),
                 ),
                 SizedBox(width: spacing),
@@ -286,7 +305,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 19, color: colorScheme.primary),
+          Icon(icon, size: 19, color: _goalAmber),
           const SizedBox(height: 9),
           Text(
             label,
@@ -498,7 +517,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
             strokeWidth: 10,
             strokeCap: StrokeCap.round,
             backgroundColor: colorScheme.surfaceContainerHighest,
-            color: colorScheme.primary,
+            color: _goalAmber,
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
@@ -535,7 +554,6 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
     required String deadlineRisk,
   }) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     final riskColor = _riskColor(context, deadlineRisk);
 
@@ -617,7 +635,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.speed_rounded, size: 20, color: colorScheme.primary),
+              Icon(Icons.speed_rounded, size: 20, color: _goalAmber),
               const SizedBox(width: 9),
               Text(
                 'Saving Pace',
@@ -635,7 +653,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
             label: 'Current pace',
             value: _money(current),
             progress: currentRatio.toDouble(),
-            color: colorScheme.primary,
+            color: _goalAmber,
           ),
 
           const SizedBox(height: 12),
@@ -645,7 +663,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
             label: 'Required pace',
             value: _money(required),
             progress: requiredRatio.toDouble(),
-            color: colorScheme.secondary,
+            color: _goalAmberDark,
           ),
 
           const SizedBox(height: 10),
@@ -722,11 +740,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.timeline_rounded,
-                size: 20,
-                color: colorScheme.primary,
-              ),
+              Icon(Icons.timeline_rounded, size: 20, color: _goalAmber),
               const SizedBox(width: 9),
               Text(
                 'Schedule Position',
@@ -786,18 +800,14 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: colorScheme.primary.withOpacity(.06),
+        color: _goalAmber.withOpacity(.07),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.primary.withOpacity(.12)),
+        border: Border.all(color: _goalAmber.withOpacity(.16)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.auto_awesome_rounded,
-            color: colorScheme.primary,
-            size: 21,
-          ),
+          const Icon(Icons.auto_awesome_rounded, color: _goalAmber, size: 21),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -814,6 +824,8 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
   }
 
   Widget _milestoneTimeline(BuildContext context, List milestones) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       children: milestones.map((item) {
         final milestone = item as Map<String, dynamic>;
@@ -832,30 +844,33 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: reached
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+                      ? _goalAmber
+                      : colorScheme.surfaceContainerHighest,
                 ),
                 child: Icon(
                   reached ? Icons.check_rounded : Icons.circle_outlined,
                   size: 17,
                   color: reached
-                      ? Colors.white
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ? Colors.black87
+                      : colorScheme.onSurfaceVariant,
                 ),
               ),
+
               const SizedBox(width: 10),
+
               Expanded(
                 child: Text(
                   '$percentage% milestone',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
+
               Text(
                 reached ? 'Reached' : 'Not reached',
                 style: TextStyle(
                   color: reached
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ? _goalAmberDark
+                      : colorScheme.onSurfaceVariant,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -951,11 +966,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline_rounded,
-            size: 19,
-            color: colorScheme.primary,
-          ),
+          Icon(Icons.info_outline_rounded, size: 19, color: _goalAmber),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -985,7 +996,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.flag_outlined, color: colorScheme.primary),
+          Icon(Icons.flag_outlined, color: _goalAmber),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
@@ -999,19 +1010,26 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
   }
 
   Color _statusColor(BuildContext context, String status) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     switch (status) {
       case 'completed':
         return Colors.green;
+
       case 'ahead':
         return Colors.green;
+
       case 'on_track':
-        return Theme.of(context).colorScheme.primary;
+        return _goalAmber;
+
       case 'behind':
         return Colors.orange;
+
       case 'overdue':
-        return Theme.of(context).colorScheme.error;
+        return Colors.red;
+
       default:
-        return Theme.of(context).colorScheme.onSurfaceVariant;
+        return colorScheme.onSurfaceVariant;
     }
   }
 

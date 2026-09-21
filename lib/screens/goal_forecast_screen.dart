@@ -4,6 +4,15 @@ import 'package:intl/intl.dart';
 import '../services/api_services.dart';
 import '../utils/responsive_helper.dart';
 
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
+
+const Color _premiumPurple = Color(0xFF6D3FD9);
+const Color _premiumPurpleDark = Color(0xFF34205F);
+
+const Color _goalAmber = Color(0xFFFFC107);
+const Color _goalAmberDark = Color(0xFFF59E0B);
+
 class GoalForecastScreen extends StatefulWidget {
   const GoalForecastScreen({super.key});
 
@@ -183,19 +192,19 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
         return Colors.green;
 
       case 'ahead':
-        return Colors.teal;
+        return Colors.green;
 
       case 'on_track':
-        return scheme.primary;
+        return _goalAmber;
 
       case 'behind':
         return Colors.orange;
 
       case 'overdue':
-        return scheme.error;
+        return Colors.red;
 
       default:
-        return scheme.outline;
+        return scheme.onSurfaceVariant;
     }
   }
 
@@ -254,13 +263,13 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
         return Colors.green;
 
       case 'medium':
-        return scheme.primary;
+        return _goalAmber;
 
       case 'low':
         return Colors.orange;
 
       default:
-        return scheme.outline;
+        return scheme.onSurfaceVariant;
     }
   }
 
@@ -284,31 +293,47 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
   // COMMON UI
   // ============================================================
 
-  Widget _sectionTitle(BuildContext context, String title, {String? subtitle}) {
+  Widget _sectionTitle(
+    BuildContext context,
+    String title, {
+    String? subtitle,
+    IconData? icon,
+  }) {
     final theme = Theme.of(context);
 
     return Padding(
       padding: EdgeInsets.only(bottom: ResponsiveHelper.spacing(context)),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              letterSpacing: -.2,
+          if (icon != null) ...[
+            Icon(icon, size: 21, color: _goalAmber),
+            const SizedBox(width: 9),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -.2,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(.65),
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 5),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(.65),
-                height: 1.45,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -352,104 +377,153 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
 
   Widget _buildHero(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
 
     final asOf = _data['as_of']?.toString();
 
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
     return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(
-          ResponsiveHelper.useCompactLayout(context) ? 22 : 26,
-        ),
-        gradient: LinearGradient(
+        borderRadius: BorderRadius.circular(compact ? 22 : 26),
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            scheme.primaryContainer.withOpacity(.85),
-            scheme.primaryContainer.withOpacity(.38),
-          ],
+          colors: [_premiumPurple, _premiumPurpleDark],
         ),
+        border: Border.all(color: Colors.white.withOpacity(.12)),
+        boxShadow: [
+          BoxShadow(
+            color: _premiumPurple.withOpacity(.18),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: ResponsiveHelper.useCompactLayout(context) ? 48 : 56,
-                  height: ResponsiveHelper.useCompactLayout(context) ? 48 : 56,
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withOpacity(.12),
-                    borderRadius: BorderRadius.circular(17),
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome_rounded,
-                    color: scheme.primary,
-                    size: ResponsiveHelper.useCompactLayout(context) ? 25 : 30,
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: compact ? 48 : 56,
+                height: compact ? 48 : 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(.10),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Goal Forecast',
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -.5,
-                              ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: compact ? 25 : 30,
+                ),
+              ),
+
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Goal Forecast',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -.5,
                             ),
                           ),
-                          _statusChip(
-                            context,
-                            label: 'Premium',
-                            color: scheme.primary,
-                            icon: Icons.workspace_premium_rounded,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        'Understand when your goals may be completed and how your saving pace affects the outcome.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurface.withOpacity(.72),
-                          height: 1.5,
                         ),
+
+                        const SizedBox(width: 10),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(.10),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'PREMIUM',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: .6,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 7),
+
+                    Text(
+                      'Understand when your goals may be completed and how your saving pace affects the outcome.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withOpacity(.72),
+                        height: 1.5,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _statusChip(
-                  context,
-                  label: 'Predictive insights',
-                  color: scheme.primary,
-                  icon: Icons.auto_graph_rounded,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _heroChip(
+                icon: Icons.auto_graph_rounded,
+                label: 'Predictive insights',
+              ),
+              if (asOf != null)
+                _heroChip(
+                  icon: Icons.schedule_rounded,
+                  label: 'Updated ${_date(asOf)}',
                 ),
-                if (asOf != null)
-                  _statusChip(
-                    context,
-                    label: 'Updated ${_date(asOf)}',
-                    color: scheme.onSurface.withOpacity(.65),
-                    icon: Icons.schedule_rounded,
-                  ),
-              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(.20),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white.withOpacity(.90)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -466,13 +540,8 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
         _toInt(_summary['behind_goals']) + _toInt(_summary['overdue_goals']);
 
     final items = [
-      (
-        'Goals',
-        '$totalGoals',
-        Icons.flag_outlined,
-        Theme.of(context).colorScheme.primary,
-      ),
-      ('Forecasted', '$forecasted', Icons.auto_graph_rounded, Colors.teal),
+      ('Goals', '$totalGoals', Icons.flag_outlined, _goalAmber),
+      ('Forecasted', '$forecasted', Icons.auto_graph_rounded, _goalAmberDark),
       (
         'Completed',
         '$completed',
@@ -483,7 +552,9 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
         'Need attention',
         '$attention',
         Icons.warning_amber_rounded,
-        attention > 0 ? Colors.orange : Theme.of(context).colorScheme.outline,
+        attention > 0
+            ? Colors.orange
+            : Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     ];
 
@@ -718,7 +789,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                         context,
                         percentage: progressPercentage,
                         progress: progress,
-                        statusColor: statusColor,
+                        statusColor: _goalAmber,
                       ),
                       const SizedBox(height: 14),
                       _buildTargetSummary(
@@ -738,7 +809,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                       context,
                       percentage: progressPercentage,
                       progress: progress,
-                      statusColor: statusColor,
+                      statusColor: _goalAmber,
                     ),
                     const SizedBox(width: 20),
                     Expanded(
@@ -971,13 +1042,13 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer.withOpacity(.35),
+            color: _goalAmber.withOpacity(.10),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             '${_money(remaining)} remaining',
             style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.primary,
+              color: _goalAmberDark,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1001,10 +1072,10 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(.08),
+            color: _goalAmber.withOpacity(.10),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: 18, color: theme.colorScheme.primary),
+          child: Icon(icon, size: 18, color: _goalAmber),
         ),
         const SizedBox(width: 9),
         Expanded(
@@ -1038,7 +1109,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
 
     return Row(
       children: [
-        Icon(icon, size: 19, color: theme.colorScheme.primary),
+        Icon(icon, size: 19, color: _goalAmber),
         const SizedBox(width: 8),
         Text(
           title,
@@ -1078,9 +1149,9 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: scheme.primaryContainer.withOpacity(.28),
+        color: _goalAmber.withOpacity(.07),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.primary.withOpacity(.10)),
+        border: Border.all(color: _goalAmber.withOpacity(.14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1092,13 +1163,13 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: scheme.primary.withOpacity(.10),
+                  color: _goalAmber.withOpacity(.10),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.hourglass_top_rounded,
                   size: 20,
-                  color: scheme.primary,
+                  color: _goalAmber,
                 ),
               ),
               const SizedBox(width: 11),
@@ -1136,7 +1207,9 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                       value: readiness,
                       minHeight: 8,
                       backgroundColor: scheme.surfaceContainerHighest,
-                      valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        _goalAmber,
+                      ),
                     ),
                   ),
                 ),
@@ -1145,7 +1218,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                   '$daysElapsed / $minimumDays days',
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: scheme.primary,
+                    color: _goalAmberDark,
                   ),
                 ),
               ],
@@ -1328,10 +1401,10 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
             width: 35,
             height: 35,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(.08),
+              color: _goalAmber.withOpacity(.10),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 18, color: theme.colorScheme.primary),
+            child: Icon(icon, size: 18, color: _goalAmber),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1385,16 +1458,14 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: scheme.tertiaryContainer.withOpacity(.42),
+          color: _goalAmber.withOpacity(.07),
           borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _goalAmber.withOpacity(.12)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.lightbulb_outline_rounded,
-              color: scheme.onTertiaryContainer,
-            ),
+            const Icon(Icons.lightbulb_outline_rounded, color: _goalAmber),
             const SizedBox(width: 11),
             Expanded(
               child: Column(
@@ -1403,7 +1474,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                   Text(
                     'What happens next?',
                     style: theme.textTheme.titleSmall?.copyWith(
-                      color: scheme.onTertiaryContainer,
+                      color: _goalAmberDark,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1411,7 +1482,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                   Text(
                     message,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onTertiaryContainer,
+                      color: scheme.onSurface.withOpacity(.72),
                       height: 1.4,
                     ),
                   ),
@@ -1598,7 +1669,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
         break;
 
       default:
-        accent = scheme.primary;
+        accent = _goalAmber;
         icon = Icons.sync_rounded;
     }
 
@@ -1714,12 +1785,12 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: scheme.primary.withOpacity(.08),
+                    color: _goalAmber.withOpacity(.10),
                     borderRadius: BorderRadius.circular(11),
                   ),
                   child: Icon(
                     Icons.fact_check_outlined,
-                    color: scheme.primary,
+                    color: _goalAmber,
                     size: 20,
                   ),
                 ),
@@ -1747,7 +1818,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                 _statusChip(
                   context,
                   label: canForecast ? 'Ready' : 'Building',
-                  color: canForecast ? Colors.green : scheme.primary,
+                  color: canForecast ? Colors.green : _goalAmber,
                   icon: canForecast
                       ? Icons.check_circle_outline_rounded
                       : Icons.hourglass_top_rounded,
@@ -1933,10 +2004,10 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
             width: 62,
             height: 62,
             decoration: BoxDecoration(
-              color: scheme.primary.withOpacity(.08),
+              color: _goalAmber.withOpacity(.10),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: Icon(Icons.flag_outlined, size: 30, color: scheme.primary),
+            child: const Icon(Icons.flag_outlined, size: 30, color: _goalAmber),
           ),
           const SizedBox(height: 14),
           Text(
@@ -1994,6 +2065,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                     'At a glance',
                     subtitle:
                         'A quick view of your current goal forecast status.',
+                    icon: Icons.insights_rounded,
                   ),
 
                   _buildSummaryGrid(context),
@@ -2005,6 +2077,7 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                     'Goal forecasts',
                     subtitle:
                         'Future estimates are generated from the saving history available for each goal.',
+                    icon: Icons.auto_graph_rounded,
                   ),
 
                   if (goals.isEmpty)
@@ -2040,15 +2113,9 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        title: const Text(
-          'Goal Forecast',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
+    return AppScaffold(
+      appBar: AdaptiveAppBar(
+        title: 'Goal Forecast',
         actions: [
           if (!_isLoading)
             IconButton(
@@ -2064,7 +2131,6 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
                     )
                   : const Icon(Icons.refresh_rounded),
             ),
-          const SizedBox(width: 4),
         ],
       ),
       body: _isLoading

@@ -4,6 +4,12 @@ import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
 import '../utils/responsive_helper.dart';
 
+const Color _premiumPurple = Color(0xFF6D3FD9);
+const Color _premiumPurpleDark = Color(0xFF34205F);
+const Color _analyticsTeal = Color(0xFF14B8A6);
+const Color _analyticsTealDark = Color(0xFF0F766E);
+const Color _analyticsTealLight = Color(0xFF5EEAD4);
+
 class AdvancedAnalyticsScreen extends StatelessWidget {
   final Map<String, dynamic> analytics;
 
@@ -179,7 +185,6 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
     required Map<String, dynamic> period,
   }) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     final months = _int(period['months']);
     final start = period['start']?.toString() ?? '';
@@ -189,16 +194,20 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context) + 2),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
+        borderRadius: BorderRadius.circular(26),
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            colorScheme.primaryContainer.withOpacity(.72),
-            colorScheme.surface,
-          ],
+          colors: [_premiumPurple, _premiumPurpleDark],
         ),
-        border: Border.all(color: colorScheme.primary.withOpacity(.12)),
+        border: Border.all(color: Colors.white.withOpacity(.12)),
+        boxShadow: [
+          BoxShadow(
+            color: _premiumPurple.withOpacity(.18),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,43 +218,50 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: colorScheme.primary.withOpacity(.12),
+                  color: Colors.white.withOpacity(.10),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.auto_graph_rounded,
-                  color: colorScheme.primary,
-                  size: 25,
+                  color: Colors.white,
+                  size: 26,
                 ),
               ),
+
               const SizedBox(width: 13),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
                             'Premium Analytics',
                             style: theme.textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
+
+                        const SizedBox(width: 10),
+
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 9,
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: colorScheme.primary.withOpacity(.10),
+                            color: Colors.white.withOpacity(.10),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
+                          child: const Text(
                             'PREMIUM',
                             style: TextStyle(
-                              color: colorScheme.primary,
+                              color: Colors.white,
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
                               letterSpacing: .6,
@@ -254,11 +270,13 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 5),
+
+                    const SizedBox(height: 6),
+
                     Text(
                       'Deeper spending analysis, comparisons and financial patterns.',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(.70),
+                        color: Colors.white.withOpacity(.72),
                         height: 1.35,
                       ),
                     ),
@@ -267,26 +285,30 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
               ),
             ],
           ),
+
           const SizedBox(height: 16),
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
             decoration: BoxDecoration(
-              color: colorScheme.surface.withOpacity(.70),
+              color: Colors.black.withOpacity(.22),
               borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: Colors.white.withOpacity(.07)),
             ),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.date_range_rounded,
                   size: 18,
-                  color: colorScheme.primary,
+                  color: Colors.white,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '$months-month analysis  •  $start → $end',
                     style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withOpacity(.88),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -316,9 +338,7 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
         ? (totalSpent / totalBudget).clamp(0.0, 1.0)
         : 0.0;
 
-    final remainingColor = remaining >= 0
-        ? colorScheme.primary
-        : colorScheme.error;
+    final remainingColor = remaining >= 0 ? _analyticsTeal : colorScheme.error;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,7 +467,7 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 19, color: colorScheme.primary),
+          Icon(icon, size: 19, color: _analyticsTeal),
           const SizedBox(height: 10),
           Text(
             label,
@@ -480,27 +500,24 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     final previous = _double(comparison['previous_period_spending']);
-
     final change = _double(comparison['change_amount']);
-
     final percentage = comparison['change_percentage'];
 
     final hasPercentage = percentage != null;
-
     final changeIsPositive = change > 0;
     final changeIsNegative = change < 0;
 
     final changeColor = changeIsPositive
-        ? colorScheme.error
+        ? Colors.red
         : changeIsNegative
-        ? colorScheme.primary
-        : colorScheme.onSurfaceVariant;
+        ? Colors.green
+        : _analyticsTeal; // neutral highlight
 
     final changeIcon = changeIsPositive
         ? Icons.trending_up_rounded
         : changeIsNegative
         ? Icons.trending_down_rounded
-        : Icons.remove_rounded;
+        : Icons.trending_flat_rounded;
 
     return Container(
       width: double.infinity,
@@ -517,6 +534,7 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
             context,
             icon: Icons.compare_arrows_rounded,
             title: 'Period Comparison',
+            iconColor: _analyticsTeal, // ✅ teal section icon
           ),
           const SizedBox(height: 15),
           Row(
@@ -656,6 +674,7 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
                   context,
                   icon: Icons.show_chart_rounded,
                   title: 'Monthly Spending Trend',
+                  iconColor: _analyticsTeal, // ✅ teal section icon
                 ),
               ),
               _trendChip(context, trendDirection, canCalculate),
@@ -675,9 +694,7 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
             Column(
               children: monthly.map((item) {
                 final amount = _double(item['spent']);
-
                 final ratio = maxSpent > 0 ? amount / maxSpent : 0.0;
-
                 final label = item['label']?.toString() ?? '';
 
                 return Padding(
@@ -709,7 +726,7 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
                           value: ratio,
                           minHeight: 8,
                           backgroundColor: colorScheme.surfaceContainerHighest,
-                          color: colorScheme.primary,
+                          color: _analyticsTeal, // ✅ teal chart bar
                         ),
                       ),
                     ],
@@ -725,21 +742,34 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
   Widget _trendChip(BuildContext context, String trend, bool canCalculate) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final color = !canCalculate
-        ? colorScheme.onSurfaceVariant
-        : trend == 'increasing'
-        ? colorScheme.error
-        : trend == 'decreasing'
-        ? colorScheme.primary
-        : Colors.orange;
+    final Color color;
+    final IconData icon;
 
-    final icon = !canCalculate
-        ? Icons.help_outline_rounded
-        : trend == 'increasing'
-        ? Icons.trending_up_rounded
-        : trend == 'decreasing'
-        ? Icons.trending_down_rounded
-        : Icons.trending_flat_rounded;
+    if (!canCalculate) {
+      color = colorScheme.onSurfaceVariant;
+      icon = Icons.help_outline_rounded;
+    } else {
+      switch (trend) {
+        case 'increasing':
+          color = Colors.red;
+          icon = Icons.trending_up_rounded;
+          break;
+
+        case 'decreasing':
+          color = Colors.green;
+          icon = Icons.trending_down_rounded;
+          break;
+
+        case 'stable':
+          color = _analyticsTeal;
+          icon = Icons.trending_flat_rounded;
+          break;
+
+        default:
+          color = colorScheme.onSurfaceVariant;
+          icon = Icons.help_outline_rounded;
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
@@ -791,6 +821,7 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
             context,
             icon: Icons.pie_chart_outline_rounded,
             title: 'Category Breakdown',
+            iconColor: _analyticsTeal,
           ),
           const SizedBox(height: 8),
           Text(
@@ -820,13 +851,13 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
                         height: 28,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: colorScheme.primary.withOpacity(.08),
+                          color: _analyticsTeal.withOpacity(.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           '${index + 1}',
                           style: TextStyle(
-                            color: colorScheme.primary,
+                            color: _analyticsTeal,
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                           ),
@@ -936,6 +967,7 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
             context,
             icon: Icons.tune_rounded,
             title: 'Spending Consistency',
+            iconColor: _analyticsTeal,
           ),
           const SizedBox(height: 14),
           Text(
@@ -968,13 +1000,12 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
     return Container(
       padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
       decoration: BoxDecoration(
-        color: colorScheme.primary.withOpacity(.05),
+        color: _analyticsTeal.withOpacity(.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colorScheme.primary.withOpacity(.10)),
+        border: Border.all(color: _analyticsTeal.withOpacity(.10)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -983,13 +1014,14 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
             context,
             icon: Icons.local_fire_department_outlined,
             title: 'Highest Spending Day',
+            iconColor: _analyticsTeal,
           ),
           const SizedBox(height: 14),
           Text(
             _money(highestDay['amount']),
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w900,
-              color: colorScheme.primary,
+              color: _analyticsTeal,
             ),
           ),
           const SizedBox(height: 5),
@@ -1099,7 +1131,7 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.fact_check_outlined, size: 19, color: colorScheme.primary),
+          Icon(Icons.fact_check_outlined, size: 19, color: _analyticsTeal),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1136,11 +1168,10 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
     Color? iconColor,
   }) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Row(
       children: [
-        Icon(icon, size: 20, color: iconColor ?? colorScheme.primary),
+        Icon(icon, size: 20, color: iconColor ?? _analyticsTeal),
         const SizedBox(width: 9),
         Expanded(
           child: Text(
@@ -1196,17 +1227,13 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(.45),
+        color: _analyticsTeal.withOpacity(.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline_rounded,
-            size: 18,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          Icon(Icons.info_outline_rounded, size: 18, color: _analyticsTeal),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -1242,26 +1269,24 @@ class AdvancedAnalyticsScreen extends StatelessWidget {
 
   Color _budgetUsageColor(BuildContext context, double usage) {
     if (usage >= 1) {
-      return Theme.of(context).colorScheme.error;
+      return Colors.red;
     }
 
     if (usage >= .8) {
       return Colors.orange;
     }
 
-    return Theme.of(context).colorScheme.primary;
+    return _analyticsTeal;
   }
 
   Color _categoryColor(BuildContext context, int index) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    final colors = [
-      colorScheme.primary,
-      colorScheme.secondary,
-      Colors.orange,
-      Colors.green,
-      Colors.deepPurple,
-      Colors.teal,
+    const colors = [
+      _analyticsTeal,
+      _analyticsTealDark,
+      _analyticsTealLight,
+      Color(0xFF2DD4BF),
+      Color(0xFF0D9488),
+      Color(0xFF99F6E4),
     ];
 
     return colors[index % colors.length];

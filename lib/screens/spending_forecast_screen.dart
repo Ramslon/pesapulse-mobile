@@ -7,6 +7,14 @@ import 'package:intl/intl.dart';
 import '../services/api_services.dart';
 import '../utils/responsive_helper.dart';
 
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
+
+const Color _premiumPurple = Color(0xFF6D3FD9);
+const Color _premiumPurpleDark = Color(0xFF34205F);
+
+const Color _analyticsTeal = Color(0xFF14B8A6);
+
 class SpendingForecastScreen extends StatefulWidget {
   const SpendingForecastScreen({super.key});
 
@@ -153,11 +161,14 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
   Color _trendColor(String direction, ColorScheme scheme) {
     switch (direction) {
       case 'increasing':
-        return scheme.error;
+        return Colors.red;
+
       case 'decreasing':
         return Colors.green;
+
       case 'stable':
-        return scheme.primary;
+        return _analyticsTeal;
+
       default:
         return scheme.outline;
     }
@@ -206,10 +217,13 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     switch (level) {
       case 'high':
         return Colors.green;
+
       case 'medium':
-        return scheme.primary;
+        return _analyticsTeal;
+
       case 'low':
         return Colors.orange;
+
       default:
         return scheme.outline;
     }
@@ -293,29 +307,45 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
         .toList();
   }
 
-  Widget _sectionTitle(BuildContext context, String title, {String? subtitle}) {
+  Widget _sectionTitle(
+    BuildContext context,
+    String title, {
+    String? subtitle,
+    IconData? icon,
+  }) {
     final theme = Theme.of(context);
 
     return Padding(
       padding: EdgeInsets.only(bottom: ResponsiveHelper.spacing(context)),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
+          if (icon != null) ...[
+            Icon(icon, size: 21, color: _analyticsTeal),
+            const SizedBox(width: 9),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(.68),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(.68),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -323,87 +353,148 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
   Widget _buildHero(BuildContext context, Map<String, dynamic> period) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+
+    final compact = ResponsiveHelper.useCompactLayout(context);
 
     final historicalMonths = _toInt(period['historical_months']);
 
     final forecastMonths = _toInt(period['forecast_months']);
 
-    return Card(
-      elevation: 0,
-      color: scheme.primaryContainer.withOpacity(.35),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(
-          ResponsiveHelper.useCompactLayout(context) ? 18 : 22,
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_premiumPurple, _premiumPurpleDark],
         ),
+        border: Border.all(color: Colors.white.withOpacity(.12)),
+        boxShadow: [
+          BoxShadow(
+            color: _premiumPurple.withOpacity(.18),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: EdgeInsets.all(
-                ResponsiveHelper.useCompactLayout(context) ? 11 : 14,
-              ),
-              decoration: BoxDecoration(
-                color: scheme.primary.withOpacity(.12),
-                borderRadius: BorderRadius.circular(
-                  ResponsiveHelper.useCompactLayout(context) ? 13 : 16,
-                ),
-              ),
-              child: Icon(
-                Icons.auto_graph_rounded,
-                color: scheme.primary,
-                size: ResponsiveHelper.useCompactLayout(context) ? 24 : 30,
-              ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: compact ? 46 : 52,
+            height: compact ? 46 : 52,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(.10),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Spending Forecast',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Use your historical spending patterns to understand what may happen next.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface.withOpacity(.72),
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      Chip(
-                        avatar: const Icon(Icons.history_rounded, size: 17),
-                        label: Text('$historicalMonths months history'),
-                      ),
-                      Chip(
-                        avatar: const Icon(
-                          Icons.online_prediction_rounded,
-                          size: 17,
+            child: Icon(
+              Icons.auto_graph_rounded,
+              color: Colors.white,
+              size: compact ? 24 : 28,
+            ),
+          ),
+
+          SizedBox(width: compact ? 12 : 16),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Spending Forecast',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
-                        label: Text('$forecastMonths months forecast'),
                       ),
-                      const Chip(
-                        avatar: Icon(Icons.workspace_premium_rounded, size: 17),
-                        label: Text('Premium'),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
                       ),
-                    ],
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(.10),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'PREMIUM',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .6,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  'Use your historical spending patterns to understand what may happen next.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(.72),
+                    height: 1.4,
                   ),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: 14),
+
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _heroChip(
+                      icon: Icons.history_rounded,
+                      label: '$historicalMonths months history',
+                    ),
+                    _heroChip(
+                      icon: Icons.online_prediction_rounded,
+                      label: '$forecastMonths months forecast',
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(.20),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white.withOpacity(.90)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -484,7 +575,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(item.$3, color: theme.colorScheme.primary),
+                    Icon(item.$3, color: _analyticsTeal),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -624,11 +715,11 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
                       spots: spots,
                       isCurved: true,
                       barWidth: 3,
-                      color: scheme.primary,
+                      color: _analyticsTeal,
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: scheme.primary.withOpacity(.08),
+                        color: _analyticsTeal.withOpacity(.10),
                       ),
                     ),
                   ],
@@ -718,7 +809,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.lock_clock_outlined, color: scheme.primary),
+                  Icon(Icons.lock_clock_outlined, color: _analyticsTeal),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -743,13 +834,17 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: scheme.surfaceContainerHighest.withOpacity(.55),
+                  color: _analyticsTeal.withOpacity(.07),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.info_outline_rounded, size: 20),
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 20,
+                      color: _analyticsTeal,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -870,7 +965,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: theme.colorScheme.primary, size: 21),
+        Icon(icon, color: _analyticsTeal, size: 21),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -1031,6 +1126,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
             value: (percentage / 100).clamp(0, 1),
             minHeight: 8,
             backgroundColor: scheme.surfaceContainerHighest,
+            color: _analyticsTeal,
           ),
         ),
         const SizedBox(height: 5),
@@ -1053,7 +1149,6 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     }
 
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
 
     return Card(
       elevation: 0,
@@ -1091,6 +1186,8 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
     final priority = recommendation['priority']?.toString() ?? 'medium';
 
+    final priorityColor = priority == 'medium' ? Colors.orange : _analyticsTeal;
+
     IconData icon;
 
     switch (recommendation['type']?.toString()) {
@@ -1107,7 +1204,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: theme.colorScheme.primary, size: 22),
+        Icon(icon, color: _analyticsTeal, size: 22),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -1126,7 +1223,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
                   Text(
                     priority.toUpperCase(),
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.primary,
+                      color: priorityColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1174,7 +1271,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.fact_check_outlined, color: scheme.primary),
+                Icon(Icons.fact_check_outlined, color: _analyticsTeal),
                 const SizedBox(width: 10),
                 Text(
                   'Data quality',
@@ -1205,8 +1302,9 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: scheme.tertiaryContainer.withOpacity(.4),
+                  color: _analyticsTeal.withOpacity(.07),
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: _analyticsTeal.withOpacity(.12)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1214,14 +1312,14 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
                     Icon(
                       Icons.calendar_today_outlined,
                       size: 20,
-                      color: scheme.onTertiaryContainer,
+                      color: _analyticsTeal,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         partialMonthNote,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onTertiaryContainer,
+                          color: scheme.onSurface.withOpacity(.72),
                           height: 1.4,
                         ),
                       ),
@@ -1348,6 +1446,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
                     'Historical overview',
                     subtitle:
                         'Your recent spending activity before forecasting.',
+                    icon: Icons.history_rounded,
                   ),
 
                   _buildSummaryGrid(context),
@@ -1358,7 +1457,11 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
                   SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
 
-                  _sectionTitle(context, 'Spending trend'),
+                  _sectionTitle(
+                    context,
+                    'Spending trend',
+                    icon: Icons.trending_up_rounded,
+                  ),
 
                   _buildTrendCard(context),
 
@@ -1369,6 +1472,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
                     'Future outlook',
                     subtitle:
                         'Projected spending based on your historical pattern.',
+                    icon: Icons.online_prediction_rounded,
                   ),
 
                   _buildForecastSection(context),
@@ -1379,7 +1483,12 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
                   if (_categories.isNotEmpty) ...[
                     SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-                    _sectionTitle(context, 'Category contribution'),
+
+                    _sectionTitle(
+                      context,
+                      'Category contribution',
+                      icon: Icons.category_outlined,
+                    ),
                     _buildCategories(context),
                   ],
 
@@ -1402,9 +1511,9 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Spending Forecast'),
+    return AppScaffold(
+      appBar: AdaptiveAppBar(
+        title: 'Spending Forecast',
         actions: [
           if (!_isLoading)
             IconButton(

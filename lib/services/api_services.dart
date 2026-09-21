@@ -927,6 +927,39 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> getHistoricalInsights({
+    int months = 12,
+  }) async {
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/advanced/historical-insights?months=$months',
+    );
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    if (response.statusCode == 403 &&
+        body['code']?.toString() == 'premium_required') {
+      throw Exception(
+        body['message']?.toString() ??
+            'This feature requires an active PesaPulse Premium subscription.',
+      );
+    }
+
+    if (response.statusCode == 422) {
+      throw Exception(
+        body['message']?.toString() ?? 'Invalid historical insights period.',
+      );
+    }
+
+    throw Exception(
+      body['message']?.toString() ?? 'Failed to load historical insights.',
+    );
+  }
+
   static Future<Map<String, dynamic>> getGoalForecast(int goalId) async {
     final response = await _request(
       method: 'GET',

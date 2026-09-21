@@ -4,6 +4,15 @@ import 'package:intl/intl.dart';
 import '../services/api_services.dart';
 import '../utils/responsive_helper.dart';
 
+import '../widgets/app/adaptive_app_bar.dart';
+import '../widgets/app/app_scaffold.dart';
+
+const Color _premiumPurple = Color(0xFF6D3FD9);
+const Color _premiumPurpleDark = Color(0xFF34205F);
+
+const Color _budgetBlue = Color(0xFF3B82F6);
+const Color _budgetBlueLight = Color(0xFF60A5FA);
+
 class AdvancedBudgetInsightsScreen extends StatefulWidget {
   const AdvancedBudgetInsightsScreen({super.key});
 
@@ -116,11 +125,9 @@ class _AdvancedBudgetInsightsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Budget Intelligence'), elevation: 0),
-      body: _buildBody(theme),
+    return AppScaffold(
+      appBar: const AdaptiveAppBar(title: 'Budget Intelligence'),
+      body: _buildBody(Theme.of(context)),
     );
   }
 
@@ -239,84 +246,89 @@ class _AdvancedBudgetInsightsScreenState
     final daysRemaining = _int(period['days_remaining']);
 
     final budgetAmount = _double(budget['amount']);
+
     final spent = _double(budget['spent']);
+
     final usagePercentage = _double(budget['usage_percentage']);
 
     final progress = (usagePercentage / 100).clamp(0.0, 1.0);
 
     final isOverBudget = spent > budgetAmount && budgetAmount > 0;
 
-    final accent = isOverBudget ? Colors.red : theme.colorScheme.primary;
+    // Purple is the Premium identity.
+    // Red is reserved for the over-budget state.
+    final statusAccent = isOverBudget ? Colors.red : _budgetBlue;
 
     final titleSection = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: compact ? 42 : 46,
-          height: compact ? 42 : 46,
+          width: compact ? 46 : 52,
+          height: compact ? 46 : 52,
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary,
-            borderRadius: BorderRadius.circular(compact ? 12 : 14),
+            color: Colors.white.withOpacity(.10),
+            shape: BoxShape.circle,
           ),
           child: Icon(
             Icons.account_balance_wallet_rounded,
-            size: compact ? 21 : 23,
-            color: theme.colorScheme.onPrimary,
+            size: compact ? 22 : 25,
+            color: Colors.white,
           ),
         ),
-        SizedBox(width: compact ? 10 : 12),
+        SizedBox(width: compact ? 11 : 13),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Premium Budget Intelligence',
-                style:
-                    (compact
-                            ? theme.textTheme.titleMedium
-                            : theme.textTheme.titleLarge)
-                        ?.copyWith(fontWeight: FontWeight.bold),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Premium Budget Intelligence',
+                      style:
+                          (compact
+                                  ? theme.textTheme.titleLarge
+                                  : theme.textTheme.headlineSmall)
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                              ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(.10),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'PREMIUM',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: .6,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 '${_monthName(month)} $year',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: Colors.white.withOpacity(.72),
                 ),
               ),
             ],
           ),
         ),
       ],
-    );
-
-    final premiumBadge = Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 10,
-        vertical: compact ? 5 : 6,
-      ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.workspace_premium_rounded,
-            size: compact ? 14 : 16,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: 5),
-          Text(
-            'PREMIUM',
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.8,
-            ),
-          ),
-        ],
-      ),
     );
 
     return Container(
@@ -329,37 +341,24 @@ class _AdvancedBudgetInsightsScreenState
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(compact ? 22 : 28),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primaryContainer,
-            theme.colorScheme.surface,
-          ],
+          colors: [_premiumPurple, _premiumPurpleDark],
         ),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+        border: Border.all(color: Colors.white.withOpacity(.12)),
+        boxShadow: [
+          BoxShadow(
+            color: _premiumPurple.withOpacity(.18),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (compact)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                titleSection,
-                const SizedBox(height: 10),
-                premiumBadge,
-              ],
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: titleSection),
-                const SizedBox(width: 12),
-                premiumBadge,
-              ],
-            ),
+          titleSection,
 
           SizedBox(height: compact ? 20 : 24),
 
@@ -372,7 +371,7 @@ class _AdvancedBudgetInsightsScreenState
                   isOverBudget,
                   spent,
                   budgetAmount,
-                  accent,
+                  statusAccent,
                 ),
                 const SizedBox(height: 20),
                 Center(
@@ -380,8 +379,9 @@ class _AdvancedBudgetInsightsScreenState
                     theme,
                     progress,
                     usagePercentage,
-                    accent,
+                    statusAccent,
                     compact,
+                    showOnPurple: true,
                   ),
                 ),
               ],
@@ -396,7 +396,7 @@ class _AdvancedBudgetInsightsScreenState
                     isOverBudget,
                     spent,
                     budgetAmount,
-                    accent,
+                    statusAccent,
                   ),
                 ),
                 const SizedBox(width: 20),
@@ -404,8 +404,9 @@ class _AdvancedBudgetInsightsScreenState
                   theme,
                   progress,
                   usagePercentage,
-                  accent,
+                  statusAccent,
                   compact,
+                  showOnPurple: true,
                 ),
               ],
             ),
@@ -417,8 +418,10 @@ class _AdvancedBudgetInsightsScreenState
             child: LinearProgressIndicator(
               minHeight: compact ? 8 : 9,
               value: progress,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation<Color>(accent),
+              backgroundColor: Colors.white.withOpacity(.12),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isOverBudget ? Colors.red : _budgetBlueLight,
+              ),
             ),
           ),
 
@@ -429,20 +432,21 @@ class _AdvancedBudgetInsightsScreenState
               Icon(
                 Icons.calendar_today_outlined,
                 size: compact ? 14 : 15,
-                color: theme.colorScheme.onSurfaceVariant,
+                color: Colors.white.withOpacity(.65),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   '$daysElapsed days elapsed',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: Colors.white.withOpacity(.65),
                   ),
                 ),
               ),
               Text(
                 '$daysRemaining days remaining',
                 style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withOpacity(.88),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -491,9 +495,20 @@ class _AdvancedBudgetInsightsScreenState
     double progress,
     double usagePercentage,
     Color accent,
-    bool compact,
-  ) {
+    bool compact, {
+    bool showOnPurple = false,
+  }) {
     final size = compact ? 86.0 : 104.0;
+
+    final backgroundColor = showOnPurple
+        ? Colors.white.withOpacity(.14)
+        : theme.colorScheme.surfaceContainerHighest;
+
+    final textColor = showOnPurple ? Colors.white : theme.colorScheme.onSurface;
+
+    final secondaryTextColor = showOnPurple
+        ? Colors.white.withOpacity(.65)
+        : theme.colorScheme.onSurfaceVariant;
 
     return SizedBox(
       width: size,
@@ -505,7 +520,7 @@ class _AdvancedBudgetInsightsScreenState
             value: progress,
             strokeWidth: compact ? 9 : 10,
             strokeCap: StrokeCap.round,
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            backgroundColor: backgroundColor,
             color: accent,
           ),
           Column(
@@ -514,13 +529,14 @@ class _AdvancedBudgetInsightsScreenState
               Text(
                 '${usagePercentage.toStringAsFixed(1)}%',
                 style: theme.textTheme.titleMedium?.copyWith(
+                  color: textColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 'used',
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: secondaryTextColor,
                 ),
               ),
             ],
@@ -615,7 +631,15 @@ class _AdvancedBudgetInsightsScreenState
         ? Colors.red
         : isPositive
         ? Colors.green
-        : theme.colorScheme.primary;
+        : _budgetBlue;
+
+    final statusIcon = isNegative
+        ? Icons.trending_up_rounded
+        : isPositive
+        ? Icons.trending_down_rounded
+        : status == 'on_budget_pace'
+        ? Icons.trending_flat_rounded
+        : Icons.speed_rounded;
 
     final statusLabel = switch (status) {
       'under_budget_pace' => 'Under budget pace',
@@ -652,15 +676,7 @@ class _AdvancedBudgetInsightsScreenState
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  isNegative
-                      ? Icons.trending_up_rounded
-                      : isPositive
-                      ? Icons.trending_down_rounded
-                      : Icons.speed_rounded,
-                  size: 18,
-                  color: statusColor,
-                ),
+                Icon(statusIcon, size: 18, color: statusColor),
                 const SizedBox(width: 7),
                 Text(
                   statusLabel,
@@ -746,8 +762,8 @@ class _AdvancedBudgetInsightsScreenState
 
     final confidenceColor = switch (confidence) {
       'high' => Colors.green,
-      'medium' => Colors.orange,
-      'low' => Colors.deepOrange,
+      'medium' => _budgetBlue,
+      'low' => Colors.orange,
       _ => theme.colorScheme.onSurfaceVariant,
     };
 
@@ -881,7 +897,7 @@ class _AdvancedBudgetInsightsScreenState
       'high' => Colors.deepOrange,
       'moderate' => Colors.orange,
       'low' => Colors.green,
-      _ => theme.colorScheme.primary,
+      _ => _budgetBlue,
     };
 
     final label = switch (level) {
@@ -1068,8 +1084,8 @@ class _AdvancedBudgetInsightsScreenState
                     minHeight: compact ? 6 : 7,
                     value: progress,
                     backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      theme.colorScheme.primary,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      _budgetBlue,
                     ),
                   ),
                 ),
@@ -1313,13 +1329,13 @@ class _AdvancedBudgetInsightsScreenState
                   width: compact ? 34 : 38,
                   height: compact ? 34 : 38,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
+                    color: _budgetBlue.withOpacity(.10),
                     borderRadius: BorderRadius.circular(compact ? 10 : 12),
                   ),
                   child: Icon(
                     icon,
                     size: compact ? 18 : 20,
-                    color: theme.colorScheme.primary,
+                    color: _budgetBlue,
                   ),
                 ),
                 SizedBox(width: compact ? 9 : 11),
@@ -1379,14 +1395,10 @@ class _AdvancedBudgetInsightsScreenState
               width: compact ? 34 : 36,
               height: compact ? 34 : 36,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
+                color: _budgetBlue.withOpacity(.10),
                 borderRadius: BorderRadius.circular(compact ? 10 : 11),
               ),
-              child: Icon(
-                icon,
-                size: compact ? 17 : 18,
-                color: theme.colorScheme.primary,
-              ),
+              child: Icon(icon, size: compact ? 17 : 18, color: _budgetBlue),
             ),
             SizedBox(width: compact ? 9 : 10),
             Expanded(
@@ -1458,7 +1470,7 @@ class _AdvancedBudgetInsightsScreenState
       case 'medium':
         return Colors.orange;
       default:
-        return theme.colorScheme.primary;
+        return _budgetBlue;
     }
   }
 
