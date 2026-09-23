@@ -20,6 +20,7 @@ import '../widgets/premium/premium_feature_guard.dart';
 
 import '../subscription/controllers/subscription_controller.dart';
 import '../subscription/models/premium_feature.dart';
+import '../subscription/models/premium_payment_result.dart';
 
 import 'add_goals_screen.dart';
 import 'archived_goals_screen.dart';
@@ -39,7 +40,7 @@ class GoalsScreen extends StatefulWidget {
 }
 
 class _GoalsScreenState extends State<GoalsScreen>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   bool isGuest = false;
 
   final GoalsService goalsService = GoalsService();
@@ -60,10 +61,14 @@ class _GoalsScreenState extends State<GoalsScreen>
   bool _cacheLoaded = false;
 
   bool _subscriptionLoading = false;
+  bool _premiumCheckoutInProgress = false;
+  bool _checkingPayment = false;
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
 
     goalsController = GoalsController(goalsService: goalsService);
 
@@ -97,6 +102,15 @@ class _GoalsScreenState extends State<GoalsScreen>
     SyncEvents.instance.goalsRefresh.addListener(_goalRefreshListener);
 
     _initializeGoalsScreen();
+  }
+
+  // lifecycle callback
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _premiumCheckoutInProgress) {
+      _verifyPremiumAfterPayment();
+    }
   }
 
   // ============================================================
@@ -200,6 +214,91 @@ class _GoalsScreenState extends State<GoalsScreen>
     }
   }
 
+  Future<void> _openPremiumCheckout() async {
+    if (_premiumCheckoutInProgress) return;
+
+    try {
+      await subscriptionController.startPremiumCheckout();
+
+      if (!mounted) return;
+
+      setState(() {
+        _premiumCheckoutInProgress = true;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Premium checkout opened. Complete your payment to unlock Premium.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
+  Future<void> _verifyPremiumAfterPayment() async {
+    if (!mounted || _checkingPayment) return;
+
+    setState(() {
+      _checkingPayment = true;
+    });
+
+    try {
+      final result = await subscriptionController.verifyPendingPayment();
+
+      if (!mounted || result == null) return;
+
+      switch (result.status) {
+        case PremiumPaymentStatus.complete:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Payment confirmed. PesaPulse Premium is now active.',
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          break;
+
+        case PremiumPaymentStatus.failed:
+          SnackbarHelper.showError(context, result.message);
+          break;
+
+        case PremiumPaymentStatus.pending:
+        case PremiumPaymentStatus.processing:
+          SnackbarHelper.showInfo(context, result.message);
+          break;
+
+        case PremiumPaymentStatus.unknown:
+          SnackbarHelper.showError(context, result.message);
+          break;
+      }
+    } catch (e) {
+      debugPrint('GoalsScreen: Premium payment verification failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to check your Premium payment status.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _checkingPayment = false;
+          _premiumCheckoutInProgress = false;
+        });
+      }
+    }
+  }
   // ============================================================
   // ADVANCED GOAL TRACKING
   // ============================================================
@@ -208,6 +307,7 @@ class _GoalsScreenState extends State<GoalsScreen>
     final allowed = await PremiumFeatureGuard.check(
       context: context,
       feature: PremiumFeature.advancedGoalTracking,
+      onUpgrade: _openPremiumCheckout,
     );
 
     if (!allowed || !mounted) return;
@@ -252,15 +352,12 @@ class _GoalsScreenState extends State<GoalsScreen>
     final allowed = await PremiumFeatureGuard.check(
       context: context,
       feature: PremiumFeature.advancedGoalForecast,
+      onUpgrade: _openPremiumCheckout,
     );
 
     if (!allowed || !mounted) return;
 
     try {
-      final data = await ApiService.getAdvancedGoalForecast();
-
-      if (!mounted) return;
-
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -440,7 +537,9 @@ class _GoalsScreenState extends State<GoalsScreen>
                       isPremium: subscriptionController.isPremium,
                       isLoading:
                           _subscriptionLoading ||
-                          !subscriptionController.state.hasLoaded,
+                          !subscriptionController.state.hasLoaded ||
+                          _premiumCheckoutInProgress ||
+                          _checkingPayment,
                       accentColor: Colors.amber,
                       onPressed: _openAdvancedGoalTracking,
                     ),
@@ -452,7 +551,9 @@ class _GoalsScreenState extends State<GoalsScreen>
                       isPremium: subscriptionController.isPremium,
                       isLoading:
                           _subscriptionLoading ||
-                          !subscriptionController.state.hasLoaded,
+                          !subscriptionController.state.hasLoaded ||
+                          _premiumCheckoutInProgress ||
+                          _checkingPayment,
                       accentColor: Colors.amber,
                       onPressed: _openAdvancedGoalForecast,
                     ),
@@ -482,6 +583,8 @@ class _GoalsScreenState extends State<GoalsScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
     SyncEvents.instance.goalsRefresh.removeListener(_goalRefreshListener);
 
     goalsController.removeListener(_onGoalsControllerChanged);

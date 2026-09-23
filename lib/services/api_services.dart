@@ -754,7 +754,8 @@ class ApiService {
     }
 
     throw Exception(
-      body['message']?.toString() ?? 'Failed to load advanced budget insights.',
+      body['message']?.toString() ??
+          'Failed to load advanced budget insights(${response.statusCode}).',
     );
   }
 
@@ -842,7 +843,8 @@ class ApiService {
     }
 
     throw Exception(
-      body['message']?.toString() ?? 'Failed to load spending forecast.',
+      body['message']?.toString() ??
+          'Failed to load spending forecast (${response.statusCode}).',
     );
   }
 
@@ -870,7 +872,8 @@ class ApiService {
     }
 
     throw Exception(
-      body['message']?.toString() ?? 'Failed to load goal forecast.',
+      body['message']?.toString() ??
+          'Failed to load goal forecast(${response.statusCode}).',
     );
   }
 
@@ -923,7 +926,8 @@ class ApiService {
     }
 
     throw Exception(
-      body['message']?.toString() ?? 'Failed to run budget simulation.',
+      body['message']?.toString() ??
+          'Failed to run budget simulation(${response.statusCode}).',
     );
   }
 
@@ -956,7 +960,63 @@ class ApiService {
     }
 
     throw Exception(
-      body['message']?.toString() ?? 'Failed to load historical insights.',
+      body['message']?.toString() ??
+          'Failed to load historical insights(${response.statusCode}).',
+    );
+  }
+
+  static Future<Map<String, dynamic>> createPremiumCheckout() async {
+    final response = await _request(
+      method: 'POST',
+      endpoint: '/subscription/checkout',
+    );
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 201) {
+      return body;
+    }
+
+    if (response.statusCode == 409 &&
+        body['code']?.toString() == 'already_premium') {
+      throw Exception(
+        body['message']?.toString() ??
+            'You already have an active PesaPulse Premium subscription.',
+      );
+    }
+
+    throw Exception(
+      body['message']?.toString() ?? 'Unable to start the Premium checkout.',
+    );
+  }
+
+  static Future<Map<String, dynamic>> getPremiumPaymentStatus({
+    required String reference,
+  }) async {
+    final encodedReference = Uri.encodeQueryComponent(reference);
+
+    final response = await _request(
+      method: 'GET',
+      endpoint:
+          '/subscription/payment-status'
+          '?reference=$encodedReference',
+    );
+
+    final body = _decodeResponseBody(response);
+
+    if (response.statusCode == 200) {
+      return body;
+    }
+
+    if (response.statusCode == 404 &&
+        body['code']?.toString() == 'payment_not_found') {
+      throw Exception(
+        body['message']?.toString() ?? 'Payment transaction not found.',
+      );
+    }
+
+    throw Exception(
+      body['message']?.toString() ?? 'Unable to check payment status.',
     );
   }
 

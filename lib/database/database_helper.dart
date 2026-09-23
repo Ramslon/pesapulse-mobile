@@ -47,7 +47,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 21,
+      version: 22,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -486,6 +486,25 @@ CREATE TABLE settings(
     ALTER TABLE budget_summary_cache
     ADD COLUMN year INTEGER
   ''');
+    }
+
+    if (oldVersion < 22) {
+      // Remove duplicate expenses that share the same server_id
+      await db.execute("""
+    DELETE FROM expenses
+    WHERE rowid NOT IN (
+      SELECT MIN(rowid)
+      FROM expenses
+      GROUP BY server_id
+    )
+    AND server_id IS NOT NULL;
+  """);
+
+      // Prevent future duplicates by enforcing uniqueness on server_id
+      await db.execute("""
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_server_id
+    ON expenses(server_id);
+  """);
     }
   }
 }

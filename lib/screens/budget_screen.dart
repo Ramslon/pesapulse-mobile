@@ -33,7 +33,8 @@ import '../utils/snackbar_helper.dart';
 import '../widgets/premium/premium_feature_card.dart';
 import '../widgets/premium/premium_feature_guard.dart';
 import '../subscription/models/premium_feature.dart';
-import '../subscription/services/subscription_service.dart';
+import '../subscription/controllers/subscription_controller.dart';
+import '../subscription/models/premium_payment_result.dart';
 
 import '../screens/advanced_budget_insights_screen.dart';
 import '../screens/budget_simulation_screen.dart';
@@ -46,7 +47,7 @@ class BudgetScreen extends StatefulWidget {
 }
 
 class BudgetScreenState extends State<BudgetScreen>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final BudgetController controller = BudgetController(
     budgetRepository: BudgetRepository(),
     insightsRepository: FinancialInsightsRepository(),
@@ -56,8 +57,14 @@ class BudgetScreenState extends State<BudgetScreen>
 
   final TextEditingController budgetController = TextEditingController();
 
+  final SubscriptionController subscriptionController =
+      SubscriptionController();
+
   bool _subscriptionLoading = true;
   bool _isPremium = false;
+
+  bool _premiumCheckoutInProgress = false;
+  bool _checkingPayment = false;
 
   double get percentageUsed =>
       BudgetCalculator.percentageUsed(budget: state.budget, spent: state.spent);
@@ -75,7 +82,28 @@ class BudgetScreenState extends State<BudgetScreen>
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+
+    subscriptionController.addListener(_onSubscriptionChanged);
+
     loadBudget();
+  }
+
+  // Lifecycle callback
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _premiumCheckoutInProgress) {
+      _verifyPremiumAfterPayment();
+    }
+  }
+
+  void _onSubscriptionChanged() {
+    if (!mounted) return;
+
+    setState(() {
+      _isPremium = subscriptionController.isPremium;
+    });
   }
 
   Future<void> refreshBudget() async {
@@ -107,7 +135,6 @@ class BudgetScreenState extends State<BudgetScreen>
   }
 
   Future<void> _loadSubscription() async {
-    // Guests should not see Premium features.
     if (state.isGuest) {
       if (!mounted) return;
 
@@ -120,15 +147,19 @@ class BudgetScreenState extends State<BudgetScreen>
     }
 
     try {
-      final service = SubscriptionService.instance;
+      if (mounted) {
+        setState(() {
+          _subscriptionLoading = true;
+        });
+      }
 
-      await service.loadSubscription();
+      await subscriptionController.loadSubscription();
 
       if (!mounted) return;
 
       setState(() {
         _subscriptionLoading = false;
-        _isPremium = service.state.isPremium;
+        _isPremium = subscriptionController.isPremium;
       });
     } catch (e) {
       debugPrint('BudgetScreen: failed to load subscription: $e');
@@ -142,39 +173,172 @@ class BudgetScreenState extends State<BudgetScreen>
     }
   }
 
+  Future<void> _openPremiumCheckout() async {
+    if (_premiumCheckoutInProgress) return;
+
+    try {
+      await subscriptionController.startPremiumCheckout();
+
+      if (!mounted) return;
+
+      setState(() {
+        _premiumCheckoutInProgress = true;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Premium checkout opened. Complete your payment to unlock Premium.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
+  Future<void> _verifyPremiumAfterPayment() async {
+    if (!mounted || _checkingPayment) return;
+
+    setState(() {
+      _checkingPayment = true;
+    });
+
+    try {
+      final result = await subscriptionController.verifyPendingPayment();
+
+      if (!mounted || result == null) return;
+
+      switch (result.status) {
+        case PremiumPaymentStatus.complete:
+          setState(() {
+            _isPremium = true;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Payment confirmed. PesaPulse Premium is now active.',
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          break;
+
+        case PremiumPaymentStatus.failed:
+          SnackbarHelper.showError(context, result.message);
+          break;
+
+        case PremiumPaymentStatus.pending:
+        case PremiumPaymentStatus.processing:
+          SnackbarHelper.showInfo(context, result.message);
+          break;
+
+        case PremiumPaymentStatus.unknown:
+          SnackbarHelper.showError(context, result.message);
+          break;
+      }
+    } catch (e) {
+      debugPrint('BudgetScreen: Premium payment verification failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to check your Premium payment status.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _checkingPayment = false;
+          _premiumCheckoutInProgress = false;
+        });
+      }
+    }
+  }
+
   Future<void> _openAdvancedBudgetInsights() async {
     final allowed = await PremiumFeatureGuard.check(
       context: context,
       feature: PremiumFeature.advancedBudgetInsights,
+      onUpgrade: _openPremiumCheckout,
     );
 
     if (!allowed || !mounted) return;
+    try {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdvancedBudgetInsightsScreen()),
+      );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AdvancedBudgetInsightsScreen()),
-    );
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      debugPrint('Advanced Budget Insights failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to load Advanced Budget Insights. Please try again.',
+      );
+    }
   }
 
   Future<void> _openBudgetSimulation() async {
     final allowed = await PremiumFeatureGuard.check(
       context: context,
       feature: PremiumFeature.budgetSimulation,
+      onUpgrade: _openPremiumCheckout,
     );
 
     if (!allowed || !mounted) return;
+    try {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const BudgetSimulationScreen()),
+      );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const BudgetSimulationScreen()),
-    );
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      debugPrint('Budget Simulation failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to load Budget Simulation. Please try again.',
+      );
+    }
   }
 
   Widget _buildAdvancedBudgetFeature() {
     return PremiumFeatureCard(
       feature: PremiumFeature.advancedBudgetInsights,
       isPremium: _isPremium,
-      isLoading: _subscriptionLoading,
+      isLoading:
+          _subscriptionLoading ||
+          _premiumCheckoutInProgress ||
+          _checkingPayment,
       accentColor: Colors.blue,
       onPressed: _openAdvancedBudgetInsights,
     );
@@ -184,7 +348,10 @@ class BudgetScreenState extends State<BudgetScreen>
     return PremiumFeatureCard(
       feature: PremiumFeature.budgetSimulation,
       isPremium: _isPremium,
-      isLoading: _subscriptionLoading,
+      isLoading:
+          _subscriptionLoading ||
+          _premiumCheckoutInProgress ||
+          _checkingPayment,
       accentColor: Colors.blue,
       onPressed: _openBudgetSimulation,
     );
@@ -322,7 +489,13 @@ class BudgetScreenState extends State<BudgetScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
+    subscriptionController.removeListener(_onSubscriptionChanged);
+    subscriptionController.dispose();
+
     budgetController.dispose();
+
     super.dispose();
   }
 

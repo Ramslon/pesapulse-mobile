@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/premium_feature.dart';
 import '../models/subscription_state.dart';
+import '../models/premium_payment_result.dart';
 import '../services/subscription_service.dart';
 
 class SubscriptionController extends ChangeNotifier {
@@ -24,6 +25,24 @@ class SubscriptionController extends ChangeNotifier {
     } finally {
       notifyListeners();
     }
+  }
+
+  Future<void> startPremiumCheckout() async {
+    await service.openPremiumCheckout();
+  }
+
+  Future<PremiumPaymentResult?> verifyPendingPayment({
+    int attempts = 4,
+    Duration delay = const Duration(seconds: 2),
+  }) async {
+    final result = await service.verifyPendingPayment(
+      attempts: attempts,
+      delay: delay,
+    );
+
+    notifyListeners();
+
+    return result;
   }
 
   void setPlan({

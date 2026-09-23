@@ -261,7 +261,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
       if (!mounted) return;
 
       setState(() {
-        expenses.addAll(newExpenses);
+        expenses = newExpenses;
 
         filterExpenses();
 

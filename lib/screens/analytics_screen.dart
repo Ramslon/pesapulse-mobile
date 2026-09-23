@@ -39,6 +39,7 @@ import '../models/analytics_period.dart';
 
 import '../subscription/controllers/subscription_controller.dart';
 import '../subscription/models/premium_feature.dart';
+import '../subscription/models/premium_payment_result.dart';
 
 import '../utils/analytics_theme_helper.dart';
 import '../utils/responsive_helper.dart';
@@ -59,7 +60,7 @@ class AnalyticsScreen extends StatefulWidget {
 }
 
 class _AnalyticsScreenState extends State<AnalyticsScreen>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   AnalyticsSummary? summary;
 
   List<Map<String, dynamic>> reports = [];
@@ -86,10 +87,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       SubscriptionController();
 
   bool _subscriptionLoading = false;
+  bool _premiumCheckoutInProgress = false;
+  bool _checkingPayment = false;
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
 
     _network = context.read<ConnectivityProvider>();
     _wasOnline = _network.isOnline;
@@ -101,6 +106,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     _initializeAnalytics();
 
     _subscriptionController.addListener(_onSubscriptionChanged);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _premiumCheckoutInProgress) {
+      _verifyPremiumAfterPayment();
+    }
   }
 
   void _onAnalyticsDataChanged() {
@@ -232,10 +244,103 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     }
   }
 
+  Future<void> _openPremiumCheckout() async {
+    if (_premiumCheckoutInProgress) return;
+
+    setState(() {
+      _premiumCheckoutInProgress = true;
+    });
+
+    try {
+      await _subscriptionController.startPremiumCheckout();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Premium checkout opened. Complete your payment to unlock Premium.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      _premiumCheckoutInProgress = false;
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      return;
+    }
+  }
+
+  Future<void> _verifyPremiumAfterPayment() async {
+    if (!mounted || _checkingPayment) return;
+
+    setState(() {
+      _checkingPayment = true;
+    });
+
+    try {
+      final result = await _subscriptionController.verifyPendingPayment();
+
+      if (!mounted || result == null) return;
+
+      switch (result.status) {
+        case PremiumPaymentStatus.complete:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Payment confirmed. PesaPulse Premium is now active.',
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          break;
+
+        case PremiumPaymentStatus.failed:
+          SnackbarHelper.showError(context, result.message);
+          break;
+
+        case PremiumPaymentStatus.pending:
+        case PremiumPaymentStatus.processing:
+          SnackbarHelper.showInfo(context, result.message);
+          break;
+
+        case PremiumPaymentStatus.unknown:
+          SnackbarHelper.showError(context, result.message);
+          break;
+      }
+    } catch (e) {
+      debugPrint('Analytics: Premium payment verification failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to check your Premium payment status.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _checkingPayment = false;
+          _premiumCheckoutInProgress = false;
+        });
+      }
+    }
+  }
+
   Future<void> _openAdvancedAnalytics() async {
     final allowed = await PremiumFeatureGuard.check(
       context: context,
       feature: PremiumFeature.advancedAnalytics,
+      onUpgrade: _openPremiumCheckout,
     );
 
     if (!allowed || !mounted) return;
@@ -276,28 +381,68 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     final allowed = await PremiumFeatureGuard.check(
       context: context,
       feature: PremiumFeature.spendingForecast,
+      onUpgrade: _openPremiumCheckout,
     );
 
     if (!allowed || !mounted) return;
+    try {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SpendingForecastScreen()),
+      );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const SpendingForecastScreen()),
-    );
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      debugPrint('Spending Forecast failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to load Spending Forecast. Please try again.',
+      );
+    }
   }
 
   Future<void> _openHistoricalInsights() async {
     final allowed = await PremiumFeatureGuard.check(
       context: context,
       feature: PremiumFeature.historicalInsights,
+      onUpgrade: _openPremiumCheckout,
     );
 
     if (!allowed || !mounted) return;
+    try {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HistoricalInsightsScreen()),
+      );
+    } on RateLimitException catch (e) {
+      if (!mounted) return;
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const HistoricalInsightsScreen()),
-    );
+      SnackbarHelper.showRateLimited(
+        context,
+        message: e.message,
+        remaining: e.remaining,
+        retryAfter: e.retryAfter,
+      );
+    } catch (e) {
+      debugPrint('Historical Insights failed: $e');
+
+      if (!mounted) return;
+
+      SnackbarHelper.showError(
+        context,
+        'Unable to load Historical Insights. Please try again.',
+      );
+    }
   }
 
   void _onConnectivityChanged() {
@@ -377,6 +522,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
     _network.removeListener(_onConnectivityChanged);
 
     SyncEvents.instance.analyticsRefresh.removeListener(
@@ -759,7 +906,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         PremiumFeatureCard(
                           feature: PremiumFeature.advancedAnalytics,
                           isPremium: _subscriptionController.isPremium,
-                          isLoading: _subscriptionLoading,
+                          isLoading:
+                              _subscriptionLoading ||
+                              _premiumCheckoutInProgress ||
+                              _checkingPayment,
                           accentColor: Colors.teal,
                           onPressed: _openAdvancedAnalytics,
                         ),
@@ -769,7 +919,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         PremiumFeatureCard(
                           feature: PremiumFeature.spendingForecast,
                           isPremium: _subscriptionController.isPremium,
-                          isLoading: _subscriptionLoading,
+                          isLoading:
+                              _subscriptionLoading ||
+                              _premiumCheckoutInProgress ||
+                              _checkingPayment,
                           accentColor: Colors.teal,
                           onPressed: _openSpendingForecast,
                         ),
@@ -779,7 +932,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         PremiumFeatureCard(
                           feature: PremiumFeature.historicalInsights,
                           isPremium: _subscriptionController.isPremium,
-                          isLoading: _subscriptionLoading,
+                          isLoading:
+                              _subscriptionLoading ||
+                              _premiumCheckoutInProgress ||
+                              _checkingPayment,
                           accentColor: Colors.teal,
                           onPressed: _openHistoricalInsights,
                         ),

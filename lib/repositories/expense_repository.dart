@@ -119,7 +119,7 @@ class ExpenseRepository extends BaseRepository {
           for (final expense in expenses) {
             await txn.insert(
               "expenses",
-              _expenseToLocal(expense, ownerId),
+              _expenseToLocal(expense, ownerId)..["is_synced"] = 1,
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
           }
