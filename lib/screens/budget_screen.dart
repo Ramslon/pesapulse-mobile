@@ -60,7 +60,7 @@ class BudgetScreenState extends State<BudgetScreen>
   final SubscriptionController subscriptionController =
       SubscriptionController();
 
-  bool _subscriptionLoading = true;
+  bool _subscriptionLoading = false;
   bool _premiumCheckoutInProgress = false;
   bool _checkingPayment = false;
 
@@ -68,6 +68,11 @@ class BudgetScreenState extends State<BudgetScreen>
 
   bool? _wasOnline;
   bool _premiumPaymentVerificationPending = false;
+
+  bool get _premiumCardLoading =>
+      _premiumCheckoutInProgress ||
+      _checkingPayment ||
+      (_subscriptionLoading && !subscriptionController.hasPremiumAccess);
 
   double get percentageUsed =>
       BudgetCalculator.percentageUsed(budget: state.budget, spent: state.spent);
@@ -208,7 +213,14 @@ class BudgetScreenState extends State<BudgetScreen>
       return;
     }
 
-    if (_subscriptionLoading && !forceRefresh) {
+    // Do not show "Checking access" when the subscription
+    // has already been loaded and no explicit refresh was requested.
+    if (!forceRefresh && subscriptionController.state.hasLoaded) {
+      debugPrint(
+        'BudgetScreen: subscription already loaded. '
+        'Skipping duplicate subscription check.',
+      );
+
       return;
     }
 
@@ -246,8 +258,8 @@ class BudgetScreenState extends State<BudgetScreen>
     } catch (e) {
       debugPrint('BudgetScreen: failed to load subscription: $e');
 
-      // If connectivity disappeared during the request,
-      // fall back to the locally cached entitlement.
+      // If connectivity disappeared while the request
+      // was running, restore the cached entitlement.
       if (!_network.isOnline) {
         await subscriptionController.restoreOfflinePremiumAccess();
       }
@@ -490,10 +502,7 @@ class BudgetScreenState extends State<BudgetScreen>
     return PremiumFeatureCard(
       feature: PremiumFeature.advancedBudgetInsights,
       isPremium: subscriptionController.hasPremiumAccess,
-      isLoading:
-          _subscriptionLoading ||
-          _premiumCheckoutInProgress ||
-          _checkingPayment,
+      isLoading: _premiumCardLoading,
       accentColor: Colors.blue,
       onPressed: _openAdvancedBudgetInsights,
     );
@@ -503,10 +512,7 @@ class BudgetScreenState extends State<BudgetScreen>
     return PremiumFeatureCard(
       feature: PremiumFeature.budgetSimulation,
       isPremium: subscriptionController.hasPremiumAccess,
-      isLoading:
-          _subscriptionLoading ||
-          _premiumCheckoutInProgress ||
-          _checkingPayment,
+      isLoading: _premiumCardLoading,
       accentColor: Colors.blue,
       onPressed: _openBudgetSimulation,
     );

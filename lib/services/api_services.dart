@@ -388,7 +388,7 @@ class ApiService {
     throw Exception(body['message']?.toString() ?? 'Failed to add expense.');
   }
 
-  static Future<Map<String, dynamic>> getExpenses() async {
+  static Future<Map<String, dynamic>> getExpenses({int page = 1}) async {
     final response = await _request(method: 'GET', endpoint: '/expenses');
 
     if (response.statusCode == 200) {

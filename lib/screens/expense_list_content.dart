@@ -57,6 +57,8 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
   bool get hasNoExpenses => expenses.isEmpty;
 
+  bool _isFetchingMore = false;
+
   bool get hasNoFilteredResults =>
       expenses.isNotEmpty && filteredExpenses.isEmpty;
 
@@ -194,8 +196,10 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
     scrollController.addListener(() {
       if (scrollController.position.pixels ==
-          scrollController.position.maxScrollExtent) {
-        fetchExpenses();
+              scrollController.position.maxScrollExtent &&
+          !_isFetchingMore &&
+          expenseController.hasMore) {
+        _loadMoreExpenses();
       }
     });
   }
@@ -204,6 +208,25 @@ class ExpenseListContentState extends State<ExpenseListContent>
     if (!mounted) return;
 
     _reloadExpensesFromLocal();
+  }
+
+  Future<void> _loadMoreExpenses() async {
+    if (_isFetchingMore || !expenseController.hasMore) return;
+
+    _isFetchingMore = true;
+
+    try {
+      final newExpenses = await expenseController.fetchExpenses();
+
+      if (!mounted) return;
+
+      setState(() {
+        expenses.addAll(newExpenses);
+        filterExpenses();
+      });
+    } finally {
+      _isFetchingMore = false;
+    }
   }
 
   Future<void> _reloadExpensesFromLocal() async {
@@ -254,17 +277,20 @@ class ExpenseListContentState extends State<ExpenseListContent>
     }
   }
 
-  Future<void> fetchExpenses() async {
+  Future<void> fetchExpenses({bool append = true}) async {
     try {
       final newExpenses = await expenseController.fetchExpenses();
 
       if (!mounted) return;
 
       setState(() {
-        expenses = newExpenses;
+        if (append) {
+          expenses.addAll(newExpenses);
+        } else {
+          expenses = newExpenses;
+        }
 
         filterExpenses();
-
         isLoading = false;
       });
     } catch (e) {
@@ -289,7 +315,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
     expenseController.resetPagination();
 
-    await fetchExpenses();
+    await fetchExpenses(append: false);
 
     if (!mounted) return;
 
