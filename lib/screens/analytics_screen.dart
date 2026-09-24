@@ -86,9 +86,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   final SubscriptionController _subscriptionController =
       SubscriptionController();
 
+  bool get _hasPremiumAccess => _subscriptionController.hasPremiumAccess;
+
   bool _subscriptionLoading = false;
   bool _premiumCheckoutInProgress = false;
   bool _checkingPayment = false;
+
+  bool _premiumPaymentVerificationPending = false;
 
   @override
   void initState() {
@@ -110,9 +114,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _premiumCheckoutInProgress) {
-      _verifyPremiumAfterPayment();
+    if (state != AppLifecycleState.resumed) {
+      return;
     }
+
+    if (!_premiumCheckoutInProgress) {
+      return;
+    }
+
+    if (!_network.isOnline) {
+      if (!mounted) return;
+
+      setState(() {
+        _premiumCheckoutInProgress = false;
+      });
+
+      SnackbarHelper.showInfo(
+        context,
+        _hasPremiumAccess
+            ? 'Premium is unlocked. Reconnect to verify any recent payment.'
+            : 'Reconnect to verify your Premium payment.',
+      );
+
+      return;
+    }
+
+    _verifyPremiumAfterPayment();
   }
 
   void _onAnalyticsDataChanged() {
@@ -132,19 +159,28 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     setState(() {});
   }
 
-  Future<void> _loadSubscription() async {
+  Future<void> _loadSubscription({bool forceRefresh = false}) async {
     if (isGuest == true) return;
 
-    if (_subscriptionController.state.isLoading) {
+    if (_subscriptionLoading && !forceRefresh) {
       return;
     }
 
-    setState(() {
-      _subscriptionLoading = true;
-    });
+    if (!_network.isOnline) {
+      await _subscriptionController.restoreOfflinePremiumAccess();
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _subscriptionLoading = true;
+      });
+    }
 
     try {
-      await _subscriptionController.loadSubscription();
+      await _subscriptionController.loadSubscription(
+        forceRefresh: forceRefresh,
+      );
     } catch (e) {
       debugPrint('Analytics: failed to load subscription: $e');
     } finally {
@@ -191,6 +227,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     await _loadCachedAnalytics();
 
     if (!mounted) return;
+
+    if (!guest && !_network.isOnline) {
+      await _subscriptionController.restoreOfflinePremiumAccess();
+
+      if (!mounted) return;
+    }
 
     if (guest) {
       setState(() {
@@ -247,12 +289,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   Future<void> _openPremiumCheckout() async {
     if (_premiumCheckoutInProgress) return;
 
+    if (!_network.isOnline) {
+      if (!mounted) return;
+
+      SnackbarHelper.showInfo(
+        context,
+        'You are offline. Reconnect to purchase PesaPulse Premium.',
+      );
+
+      return;
+    }
+
     setState(() {
       _premiumCheckoutInProgress = true;
+      _premiumPaymentVerificationPending = false;
     });
 
     try {
       await _subscriptionController.startPremiumCheckout();
+
+      _premiumPaymentVerificationPending = true;
 
       if (!mounted) return;
 
@@ -265,9 +321,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         ),
       );
     } catch (e) {
-      _premiumCheckoutInProgress = false;
+      _premiumPaymentVerificationPending = false;
 
       if (!mounted) return;
+
+      setState(() {
+        _premiumCheckoutInProgress = false;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -275,13 +335,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           behavior: SnackBarBehavior.floating,
         ),
       );
-
-      return;
     }
   }
 
   Future<void> _verifyPremiumAfterPayment() async {
     if (!mounted || _checkingPayment) return;
+
+    if (!_network.isOnline) {
+      setState(() {
+        _premiumCheckoutInProgress = false;
+      });
+
+      SnackbarHelper.showInfo(
+        context,
+        _hasPremiumAccess
+            ? 'Premium is already unlocked. Reconnect to verify your payment.'
+            : 'Payment status cannot be verified while offline. Reconnect and try again.',
+      );
+
+      return;
+    }
 
     setState(() {
       _checkingPayment = true;
@@ -294,6 +367,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
       switch (result.status) {
         case PremiumPaymentStatus.complete:
+          await _subscriptionController.cacheCurrentPremiumAccess();
+
+          _premiumPaymentVerificationPending = false;
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -305,11 +382,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           break;
 
         case PremiumPaymentStatus.failed:
+          _premiumPaymentVerificationPending = false;
+
           SnackbarHelper.showError(context, result.message);
           break;
 
         case PremiumPaymentStatus.pending:
         case PremiumPaymentStatus.processing:
+          _premiumPaymentVerificationPending = true;
+
           SnackbarHelper.showInfo(context, result.message);
           break;
 
@@ -336,11 +417,35 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     }
   }
 
-  Future<void> _openAdvancedAnalytics() async {
-    final allowed = await PremiumFeatureGuard.check(
+  Future<bool> _checkPremiumFeatureAccess(PremiumFeature feature) async {
+    if (!_network.isOnline) {
+      if (!mounted) return false;
+
+      if (_hasPremiumAccess) {
+        SnackbarHelper.showInfo(
+          context,
+          'Premium is unlocked, but this feature requires an internet connection.',
+        );
+      } else {
+        SnackbarHelper.showInfo(
+          context,
+          'You are offline. Reconnect to check Premium access.',
+        );
+      }
+
+      return false;
+    }
+
+    return PremiumFeatureGuard.check(
       context: context,
-      feature: PremiumFeature.advancedAnalytics,
+      feature: feature,
       onUpgrade: _openPremiumCheckout,
+    );
+  }
+
+  Future<void> _openAdvancedAnalytics() async {
+    final allowed = await _checkPremiumFeatureAccess(
+      PremiumFeature.advancedAnalytics,
     );
 
     if (!allowed || !mounted) return;
@@ -378,10 +483,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   Future<void> _openSpendingForecast() async {
-    final allowed = await PremiumFeatureGuard.check(
-      context: context,
-      feature: PremiumFeature.spendingForecast,
-      onUpgrade: _openPremiumCheckout,
+    final allowed = await _checkPremiumFeatureAccess(
+      PremiumFeature.spendingForecast,
     );
 
     if (!allowed || !mounted) return;
@@ -412,10 +515,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   Future<void> _openHistoricalInsights() async {
-    final allowed = await PremiumFeatureGuard.check(
-      context: context,
-      feature: PremiumFeature.historicalInsights,
-      onUpgrade: _openPremiumCheckout,
+    final allowed = await _checkPremiumFeatureAccess(
+      PremiumFeature.historicalInsights,
     );
 
     if (!allowed || !mounted) return;
@@ -474,11 +575,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         return;
       }
 
-      if (_analyticsRequestInProgress) {
-        return;
+      if (!_analyticsRequestInProgress) {
+        _refreshAnalyticsInBackground();
       }
 
-      _refreshAnalyticsInBackground();
+      _loadSubscription(forceRefresh: true);
+
+      if (_premiumPaymentVerificationPending) {
+        _verifyPremiumAfterPayment();
+      }
     }
   }
 
@@ -905,7 +1010,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         //─────────────────────────────
                         PremiumFeatureCard(
                           feature: PremiumFeature.advancedAnalytics,
-                          isPremium: _subscriptionController.isPremium,
+                          isPremium: _subscriptionController.hasPremiumAccess,
                           isLoading:
                               _subscriptionLoading ||
                               _premiumCheckoutInProgress ||
@@ -918,7 +1023,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
                         PremiumFeatureCard(
                           feature: PremiumFeature.spendingForecast,
-                          isPremium: _subscriptionController.isPremium,
+                          isPremium: _subscriptionController.hasPremiumAccess,
                           isLoading:
                               _subscriptionLoading ||
                               _premiumCheckoutInProgress ||
@@ -931,7 +1036,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
                         PremiumFeatureCard(
                           feature: PremiumFeature.historicalInsights,
-                          isPremium: _subscriptionController.isPremium,
+                          isPremium: _subscriptionController.hasPremiumAccess,
                           isLoading:
                               _subscriptionLoading ||
                               _premiumCheckoutInProgress ||

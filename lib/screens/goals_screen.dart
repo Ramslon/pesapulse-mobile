@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/connectivity_provider.dart';
 
 import '../services/session_service.dart';
 import '../services/sync_events.dart';
@@ -64,11 +67,21 @@ class _GoalsScreenState extends State<GoalsScreen>
   bool _premiumCheckoutInProgress = false;
   bool _checkingPayment = false;
 
+  late ConnectivityProvider _network;
+
+  bool? _wasOnline;
+  bool _premiumPaymentVerificationPending = false;
+
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addObserver(this);
+
+    _network = context.read<ConnectivityProvider>();
+    _wasOnline = _network.isOnline;
+
+    _network.addListener(_onConnectivityChanged);
 
     goalsController = GoalsController(goalsService: goalsService);
 
@@ -104,13 +117,67 @@ class _GoalsScreenState extends State<GoalsScreen>
     _initializeGoalsScreen();
   }
 
+  void _onConnectivityChanged() {
+    final isOnline = _network.isOnline;
+    final wasOnline = _wasOnline;
+
+    _wasOnline = isOnline;
+
+    if (!mounted) return;
+
+    if (!isOnline) {
+      debugPrint('GoalsScreen: device is offline.');
+      return;
+    }
+
+    if (wasOnline == false && isOnline) {
+      debugPrint(
+        'GoalsScreen: connectivity restored. Refreshing subscription.',
+      );
+
+      if (!isGuest) {
+        _loadSubscription(forceRefresh: true);
+      }
+
+      if (_premiumPaymentVerificationPending) {
+        _verifyPremiumAfterPayment();
+      }
+    }
+  }
+
   // lifecycle callback
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _premiumCheckoutInProgress) {
-      _verifyPremiumAfterPayment();
+    if (state != AppLifecycleState.resumed) {
+      return;
     }
+
+    final shouldVerify =
+        _premiumCheckoutInProgress || _premiumPaymentVerificationPending;
+
+    if (!shouldVerify) {
+      return;
+    }
+
+    if (!_network.isOnline) {
+      if (!mounted) return;
+
+      setState(() {
+        _premiumCheckoutInProgress = false;
+      });
+
+      SnackbarHelper.showInfo(
+        context,
+        subscriptionController.hasPremiumAccess
+            ? 'Premium is unlocked. Reconnect to verify any recent payment.'
+            : 'Reconnect to verify your Premium payment.',
+      );
+
+      return;
+    }
+
+    _verifyPremiumAfterPayment();
   }
 
   // ============================================================
@@ -188,10 +255,24 @@ class _GoalsScreenState extends State<GoalsScreen>
   // SUBSCRIPTION
   // ============================================================
 
-  Future<void> _loadSubscription() async {
+  Future<void> _loadSubscription({bool forceRefresh = false}) async {
     if (isGuest) return;
 
-    if (subscriptionController.state.isLoading) {
+    if (_subscriptionLoading && !forceRefresh) {
+      return;
+    }
+
+    // Offline:
+    // restore the last server-confirmed Premium entitlement
+    // instead of attempting an API request.
+    if (!_network.isOnline) {
+      await subscriptionController.restoreOfflinePremiumAccess();
+
+      debugPrint(
+        'GoalsScreen: offline subscription state restored. '
+        'hasPremiumAccess=${subscriptionController.hasPremiumAccess}',
+      );
+
       return;
     }
 
@@ -202,29 +283,54 @@ class _GoalsScreenState extends State<GoalsScreen>
     }
 
     try {
-      await subscriptionController.loadSubscription();
+      await subscriptionController.loadSubscription(forceRefresh: forceRefresh);
+
+      debugPrint(
+        'GoalsScreen: subscription refreshed. '
+        'isPremium=${subscriptionController.isPremium}',
+      );
     } catch (e) {
       debugPrint('GoalsScreen: failed to load subscription: $e');
-    } finally {
-      if (!mounted) return;
 
-      setState(() {
-        _subscriptionLoading = false;
-      });
+      // If connectivity dropped while the request was running,
+      // restore the last confirmed local entitlement.
+      if (!_network.isOnline) {
+        await subscriptionController.restoreOfflinePremiumAccess();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _subscriptionLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _openPremiumCheckout() async {
     if (_premiumCheckoutInProgress) return;
 
+    if (!_network.isOnline) {
+      if (!mounted) return;
+
+      SnackbarHelper.showInfo(
+        context,
+        'You are offline. Reconnect to purchase PesaPulse Premium.',
+      );
+
+      return;
+    }
+
+    setState(() {
+      _premiumCheckoutInProgress = true;
+      _premiumPaymentVerificationPending = false;
+    });
+
     try {
       await subscriptionController.startPremiumCheckout();
 
-      if (!mounted) return;
+      _premiumPaymentVerificationPending = true;
 
-      setState(() {
-        _premiumCheckoutInProgress = true;
-      });
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -237,6 +343,11 @@ class _GoalsScreenState extends State<GoalsScreen>
     } catch (e) {
       if (!mounted) return;
 
+      setState(() {
+        _premiumCheckoutInProgress = false;
+        _premiumPaymentVerificationPending = false;
+      });
+
       SnackbarHelper.showError(
         context,
         e.toString().replaceFirst('Exception: ', ''),
@@ -247,6 +358,23 @@ class _GoalsScreenState extends State<GoalsScreen>
   Future<void> _verifyPremiumAfterPayment() async {
     if (!mounted || _checkingPayment) return;
 
+    if (!_network.isOnline) {
+      if (mounted) {
+        setState(() {
+          _premiumCheckoutInProgress = false;
+        });
+
+        SnackbarHelper.showInfo(
+          context,
+          subscriptionController.hasPremiumAccess
+              ? 'Premium is already unlocked. Reconnect to verify your payment.'
+              : 'Payment status cannot be verified while offline. Reconnect and try again.',
+        );
+      }
+
+      return;
+    }
+
     setState(() {
       _checkingPayment = true;
     });
@@ -254,10 +382,18 @@ class _GoalsScreenState extends State<GoalsScreen>
     try {
       final result = await subscriptionController.verifyPendingPayment();
 
-      if (!mounted || result == null) return;
+      if (!mounted || result == null) {
+        return;
+      }
 
       switch (result.status) {
         case PremiumPaymentStatus.complete:
+          _premiumPaymentVerificationPending = false;
+
+          // SubscriptionService also maintains the entitlement cache,
+          // but this keeps the screen/controller state synchronized.
+          await subscriptionController.cacheCurrentPremiumAccess();
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -269,20 +405,31 @@ class _GoalsScreenState extends State<GoalsScreen>
           break;
 
         case PremiumPaymentStatus.failed:
+          _premiumPaymentVerificationPending = false;
+
           SnackbarHelper.showError(context, result.message);
           break;
 
         case PremiumPaymentStatus.pending:
         case PremiumPaymentStatus.processing:
+          // Keep this true so another resume/reconnect can retry.
+          _premiumPaymentVerificationPending = true;
+
           SnackbarHelper.showInfo(context, result.message);
           break;
 
         case PremiumPaymentStatus.unknown:
+          _premiumPaymentVerificationPending = true;
+
           SnackbarHelper.showError(context, result.message);
           break;
       }
     } catch (e) {
       debugPrint('GoalsScreen: Premium payment verification failed: $e');
+
+      // Keep the verification pending so connectivity recovery
+      // can retry automatically.
+      _premiumPaymentVerificationPending = true;
 
       if (!mounted) return;
 
@@ -299,15 +446,39 @@ class _GoalsScreenState extends State<GoalsScreen>
       }
     }
   }
+
+  Future<bool> _checkPremiumFeatureAccess(PremiumFeature feature) async {
+    if (!_network.isOnline) {
+      if (!mounted) return false;
+
+      if (subscriptionController.hasPremiumAccess) {
+        SnackbarHelper.showInfo(
+          context,
+          'Premium is unlocked, but this feature requires an internet connection.',
+        );
+      } else {
+        SnackbarHelper.showInfo(
+          context,
+          'You are offline. Reconnect to check Premium access.',
+        );
+      }
+
+      return false;
+    }
+
+    return PremiumFeatureGuard.check(
+      context: context,
+      feature: feature,
+      onUpgrade: _openPremiumCheckout,
+    );
+  }
   // ============================================================
   // ADVANCED GOAL TRACKING
   // ============================================================
 
   Future<void> _openAdvancedGoalTracking() async {
-    final allowed = await PremiumFeatureGuard.check(
-      context: context,
-      feature: PremiumFeature.advancedGoalTracking,
-      onUpgrade: _openPremiumCheckout,
+    final allowed = await _checkPremiumFeatureAccess(
+      PremiumFeature.advancedGoalTracking,
     );
 
     if (!allowed || !mounted) return;
@@ -349,10 +520,8 @@ class _GoalsScreenState extends State<GoalsScreen>
   // ============================================================
 
   Future<void> _openAdvancedGoalForecast() async {
-    final allowed = await PremiumFeatureGuard.check(
-      context: context,
-      feature: PremiumFeature.advancedGoalForecast,
-      onUpgrade: _openPremiumCheckout,
+    final allowed = await _checkPremiumFeatureAccess(
+      PremiumFeature.advancedGoalForecast,
     );
 
     if (!allowed || !mounted) return;
@@ -534,10 +703,9 @@ class _GoalsScreenState extends State<GoalsScreen>
 
                     PremiumFeatureCard(
                       feature: PremiumFeature.advancedGoalTracking,
-                      isPremium: subscriptionController.isPremium,
+                      isPremium: subscriptionController.hasPremiumAccess,
                       isLoading:
                           _subscriptionLoading ||
-                          !subscriptionController.state.hasLoaded ||
                           _premiumCheckoutInProgress ||
                           _checkingPayment,
                       accentColor: Colors.amber,
@@ -548,10 +716,9 @@ class _GoalsScreenState extends State<GoalsScreen>
 
                     PremiumFeatureCard(
                       feature: PremiumFeature.advancedGoalForecast,
-                      isPremium: subscriptionController.isPremium,
+                      isPremium: subscriptionController.hasPremiumAccess,
                       isLoading:
                           _subscriptionLoading ||
-                          !subscriptionController.state.hasLoaded ||
                           _premiumCheckoutInProgress ||
                           _checkingPayment,
                       accentColor: Colors.amber,
@@ -584,6 +751,8 @@ class _GoalsScreenState extends State<GoalsScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+
+    _network.removeListener(_onConnectivityChanged);
 
     SyncEvents.instance.goalsRefresh.removeListener(_goalRefreshListener);
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,11 +18,23 @@ class SubscriptionService {
   static const String _pendingCheckoutReferenceKey =
       'pending_premium_checkout_reference';
 
+  static const String _premiumCacheFlagPrefix = 'pesapulse_premium_access_';
+
+  static const String _premiumCacheExpiryPrefix = 'pesapulse_premium_expiry_';
+
   SubscriptionState _state = const SubscriptionState();
 
   SubscriptionState get state => _state;
 
   bool get isPremium => _state.isPremium;
+
+  bool get hasCachedPremiumAccess => _cachedPremiumAccess ?? false;
+
+  bool get hasPremiumAccess {
+    return isPremium || hasCachedPremiumAccess;
+  }
+
+  bool? _cachedPremiumAccess;
 
   bool canAccess(PremiumFeature feature) {
     switch (feature) {
@@ -34,6 +47,32 @@ class SubscriptionService {
       case PremiumFeature.historicalInsights:
         return isPremium;
     }
+  }
+
+  Future<String?> _getCurrentOwnerId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final ownerId = prefs.getString('owner_id');
+
+      if (ownerId == null || ownerId.isEmpty || ownerId == 'guest') {
+        return null;
+      }
+
+      return ownerId;
+    } catch (e) {
+      debugPrint('SubscriptionService: failed to read owner id: $e');
+
+      return null;
+    }
+  }
+
+  String _premiumCacheFlagKey(String ownerId) {
+    return '$_premiumCacheFlagPrefix$ownerId';
+  }
+
+  String _premiumCacheExpiryKey(String ownerId) {
+    return '$_premiumCacheExpiryPrefix$ownerId';
   }
 
   Future<SubscriptionState> loadSubscription({
@@ -73,6 +112,14 @@ class SubscriptionService {
         expiresAt: expiresAt,
       );
 
+      if (_state.isPremium) {
+        await cacheCurrentPremiumAccess();
+        _cachedPremiumAccess = true;
+      } else {
+        await clearCachedPremiumAccess();
+        _cachedPremiumAccess = false;
+      }
+
       return _state;
     } catch (e) {
       _state = _state.copyWith(
@@ -83,6 +130,125 @@ class SubscriptionService {
 
       rethrow;
     }
+  }
+
+  Future<bool> getCachedPremiumAccess() async {
+    try {
+      final ownerId = await _getCurrentOwnerId();
+
+      if (ownerId == null) {
+        return false;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+
+      final cachedPremium =
+          prefs.getBool(_premiumCacheFlagKey(ownerId)) ?? false;
+
+      if (!cachedPremium) {
+        return false;
+      }
+
+      final expiryValue = prefs.getString(_premiumCacheExpiryKey(ownerId));
+
+      if (expiryValue == null || expiryValue.isEmpty) {
+        return true;
+      }
+
+      final expiresAt = DateTime.tryParse(expiryValue)?.toUtc();
+
+      if (expiresAt == null) {
+        return true;
+      }
+
+      if (!expiresAt.isAfter(DateTime.now().toUtc())) {
+        await clearCachedPremiumAccess();
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint(
+        'SubscriptionService: failed to read cached Premium access: $e',
+      );
+
+      return false;
+    }
+  }
+
+  Future<void> cacheCurrentPremiumAccess() async {
+    try {
+      final ownerId = await _getCurrentOwnerId();
+
+      if (ownerId == null) {
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+
+      if (!isPremium) {
+        await clearCachedPremiumAccess();
+        return;
+      }
+
+      await prefs.setBool(_premiumCacheFlagKey(ownerId), true);
+
+      final expiresAt = _state.expiresAt;
+
+      if (expiresAt != null) {
+        await prefs.setString(
+          _premiumCacheExpiryKey(ownerId),
+          expiresAt.toUtc().toIso8601String(),
+        );
+      } else {
+        await prefs.remove(_premiumCacheExpiryKey(ownerId));
+      }
+
+      debugPrint('SubscriptionService: Premium entitlement cached locally.');
+    } catch (e) {
+      debugPrint(
+        'SubscriptionService: failed to cache Premium entitlement: $e',
+      );
+    }
+  }
+
+  Future<void> clearCachedPremiumAccess() async {
+    try {
+      final ownerId = await _getCurrentOwnerId();
+
+      if (ownerId == null) {
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.remove(_premiumCacheFlagKey(ownerId));
+
+      await prefs.remove(_premiumCacheExpiryKey(ownerId));
+
+      debugPrint('SubscriptionService: cached Premium entitlement cleared.');
+    } catch (e) {
+      debugPrint(
+        'SubscriptionService: failed to clear cached Premium entitlement: $e',
+      );
+    }
+  }
+
+  Future<bool> restoreCachedPremiumAccess() async {
+    final cached = await getCachedPremiumAccess();
+
+    _cachedPremiumAccess = cached;
+
+    return cached;
+  }
+
+  Future<bool> restoreOfflinePremiumAccess() async {
+    if (isPremium) {
+      _cachedPremiumAccess = true;
+      return true;
+    }
+
+    return restoreCachedPremiumAccess();
   }
 
   Future<String> createPremiumCheckout() async {
@@ -167,6 +333,12 @@ class SubscriptionService {
 
         if (result.isComplete) {
           await loadSubscription(forceRefresh: true);
+
+          if (_state.isPremium) {
+            await cacheCurrentPremiumAccess();
+            _cachedPremiumAccess = true;
+          }
+
           await _clearPendingCheckoutReference();
 
           return result;

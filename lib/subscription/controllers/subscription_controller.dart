@@ -15,6 +15,10 @@ class SubscriptionController extends ChangeNotifier {
 
   bool get isPremium => service.isPremium;
 
+  bool get hasPremiumAccess => service.hasPremiumAccess;
+
+  bool get hasCachedPremiumAccess => service.hasCachedPremiumAccess;
+
   bool canAccess(PremiumFeature feature) {
     return service.canAccess(feature);
   }
@@ -43,6 +47,26 @@ class SubscriptionController extends ChangeNotifier {
     notifyListeners();
 
     return result;
+  }
+
+  Future<bool> restoreOfflinePremiumAccess() async {
+    final result = await service.restoreOfflinePremiumAccess();
+    notifyListeners();
+    return result;
+  }
+
+  Future<void> cacheCurrentPremiumAccess() async {
+    await service.cacheCurrentPremiumAccess();
+    notifyListeners();
+  }
+
+  Future<void> clearCachedPremiumAccess() async {
+    await service.clearCachedPremiumAccess();
+    notifyListeners();
+  }
+
+  Future<bool> getCachedPremiumAccess() async {
+    return service.getCachedPremiumAccess();
   }
 
   void setPlan({

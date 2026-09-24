@@ -61,10 +61,13 @@ class BudgetScreenState extends State<BudgetScreen>
       SubscriptionController();
 
   bool _subscriptionLoading = true;
-  bool _isPremium = false;
-
   bool _premiumCheckoutInProgress = false;
   bool _checkingPayment = false;
+
+  late ConnectivityProvider _network;
+
+  bool? _wasOnline;
+  bool _premiumPaymentVerificationPending = false;
 
   double get percentageUsed =>
       BudgetCalculator.percentageUsed(budget: state.budget, spent: state.spent);
@@ -85,6 +88,11 @@ class BudgetScreenState extends State<BudgetScreen>
 
     WidgetsBinding.instance.addObserver(this);
 
+    _network = context.read<ConnectivityProvider>();
+    _wasOnline = _network.isOnline;
+
+    _network.addListener(_onConnectivityChanged);
+
     subscriptionController.addListener(_onSubscriptionChanged);
 
     loadBudget();
@@ -93,17 +101,72 @@ class BudgetScreenState extends State<BudgetScreen>
   // Lifecycle callback
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _premiumCheckoutInProgress) {
-      _verifyPremiumAfterPayment();
+    if (state != AppLifecycleState.resumed) {
+      return;
     }
+
+    final shouldVerify =
+        _premiumCheckoutInProgress || _premiumPaymentVerificationPending;
+
+    if (!shouldVerify) {
+      return;
+    }
+
+    if (!_network.isOnline) {
+      if (!mounted) return;
+
+      setState(() {
+        _premiumCheckoutInProgress = false;
+      });
+
+      SnackbarHelper.showInfo(
+        context,
+        subscriptionController.hasPremiumAccess
+            ? 'Premium is unlocked. Reconnect to verify any recent payment.'
+            : 'Reconnect to verify your Premium payment.',
+      );
+
+      return;
+    }
+
+    _verifyPremiumAfterPayment();
   }
 
   void _onSubscriptionChanged() {
     if (!mounted) return;
 
-    setState(() {
-      _isPremium = subscriptionController.isPremium;
-    });
+    setState(() {});
+  }
+
+  void _onConnectivityChanged() {
+    final isOnline = _network.isOnline;
+    final wasOnline = _wasOnline;
+
+    _wasOnline = isOnline;
+
+    if (!mounted) return;
+
+    if (!isOnline) {
+      debugPrint('BudgetScreen: device is offline.');
+      return;
+    }
+
+    if (wasOnline == false && isOnline) {
+      debugPrint('BudgetScreen: connectivity restored.');
+
+      if (state.isGuest) {
+        return;
+      }
+
+      // A pending payment verification already refreshes the
+      // subscription when payment is confirmed, so avoid starting
+      // a second subscription refresh at the same time.
+      if (_premiumPaymentVerificationPending) {
+        _verifyPremiumAfterPayment();
+      } else {
+        _loadSubscription(forceRefresh: true);
+      }
+    }
   }
 
   Future<void> refreshBudget() async {
@@ -134,56 +197,94 @@ class BudgetScreenState extends State<BudgetScreen>
     }
   }
 
-  Future<void> _loadSubscription() async {
+  Future<void> _loadSubscription({bool forceRefresh = false}) async {
     if (state.isGuest) {
       if (!mounted) return;
 
       setState(() {
         _subscriptionLoading = false;
-        _isPremium = false;
       });
 
       return;
     }
 
-    try {
-      if (mounted) {
-        setState(() {
-          _subscriptionLoading = true;
-        });
-      }
+    if (_subscriptionLoading && !forceRefresh) {
+      return;
+    }
 
-      await subscriptionController.loadSubscription();
+    // Offline: restore the last server-confirmed entitlement.
+    if (!_network.isOnline) {
+      await subscriptionController.restoreOfflinePremiumAccess();
+
+      debugPrint(
+        'BudgetScreen: offline subscription restored. '
+        'hasPremiumAccess=${subscriptionController.hasPremiumAccess}',
+      );
 
       if (!mounted) return;
 
       setState(() {
         _subscriptionLoading = false;
-        _isPremium = subscriptionController.isPremium;
       });
+
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _subscriptionLoading = true;
+      });
+    }
+
+    try {
+      await subscriptionController.loadSubscription(forceRefresh: forceRefresh);
+
+      debugPrint(
+        'BudgetScreen: subscription refreshed. '
+        'isPremium=${subscriptionController.isPremium}',
+      );
     } catch (e) {
       debugPrint('BudgetScreen: failed to load subscription: $e');
 
-      if (!mounted) return;
-
-      setState(() {
-        _subscriptionLoading = false;
-        _isPremium = false;
-      });
+      // If connectivity disappeared during the request,
+      // fall back to the locally cached entitlement.
+      if (!_network.isOnline) {
+        await subscriptionController.restoreOfflinePremiumAccess();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _subscriptionLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _openPremiumCheckout() async {
     if (_premiumCheckoutInProgress) return;
 
+    if (!_network.isOnline) {
+      if (!mounted) return;
+
+      SnackbarHelper.showInfo(
+        context,
+        'You are offline. Reconnect to purchase PesaPulse Premium.',
+      );
+
+      return;
+    }
+
+    setState(() {
+      _premiumCheckoutInProgress = true;
+      _premiumPaymentVerificationPending = false;
+    });
+
     try {
       await subscriptionController.startPremiumCheckout();
 
-      if (!mounted) return;
+      _premiumPaymentVerificationPending = true;
 
-      setState(() {
-        _premiumCheckoutInProgress = true;
-      });
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -196,6 +297,11 @@ class BudgetScreenState extends State<BudgetScreen>
     } catch (e) {
       if (!mounted) return;
 
+      setState(() {
+        _premiumCheckoutInProgress = false;
+        _premiumPaymentVerificationPending = false;
+      });
+
       SnackbarHelper.showError(
         context,
         e.toString().replaceFirst('Exception: ', ''),
@@ -206,6 +312,23 @@ class BudgetScreenState extends State<BudgetScreen>
   Future<void> _verifyPremiumAfterPayment() async {
     if (!mounted || _checkingPayment) return;
 
+    if (!_network.isOnline) {
+      if (mounted) {
+        setState(() {
+          _premiumCheckoutInProgress = false;
+        });
+
+        SnackbarHelper.showInfo(
+          context,
+          subscriptionController.hasPremiumAccess
+              ? 'Premium is already unlocked. Reconnect to verify your payment.'
+              : 'Payment status cannot be verified while offline. Reconnect and try again.',
+        );
+      }
+
+      return;
+    }
+
     setState(() {
       _checkingPayment = true;
     });
@@ -213,13 +336,15 @@ class BudgetScreenState extends State<BudgetScreen>
     try {
       final result = await subscriptionController.verifyPendingPayment();
 
-      if (!mounted || result == null) return;
+      if (!mounted || result == null) {
+        return;
+      }
 
       switch (result.status) {
         case PremiumPaymentStatus.complete:
-          setState(() {
-            _isPremium = true;
-          });
+          _premiumPaymentVerificationPending = false;
+
+          await subscriptionController.cacheCurrentPremiumAccess();
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -232,20 +357,28 @@ class BudgetScreenState extends State<BudgetScreen>
           break;
 
         case PremiumPaymentStatus.failed:
+          _premiumPaymentVerificationPending = false;
+
           SnackbarHelper.showError(context, result.message);
           break;
 
         case PremiumPaymentStatus.pending:
         case PremiumPaymentStatus.processing:
+          _premiumPaymentVerificationPending = true;
+
           SnackbarHelper.showInfo(context, result.message);
           break;
 
         case PremiumPaymentStatus.unknown:
+          _premiumPaymentVerificationPending = true;
+
           SnackbarHelper.showError(context, result.message);
           break;
       }
     } catch (e) {
       debugPrint('BudgetScreen: Premium payment verification failed: $e');
+
+      _premiumPaymentVerificationPending = true;
 
       if (!mounted) return;
 
@@ -263,11 +396,35 @@ class BudgetScreenState extends State<BudgetScreen>
     }
   }
 
-  Future<void> _openAdvancedBudgetInsights() async {
-    final allowed = await PremiumFeatureGuard.check(
+  Future<bool> _checkPremiumFeatureAccess(PremiumFeature feature) async {
+    if (!_network.isOnline) {
+      if (!mounted) return false;
+
+      if (subscriptionController.hasPremiumAccess) {
+        SnackbarHelper.showInfo(
+          context,
+          'Premium is unlocked, but this feature requires an internet connection.',
+        );
+      } else {
+        SnackbarHelper.showInfo(
+          context,
+          'You are offline. Reconnect to check Premium access.',
+        );
+      }
+
+      return false;
+    }
+
+    return PremiumFeatureGuard.check(
       context: context,
-      feature: PremiumFeature.advancedBudgetInsights,
+      feature: feature,
       onUpgrade: _openPremiumCheckout,
+    );
+  }
+
+  Future<void> _openAdvancedBudgetInsights() async {
+    final allowed = await _checkPremiumFeatureAccess(
+      PremiumFeature.advancedBudgetInsights,
     );
 
     if (!allowed || !mounted) return;
@@ -298,10 +455,8 @@ class BudgetScreenState extends State<BudgetScreen>
   }
 
   Future<void> _openBudgetSimulation() async {
-    final allowed = await PremiumFeatureGuard.check(
-      context: context,
-      feature: PremiumFeature.budgetSimulation,
-      onUpgrade: _openPremiumCheckout,
+    final allowed = await _checkPremiumFeatureAccess(
+      PremiumFeature.budgetSimulation,
     );
 
     if (!allowed || !mounted) return;
@@ -334,7 +489,7 @@ class BudgetScreenState extends State<BudgetScreen>
   Widget _buildAdvancedBudgetFeature() {
     return PremiumFeatureCard(
       feature: PremiumFeature.advancedBudgetInsights,
-      isPremium: _isPremium,
+      isPremium: subscriptionController.hasPremiumAccess,
       isLoading:
           _subscriptionLoading ||
           _premiumCheckoutInProgress ||
@@ -347,7 +502,7 @@ class BudgetScreenState extends State<BudgetScreen>
   Widget _buildAdvancedBudgetSimulation() {
     return PremiumFeatureCard(
       feature: PremiumFeature.budgetSimulation,
-      isPremium: _isPremium,
+      isPremium: subscriptionController.hasPremiumAccess,
       isLoading:
           _subscriptionLoading ||
           _premiumCheckoutInProgress ||
@@ -490,6 +645,8 @@ class BudgetScreenState extends State<BudgetScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+
+    _network.removeListener(_onConnectivityChanged);
 
     subscriptionController.removeListener(_onSubscriptionChanged);
     subscriptionController.dispose();
