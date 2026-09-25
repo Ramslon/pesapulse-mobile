@@ -10,7 +10,6 @@ import '../utils/snackbar_helper.dart';
 
 import '../services/notification_service.dart';
 import '../repositories/expense_repository.dart';
-import '../services/sync_service.dart';
 
 import '../exceptions/rate_limit_exception.dart';
 
@@ -87,9 +86,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         expenseDate: dateController.text.trim(),
         description: descriptionController.text.trim(),
       );
-
-      // Trigger sync in background.
-      SyncService.instance.getPendingChanges();
 
       // Budget alerts can also run in background.
       NotificationService.checkBudgetAlerts();

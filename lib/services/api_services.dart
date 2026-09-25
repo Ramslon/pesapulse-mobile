@@ -360,17 +360,19 @@ class ApiService {
     );
   }
 
-  static Future<Map<String, dynamic>> addExpense(
-    String title,
-    String amount,
-    String category,
-    String expenseDate,
-    String description,
-  ) async {
+  static Future<Map<String, dynamic>> addExpense({
+    required String clientId,
+    required String title,
+    required String amount,
+    required String category,
+    required String expenseDate,
+    required String description,
+  }) async {
     final response = await _request(
       method: 'POST',
       endpoint: '/expenses',
       body: jsonEncode({
+        'client_id': clientId.trim(),
         'title': title,
         'amount': amount,
         'category': category,

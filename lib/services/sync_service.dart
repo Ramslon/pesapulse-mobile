@@ -461,64 +461,67 @@ class SyncService {
       // =======================================================================
 
       case "create":
-        // --------------------------------------------------------
-        // GOAL CREATE
-        // --------------------------------------------------------
-
-        if (tableName == "goals") {
+        if (item["table_name"] == "goals") {
           await goalsRepository.syncOfflineGoal(
             localId: item["record_id"] as int,
             title: payload["title"],
             targetAmount: double.parse(payload["target_amount"].toString()),
             targetDate: payload["target_date"],
           );
-
           return;
         }
 
-        // --------------------------------------------------------
+        // ------------------------------------------------------------
         // EXPENSE CREATE
-        // --------------------------------------------------------
+        // ------------------------------------------------------------
 
-        if (tableName == "expenses") {
-          final existingServerId = await expenseRepository
-              .findDuplicateOnServer(payload);
+        String? clientId = payload["client_id"]?.toString().trim();
 
-          if (existingServerId != null) {
-            final database = await db.database;
+        /*
+   * Backward compatibility:
+   *
+   * Older queued expense operations may not contain client_id
+   * in their payload. Database version 20 already populated
+   * client_id in existing expense rows, so recover it from
+   * the local expense record.
+   */
+        if (clientId == null || clientId.isEmpty) {
+          final database = await db.database;
 
-            await database.update(
-              "expenses",
-              {"server_id": existingServerId, "is_synced": 1},
-              where: "id=? AND owner_id=?",
-              whereArgs: [
-                item["record_id"],
-                await SessionService.currentOwnerId(),
-              ],
-            );
-
-            debugPrint(
-              'SyncService: duplicate expense '
-              'detected. Local record linked to '
-              'server_id=$existingServerId.',
-            );
-
-            return;
-          }
-
-          await expenseRepository.syncOfflineExpense(
-            localId: item["record_id"] as int,
-            title: payload["title"],
-            amount: payload["amount"].toString(),
-            category: payload["category"],
-            expenseDate: payload["expense_date"],
-            description: payload["description"] ?? "",
+          final rows = await database.query(
+            "expenses",
+            columns: ["client_id"],
+            where: "id=? AND owner_id=?",
+            whereArgs: [item["record_id"], item["owner_id"]],
+            limit: 1,
           );
 
-          return;
+          if (rows.isNotEmpty) {
+            final storedClientId = rows.first["client_id"]?.toString().trim();
+
+            if (storedClientId != null && storedClientId.isNotEmpty) {
+              clientId = storedClientId;
+            }
+          }
         }
 
-        throw Exception('Unsupported create table: $tableName');
+        final resolvedClientId = clientId;
+
+        if (resolvedClientId == null || resolvedClientId.isEmpty) {
+          throw Exception("Expense sync failed: missing client_id.");
+        }
+
+        await expenseRepository.syncOfflineExpense(
+          localId: item["record_id"] as int,
+          clientId: resolvedClientId,
+          title: payload["title"],
+          amount: payload["amount"].toString(),
+          category: payload["category"],
+          expenseDate: payload["expense_date"],
+          description: payload["description"] ?? "",
+        );
+
+        return;
 
       // =======================================================================
       // UPDATE PROGRESS

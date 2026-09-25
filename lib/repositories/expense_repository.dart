@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:pesapulse_mobile/services/startup_refresh_coordinator.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../services/sync_service.dart';
 import '../services/sync_events.dart';
@@ -18,6 +19,7 @@ class ExpenseRepository extends BaseRepository {
     return {
       "id": expense["id"],
       "server_id": expense["id"],
+      "client_id": expense["client_id"],
       "owner_id": ownerId,
 
       "title": expense["title"],
@@ -166,61 +168,38 @@ class ExpenseRepository extends BaseRepository {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
+    // One stable ID for the entire lifetime of this expense.
+    //
+    // The same client_id is used for:
+    // - online creation
+    // - local SQLite
+    // - sync_queue
+    // - retry after a failed/lost response
+    const uuid = Uuid();
+    final clientId = uuid.v4();
+
     final expense = <String, dynamic>{
       "owner_id": ownerId,
-      "title": title,
+      "client_id": clientId,
+      "title": title.trim(),
       "amount": amount,
       "category": category,
       "expense_date": expenseDate,
       "description": description,
     };
 
-    // ------------------------------------------------------------
-    // STEP 1: Check whether this expense already exists on server
-    // ------------------------------------------------------------
-
     try {
-      final existingServerId = await findDuplicateOnServer(expense);
+      // ------------------------------------------------------------
+      // ONLINE CREATION
+      // ------------------------------------------------------------
 
-      if (existingServerId != null) {
-        expense["id"] = existingServerId;
-        expense["server_id"] = existingServerId;
-        expense["is_synced"] = 1;
-        expense["is_deleted"] = 0;
-
-        await database.insert(
-          "expenses",
-          expense,
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-
-        debugPrint(
-          'ExpenseRepository: existing server expense reused '
-          '(server_id=$existingServerId).',
-        );
-
-        return;
-      }
-    } on RateLimitException {
-      rethrow;
-    } catch (e) {
-      debugPrint('ExpenseRepository: duplicate check failed: $e');
-
-      // Do not create a second server expense here.
-      // Continue to normal online creation attempt.
-    }
-
-    // ------------------------------------------------------------
-    // STEP 2: Try ONLINE creation
-    // ------------------------------------------------------------
-
-    try {
       final response = await ApiService.addExpense(
-        title,
-        amount,
-        category,
-        expenseDate,
-        description,
+        clientId: clientId,
+        title: title,
+        amount: amount,
+        category: category,
+        expenseDate: expenseDate,
+        description: description,
       );
 
       final serverId = response["id"];
@@ -234,6 +213,7 @@ class ExpenseRepository extends BaseRepository {
       final localExpense = <String, dynamic>{
         "id": serverId,
         "server_id": serverId,
+        "client_id": response["client_id"] ?? clientId,
         "owner_id": ownerId,
         "title": response["title"] ?? title,
         "amount":
@@ -253,22 +233,20 @@ class ExpenseRepository extends BaseRepository {
       );
 
       debugPrint(
-        'ExpenseRepository: expense saved locally and server sync complete. '
-        'server_id=$serverId',
+        'ExpenseRepository: online expense creation complete. '
+        'client_id=$clientId, '
+        'server_id=$serverId, '
+        'deduplicated=${response["deduplicated"] ?? false}',
       );
 
-      // IMPORTANT:
-      // No sync_queue entry is created here.
-      //
-      // IMPORTANT:
-      // Do NOT call SyncService.getPendingChanges() here either.
+      // No sync queue entry for a successful online creation.
       return;
     } on RateLimitException {
       rethrow;
     } catch (e) {
-      // ----------------------------------------------------------
-      // STEP 3: ONLINE request failed → OFFLINE FALLBACK
-      // ----------------------------------------------------------
+      // ------------------------------------------------------------
+      // ONLINE FAILED → LOCAL + SYNC QUEUE
+      // ------------------------------------------------------------
 
       debugPrint('ExpenseRepository: online expense creation failed: $e');
 
@@ -289,14 +267,16 @@ class ExpenseRepository extends BaseRepository {
       await SyncService.instance.getPendingChanges();
 
       debugPrint(
-        'ExpenseRepository: expense saved locally for offline '
-        'synchronization. local_id=$localId',
+        'ExpenseRepository: expense saved locally for synchronization. '
+        'local_id=$localId, '
+        'client_id=$clientId',
       );
     }
   }
 
   Future<void> syncOfflineExpense({
     required int localId,
+    required String clientId,
     required String title,
     required String amount,
     required String category,
@@ -306,49 +286,50 @@ class ExpenseRepository extends BaseRepository {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
-    // Deduplication check
-    final existingServerId = await findDuplicateOnServer({
-      "title": title,
-      "amount": amount,
-      "category": category,
-      "expense_date": expenseDate,
-    });
-
-    if (existingServerId != null) {
-      // Update local record with serverId instead of creating duplicate
-      await database.update(
-        "expenses",
-        {"owner_id": ownerId, "server_id": existingServerId, "is_synced": 1},
-        where: "id=? AND owner_id=?",
-        whereArgs: [localId, ownerId],
-      );
-      return;
-    }
-
-    // No duplicate found → create normally
     final response = await ApiService.addExpense(
-      title,
-      amount,
-      category,
-      expenseDate,
-      description,
+      clientId: clientId,
+      title: title,
+      amount: amount,
+      category: category,
+      expenseDate: expenseDate,
+      description: description,
     );
+
+    final serverId = response["id"];
+
+    if (serverId == null) {
+      throw Exception(
+        'Server returned a successful response without an expense id.',
+      );
+    }
 
     await database.update(
       "expenses",
       {
         "owner_id": ownerId,
-        "server_id": response["id"],
-        "title": response["title"],
-        "amount": response["amount"],
-        "category": response["category"],
-        "expense_date": response["expense_date"],
-        "description": response["description"] ?? "",
-        "updated_at": response["updated_at"],
+        "server_id": serverId,
+        "client_id": response["client_id"] ?? clientId,
+        "title": response["title"] ?? title,
+        "amount":
+            double.tryParse(response["amount"]?.toString() ?? amount) ?? 0,
+        "category": response["category"] ?? category,
+        "expense_date": response["expense_date"] ?? expenseDate,
+        "description": response["description"] ?? description,
+        "updated_at":
+            response["updated_at"] ?? DateTime.now().toIso8601String(),
         "is_synced": 1,
+        "is_deleted": 0,
       },
       where: "id=? AND owner_id=?",
       whereArgs: [localId, ownerId],
+    );
+
+    debugPrint(
+      'ExpenseRepository: offline expense synchronized. '
+      'local_id=$localId, '
+      'client_id=$clientId, '
+      'server_id=$serverId, '
+      'deduplicated=${response["deduplicated"] ?? false}',
     );
   }
 
@@ -605,37 +586,6 @@ class ExpenseRepository extends BaseRepository {
       'ExpenseRepository: offline expense deletion synced '
       '(localId=$localId, serverId=$serverId).',
     );
-  }
-
-  Future<List<Map<String, dynamic>>> getExpensesFromServer({
-    String? title,
-    String? amount,
-    String? category,
-    String? expenseDate,
-  }) async {
-    final response = await ApiService.getExpenses();
-    final allExpenses = List<Map<String, dynamic>>.from(response["data"]);
-
-    return allExpenses.where((exp) {
-      return (title == null || exp["title"] == title) &&
-          (amount == null || exp["amount"].toString() == amount) &&
-          (category == null || exp["category"] == category) &&
-          (expenseDate == null || exp["expense_date"] == expenseDate);
-    }).toList();
-  }
-
-  Future<int?> findDuplicateOnServer(Map<String, dynamic> payload) async {
-    final existing = await getExpensesFromServer(
-      title: payload["title"],
-      amount: payload["amount"].toString(),
-      category: payload["category"],
-      expenseDate: payload["expense_date"],
-    );
-
-    if (existing.isNotEmpty) {
-      return existing.first["id"] as int?;
-    }
-    return null;
   }
 
   Future<List<Map<String, dynamic>>> getExpensesFromLocal() async {
