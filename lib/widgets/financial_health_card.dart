@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../utils/responsive_helper.dart';
@@ -13,393 +15,653 @@ class FinancialHealthCard extends StatelessWidget {
   });
 
   Color get scoreColor {
-    if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.lightGreen;
-    if (score >= 40) return Colors.orange;
-    if (score >= 20) return Colors.deepOrange;
-    return Colors.red;
+    if (score >= 80) {
+      return const Color(0xFF16A34A);
+    }
+
+    if (score >= 60) {
+      return const Color(0xFF65A30D);
+    }
+
+    if (score >= 40) {
+      return const Color(0xFFF59E0B);
+    }
+
+    if (score >= 20) {
+      return const Color(0xFFF97316);
+    }
+
+    return const Color(0xFFDC2626);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     final compact = ResponsiveHelper.useCompactLayout(context);
+
     final tablet = ResponsiveHelper.isTablet(context);
+
     final desktop = ResponsiveHelper.isDesktop(context);
+
     final landscape = ResponsiveHelper.isLandscape(context);
 
-    final cardPadding = _cardPadding(
-      context,
-      compact: compact,
-      tablet: tablet,
-      desktop: desktop,
-    );
-
-    final contentSpacing = _contentSpacing(
-      compact: compact,
-      tablet: tablet,
-      desktop: desktop,
-    );
-
-    final gaugeGap = _gaugeGap(
-      compact: compact,
-      landscape: landscape,
-      desktop: desktop,
-    );
-
-    final gaugeSize = _gaugeSize(
-      context,
-      compact: compact,
-      tablet: tablet,
-      desktop: desktop,
-      landscape: landscape,
-    );
-
     final safeScore = score.clamp(0, 100);
-    final progress = safeScore / 100;
 
-    final scoreFontSize = _scoreFontSize(
-      gaugeSize: gaugeSize,
-      compact: compact,
-      tablet: tablet,
-      desktop: desktop,
-    );
+    final horizontalLayout = landscape && !compact;
 
-    final labelFontSize = _labelFontSize(
-      compact: compact,
-      tablet: tablet,
-      desktop: desktop,
-    );
+    final cardPadding = desktop
+        ? 20.0
+        : tablet
+        ? 18.0
+        : compact
+        ? 12.0
+        : 16.0;
 
-    return Card(
-      elevation: 1,
-      shadowColor: scoreColor.withOpacity(.12),
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(compact ? 16 : 22),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(cardPadding),
-        child: Column(
-          children: [
-            // ─────────────────────────────────────────────
-            // Header
-            // ─────────────────────────────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(compact ? 8 : 11),
-                  decoration: BoxDecoration(
-                    color: scoreColor.withOpacity(.12),
-                    borderRadius: BorderRadius.circular(compact ? 11 : 14),
-                  ),
-                  child: Icon(
-                    Icons.favorite_rounded,
-                    color: scoreColor,
-                    size: compact ? 18 : 22,
-                  ),
-                ),
+    final radius = desktop
+        ? 22.0
+        : compact
+        ? 16.0
+        : 19.0;
 
-                SizedBox(width: contentSpacing),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Financial Health",
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: compact
-                              ? 17
-                              : tablet
-                              ? 20
-                              : 22,
-                        ),
-                      ),
-
-                      const SizedBox(height: 2),
-
-                      Text(
-                        "Your current financial wellness score",
-                        style: TextStyle(
-                          color: colorScheme.onSurface.withOpacity(.65),
-                          fontSize: compact ? 11 : 13,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: gaugeGap),
-
-            // ─────────────────────────────────────────────
-            // Score Gauge
-            // ─────────────────────────────────────────────
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: safeScore.toDouble()),
-              duration: const Duration(milliseconds: 1100),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Circular gauge with ONLY the score inside.
-                    SizedBox(
-                      width: gaugeSize,
-                      height: gaugeSize,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            value: value / 100,
-                            strokeWidth: _strokeWidth(
-                              compact: compact,
-                              tablet: tablet,
-                              desktop: desktop,
-                            ),
-                            strokeCap: StrokeCap.round,
-                            backgroundColor:
-                                colorScheme.surfaceContainerHighest,
-                            color: scoreColor,
-                          ),
-
-                          Text(
-                            value.toStringAsFixed(0),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: scoreFontSize,
-                              fontWeight: FontWeight.w900,
-                              height: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: compact ? 7 : 12),
-
-                    // Label deliberately OUTSIDE the circular gauge.
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 12 : 16,
-                        vertical: compact ? 5 : 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: scoreColor.withOpacity(.10),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: scoreColor,
-                          fontSize: labelFontSize,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-
-            SizedBox(height: compact ? 14 : 20),
-
-            // ─────────────────────────────────────────────
-            // Overall score
-            // ─────────────────────────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  "Overall Score",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: compact ? 13 : 14,
-                  ),
-                ),
-
-                Text(
-                  "$safeScore / 100",
-                  style: TextStyle(
-                    color: scoreColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: compact ? 13 : 15,
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: compact ? 8 : 10),
-
-            // ─────────────────────────────────────────────
-            // Progress bar
-            // ─────────────────────────────────────────────
-            ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: progress),
-                duration: const Duration(milliseconds: 1200),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return LinearProgressIndicator(
-                    value: value,
-                    minHeight: compact ? 7 : 10,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    color: scoreColor,
-                  );
-                },
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutCubic,
+      tween: Tween(begin: 0.97, end: 1.0),
+      builder: (_, scale, child) {
+        return Transform.scale(scale: scale, child: child);
+      },
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(color: scoreColor.withOpacity(0.12)),
+          boxShadow: [
+            BoxShadow(
+              color: scoreColor.withOpacity(
+                theme.brightness == Brightness.dark ? 0.08 : 0.055,
               ),
-            ),
-
-            SizedBox(height: compact ? 7 : 12),
-
-            // ─────────────────────────────────────────────
-            // Description
-            // ─────────────────────────────────────────────
-            Text(
-              _scoreDescription(safeScore),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: colorScheme.onSurface.withOpacity(.65),
-                fontSize: compact ? 11 : 13,
-                height: 1.3,
-              ),
+              blurRadius: desktop ? 20 : 14,
+              offset: const Offset(0, 6),
             ),
           ],
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(cardPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context, compact: compact, desktop: desktop),
+
+              SizedBox(
+                height: desktop
+                    ? 18
+                    : compact
+                    ? 12
+                    : 15,
+              ),
+
+              if (horizontalLayout)
+                _buildLandscapeContent(
+                  context,
+                  safeScore: safeScore,
+                  compact: compact,
+                  desktop: desktop,
+                )
+              else
+                _buildPortraitContent(
+                  context,
+                  safeScore: safeScore,
+                  compact: compact,
+                  tablet: tablet,
+                  desktop: desktop,
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  double _cardPadding(
+  Widget _buildHeader(
     BuildContext context, {
     required bool compact,
-    required bool tablet,
     required bool desktop,
   }) {
-    if (desktop) return 24;
-    if (tablet) return 22;
-    if (compact) return 15;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    return 18;
+    final iconBoxSize = desktop
+        ? 42.0
+        : compact
+        ? 34.0
+        : 38.0;
+
+    final iconSize = desktop
+        ? 21.0
+        : compact
+        ? 17.0
+        : 19.0;
+
+    final titleSize = desktop
+        ? 17.0
+        : compact
+        ? 13.0
+        : 15.5;
+
+    final subtitleSize = desktop
+        ? 11.5
+        : compact
+        ? 9.5
+        : 10.5;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: iconBoxSize,
+          height: iconBoxSize,
+          decoration: BoxDecoration(
+            color: scoreColor.withOpacity(0.09),
+            borderRadius: BorderRadius.circular(compact ? 10 : 12),
+            border: Border.all(color: scoreColor.withOpacity(0.10)),
+          ),
+          child: Icon(
+            Icons.health_and_safety_rounded,
+            color: scoreColor,
+            size: iconSize,
+          ),
+        ),
+
+        SizedBox(width: compact ? 9 : 11),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Financial Health',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
+              ),
+
+              const SizedBox(height: 3),
+
+              Text(
+                'Your current financial wellness score',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant.withOpacity(0.68),
+                  fontSize: subtitleSize,
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: 8),
+
+        _buildStatusBadge(context, compact: compact),
+      ],
+    );
   }
 
-  double _contentSpacing({
-    required bool compact,
-    required bool tablet,
-    required bool desktop,
-  }) {
-    if (desktop) return 20;
-    if (tablet) return 18;
-    if (compact) return 12;
-
-    return 14;
+  Widget _buildStatusBadge(BuildContext context, {required bool compact}) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: compact ? 82 : 105),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 7 : 9,
+          vertical: compact ? 4 : 5,
+        ),
+        decoration: BoxDecoration(
+          color: scoreColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: scoreColor,
+            fontSize: compact ? 8.5 : 9.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
   }
 
-  double _gaugeGap({
-    required bool compact,
-    required bool landscape,
-    required bool desktop,
-  }) {
-    if (desktop) return 20;
-    if (landscape) return 14;
-    if (compact) return 10;
-
-    return 16;
-  }
-
-  double _gaugeSize(
+  Widget _buildPortraitContent(
     BuildContext context, {
+    required int safeScore,
     required bool compact,
     required bool tablet,
     required bool desktop,
-    required bool landscape,
   }) {
-    final width = ResponsiveHelper.width(context);
+    final gaugeSize = desktop
+        ? 165.0
+        : tablet
+        ? 150.0
+        : compact
+        ? 112.0
+        : 140.0;
 
-    if (desktop) {
-      return 190;
-    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildGauge(
+          context,
+          score: safeScore,
+          size: gaugeSize,
+          compact: compact,
+          tablet: tablet,
+          desktop: desktop,
+        ),
 
-    if (tablet) {
-      return landscape ? 165 : 175;
-    }
+        SizedBox(height: compact ? 12 : 15),
 
-    if (landscape) {
-      return 120;
-    }
+        _buildScoreSummary(
+          context,
+          score: safeScore,
+          compact: compact,
+          desktop: desktop,
+          centered: true,
+        ),
 
-    if (compact) {
-      return (width * .36).clamp(125.0, 140.0);
-    }
+        SizedBox(height: compact ? 12 : 15),
 
-    return (width * .42).clamp(140.0, 175.0);
+        _buildScoreIndicator(
+          context,
+          score: safeScore,
+          compact: compact,
+          desktop: desktop,
+        ),
+
+        SizedBox(height: compact ? 10 : 12),
+
+        _buildDescription(
+          context,
+          score: safeScore,
+          compact: compact,
+          desktop: desktop,
+        ),
+      ],
+    );
   }
 
-  double _strokeWidth({
+  Widget _buildLandscapeContent(
+    BuildContext context, {
+    required int safeScore,
     required bool compact,
-    required bool tablet,
     required bool desktop,
   }) {
-    if (desktop) return 15;
-    if (tablet) return 13;
-    if (compact) return 9;
+    final gaugeSize = desktop
+        ? 128.0
+        : compact
+        ? 94.0
+        : 112.0;
 
-    return 11;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildGauge(
+          context,
+          score: safeScore,
+          size: gaugeSize,
+          compact: compact,
+          tablet: false,
+          desktop: desktop,
+        ),
+
+        SizedBox(
+          width: desktop
+              ? 18
+              : compact
+              ? 10
+              : 14,
+        ),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildScoreSummary(
+                context,
+                score: safeScore,
+                compact: compact,
+                desktop: desktop,
+                centered: false,
+              ),
+
+              SizedBox(height: compact ? 9 : 11),
+
+              _buildScoreIndicator(
+                context,
+                score: safeScore,
+                compact: compact,
+                desktop: desktop,
+              ),
+
+              SizedBox(height: compact ? 8 : 10),
+
+              _buildDescription(
+                context,
+                score: safeScore,
+                compact: compact,
+                desktop: desktop,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
-  double _scoreFontSize({
-    required double gaugeSize,
+  Widget _buildGauge(
+    BuildContext context, {
+    required int score,
+    required double size,
     required bool compact,
     required bool tablet,
     required bool desktop,
   }) {
-    if (compact) return 30;
-    if (desktop) return 48;
-    if (tablet) return 43;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return gaugeSize * .28;
+    final strokeWidth = desktop
+        ? 13.0
+        : tablet
+        ? 11.0
+        : compact
+        ? 8.0
+        : 10.0;
+
+    final scoreSize = desktop
+        ? 40.0
+        : tablet
+        ? 36.0
+        : compact
+        ? 27.0
+        : 34.0;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 1100),
+        curve: Curves.easeOutCubic,
+        tween: Tween(begin: 0, end: score.toDouble()),
+        builder: (context, value, child) {
+          return CustomPaint(
+            painter: _FinancialHealthPainter(
+              progress: value / 100,
+              color: scoreColor,
+              trackColor: colorScheme.surfaceContainerHighest.withOpacity(0.80),
+              strokeWidth: strokeWidth,
+            ),
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(strokeWidth + 6),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value.toStringAsFixed(0),
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: scoreSize,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                      letterSpacing: -1.0,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
-  double _labelFontSize({
+  Widget _buildScoreSummary(
+    BuildContext context, {
+    required int score,
     required bool compact,
-    required bool tablet,
+    required bool desktop,
+    required bool centered,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final titleSize = desktop
+        ? 10.5
+        : compact
+        ? 8.5
+        : 9.5;
+
+    final scoreSize = desktop
+        ? 19.0
+        : compact
+        ? 14.0
+        : 17.0;
+
+    return Column(
+      crossAxisAlignment: centered
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          'OVERALL SCORE',
+          style: TextStyle(
+            color: colorScheme.onSurfaceVariant.withOpacity(0.60),
+            fontSize: titleSize,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+          ),
+        ),
+
+        const SizedBox(height: 4),
+
+        Text(
+          '$score / 100',
+          textAlign: centered ? TextAlign.center : TextAlign.start,
+          style: TextStyle(
+            color: scoreColor,
+            fontSize: scoreSize,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.3,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScoreIndicator(
+    BuildContext context, {
+    required int score,
+    required bool compact,
     required bool desktop,
   }) {
-    if (desktop) return 14;
-    if (tablet) return 13;
-    if (compact) return 11;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return 12;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 9 : 11,
+        vertical: compact ? 8 : 9,
+      ),
+      decoration: BoxDecoration(
+        color: scoreColor.withOpacity(
+          Theme.of(context).brightness == Brightness.dark ? 0.08 : 0.045,
+        ),
+        borderRadius: BorderRadius.circular(compact ? 11 : 13),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Health level',
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.65),
+                    fontSize: desktop
+                        ? 10.5
+                        : compact
+                        ? 8.5
+                        : 9.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '${score.toString()}%',
+                style: TextStyle(
+                  color: scoreColor,
+                  fontSize: desktop
+                      ? 10.5
+                      : compact
+                      ? 8.5
+                      : 9.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: compact ? 6 : 7),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 1100),
+              curve: Curves.easeOutCubic,
+              tween: Tween(begin: 0, end: score / 100),
+              builder: (_, value, __) {
+                return LinearProgressIndicator(
+                  value: value,
+                  minHeight: compact ? 5 : 6,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDescription(
+    BuildContext context, {
+    required int score,
+    required bool compact,
+    required bool desktop,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Text(
+      _scoreDescription(score),
+      textAlign: ResponsiveHelper.isLandscape(context)
+          ? TextAlign.start
+          : TextAlign.center,
+      style: TextStyle(
+        color: colorScheme.onSurfaceVariant.withOpacity(0.66),
+        fontSize: desktop
+            ? 11.5
+            : compact
+            ? 9.5
+            : 10.5,
+        height: 1.4,
+      ),
+    );
   }
 
   String _scoreDescription(int score) {
     if (score >= 80) {
-      return "Excellent financial management. Keep up the good work.";
+      return 'Excellent financial management. Keep protecting the habits that are working.';
     }
 
     if (score >= 60) {
-      return "Good financial health with some room for improvement.";
+      return 'Good financial health with some room to strengthen your money habits.';
     }
 
     if (score >= 40) {
-      return "Your finances are fairly balanced. Consider improving your spending habits.";
+      return 'Your finances are fairly balanced, but there is room to improve consistency.';
     }
 
     if (score >= 20) {
-      return "Your financial health needs attention. Review your spending and budget.";
+      return 'Your financial health needs attention. Review spending and budget pressure.';
     }
 
-    return "Your financial health needs significant attention. Start by reviewing your budget.";
+    return 'Your financial health needs significant attention. Start with your budget and spending habits.';
+  }
+}
+
+class _FinancialHealthPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final Color trackColor;
+  final double strokeWidth;
+
+  const _FinancialHealthPainter({
+    required this.progress,
+    required this.color,
+    required this.trackColor,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    final radius = math.min(size.width, size.height) / 2 - strokeWidth / 2;
+
+    final trackPaint = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final progressPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    canvas.drawCircle(center, radius, trackPaint);
+
+    final normalizedProgress = progress.clamp(0.0, 1.0);
+
+    if (normalizedProgress > 0) {
+      canvas.drawArc(
+        rect,
+        -math.pi / 2,
+        2 * math.pi * normalizedProgress,
+        false,
+        progressPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FinancialHealthPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.color != color ||
+        oldDelegate.trackColor != trackColor ||
+        oldDelegate.strokeWidth != strokeWidth;
   }
 }
