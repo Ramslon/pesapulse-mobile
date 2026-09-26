@@ -25,37 +25,88 @@ class BudgetBreakdownCard extends StatefulWidget {
 class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
   String? selectedCategory;
 
-  static const List<Color> colors = [
-    Colors.green,
-    Colors.blue,
-    Colors.orange,
-    Colors.purple,
-    Colors.red,
-    Colors.teal,
-    Colors.indigo,
-    Colors.pink,
-  ];
+  static const Color _foodColor = Color(0xFFF59E0B);
+  static const Color _transportColor = Color(0xFF2563EB);
+  static const Color _shoppingColor = Color(0xFF7C3AED);
+  static const Color _billsColor = Color(0xFFE53935);
+  static const Color _entertainmentColor = Color(0xFFDB2777);
+  static const Color _healthColor = Color(0xFF16A34A);
+  static const Color _educationColor = Color(0xFF0891B2);
+  static const Color _otherColor = Color(0xFF64748B);
 
   @override
   void didUpdateWidget(covariant BudgetBreakdownCard oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Clear selection if the selected category no longer exists.
     if (selectedCategory != null &&
         !widget.categoryTotals.containsKey(selectedCategory)) {
-      selectedCategory = null;
+      setState(() {
+        selectedCategory = null;
+      });
     }
   }
 
+  List<MapEntry<String, double>> get _sortedCategories {
+    return widget.categoryTotals.entries
+        .where((entry) => entry.value > 0)
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+  }
+
   Color _categoryColor(String category) {
-    final categories = widget.categoryTotals.keys.toList();
-    final index = categories.indexOf(category);
+    final normalized = category.trim().toLowerCase();
 
-    if (index < 0) {
-      return colors.first;
+    switch (normalized) {
+      case 'food':
+      case 'groceries':
+      case 'restaurant':
+      case 'restaurants':
+        return _foodColor;
+
+      case 'transport':
+      case 'transportation':
+      case 'travel':
+        return _transportColor;
+
+      case 'shopping':
+        return _shoppingColor;
+
+      case 'bills':
+      case 'utilities':
+        return _billsColor;
+
+      case 'entertainment':
+        return _entertainmentColor;
+
+      case 'health':
+      case 'medical':
+        return _healthColor;
+
+      case 'education':
+        return _educationColor;
+
+      default:
+        final index = _sortedCategories.indexWhere(
+          (entry) => entry.key == category,
+        );
+
+        const fallbackColors = [
+          _foodColor,
+          _transportColor,
+          _shoppingColor,
+          _billsColor,
+          _entertainmentColor,
+          _healthColor,
+          _educationColor,
+          _otherColor,
+        ];
+
+        if (index < 0) {
+          return _otherColor;
+        }
+
+        return fallbackColors[index % fallbackColors.length];
     }
-
-    return colors[index % colors.length];
   }
 
   void _selectCategory(String category) {
@@ -75,30 +126,33 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
   }
 
   int _rankFor(String category) {
-    final sorted = widget.categoryTotals.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final categories = _sortedCategories;
 
-    return sorted.indexWhere((entry) => entry.key == category) + 1;
+    final index = categories.indexWhere((entry) => entry.key == category);
+
+    return index < 0 ? 0 : index + 1;
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     final compact = ResponsiveHelper.useCompactLayout(context);
+
     final tablet = ResponsiveHelper.isTablet(context);
+
     final desktop = ResponsiveHelper.isDesktop(context);
+
     final landscape = ResponsiveHelper.isLandscape(context);
 
     final cardPadding = ResponsiveHelper.cardPadding(context);
+
     final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const BudgetSectionHeader(
-          title: "Budget Breakdown",
-          subtitle: "Tap a category to see more details",
+          title: 'Budget Breakdown',
+          subtitle: 'See where your spending is being allocated',
         ),
 
         SizedBox(
@@ -109,31 +163,64 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
               : 20,
         ),
 
-        Card(
-          elevation: 0,
-          color: theme.colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-              compact
-                  ? 16
-                  : tablet
-                  ? 18
-                  : 20,
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(cardPadding),
-            child: _buildContent(
-              context,
-              compact: compact,
-              tablet: tablet,
-              desktop: desktop,
-              landscape: landscape,
-              sectionSpacing: sectionSpacing,
-            ),
-          ),
+        _buildCard(
+          context,
+          compact: compact,
+          tablet: tablet,
+          desktop: desktop,
+          landscape: landscape,
+          cardPadding: cardPadding,
+          sectionSpacing: sectionSpacing,
         ),
       ],
+    );
+  }
+
+  Widget _buildCard(
+    BuildContext context, {
+    required bool compact,
+    required bool tablet,
+    required bool desktop,
+    required bool landscape,
+    required double cardPadding,
+    required double sectionSpacing,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final radius = desktop
+        ? 22.0
+        : compact
+        ? 17.0
+        : 20.0;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              theme.brightness == Brightness.dark ? 0.07 : 0.035,
+            ),
+            blurRadius: desktop ? 20 : 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(cardPadding),
+        child: _buildContent(
+          context,
+          compact: compact,
+          tablet: tablet,
+          desktop: desktop,
+          landscape: landscape,
+          sectionSpacing: sectionSpacing,
+        ),
+      ),
     );
   }
 
@@ -145,14 +232,30 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
     required bool landscape,
     required double sectionSpacing,
   }) {
-    if (widget.categoryTotals.isEmpty) {
+    final categories = _sortedCategories;
+
+    if (categories.isEmpty) {
       return _buildEmptyState(context, compact: compact, tablet: tablet);
     }
 
-    final categories = widget.categoryTotals.keys.toList();
-
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildSummaryHeader(
+          context,
+          categories: categories,
+          compact: compact,
+          desktop: desktop,
+        ),
+
+        SizedBox(
+          height: compact
+              ? 12
+              : desktop
+              ? 18
+              : 15,
+        ),
+
         _buildChart(
           context,
           categories: categories,
@@ -162,18 +265,22 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
           landscape: landscape,
         ),
 
-        SizedBox(height: compact ? 14 : 18),
+        SizedBox(height: compact ? 13 : 17),
 
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
+          duration: const Duration(milliseconds: 260),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           child: selectedCategory == null
               ? _buildChartHint(context, compact: compact)
-              : _buildSelectedCategoryDetails(
-                  context,
-                  category: selectedCategory!,
-                  compact: compact,
+              : KeyedSubtree(
+                  key: ValueKey(selectedCategory),
+                  child: _buildSelectedCategoryDetails(
+                    context,
+                    category: selectedCategory!,
+                    compact: compact,
+                    desktop: desktop,
+                  ),
                 ),
         ),
 
@@ -181,15 +288,113 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
 
         Divider(
           height: 1,
-          color: Theme.of(context).dividerColor.withOpacity(.55),
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.08),
         ),
 
-        SizedBox(height: compact ? 12 : 16),
+        SizedBox(height: compact ? 12 : 15),
 
         _buildCategoryList(
           context,
+          categories: categories,
           compact: compact,
-          sectionSpacing: sectionSpacing,
+          desktop: desktop,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryHeader(
+    BuildContext context, {
+    required List<MapEntry<String, double>> categories,
+    required bool compact,
+    required bool desktop,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final topCategory = categories.first.key;
+    final topAmount = categories.first.value;
+    final topPercentage = _percentageFor(topCategory);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Spending Allocation',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: desktop
+                      ? 15
+                      : compact
+                      ? 12.5
+                      : 14,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.1,
+                ),
+              ),
+
+              const SizedBox(height: 3),
+
+              Text(
+                '$topCategory is your largest spending category',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant.withOpacity(0.65),
+                  fontSize: desktop
+                      ? 11.5
+                      : compact
+                      ? 9.5
+                      : 10.5,
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: 10),
+
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 8 : 10,
+            vertical: compact ? 5 : 6,
+          ),
+          decoration: BoxDecoration(
+            color: _categoryColor(topCategory).withOpacity(0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _categoryColor(topCategory).withOpacity(0.10),
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                CurrencyFormatter.format(topAmount),
+                maxLines: 1,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: compact ? 9.5 : 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${topPercentage.toStringAsFixed(0)}%',
+                style: TextStyle(
+                  color: _categoryColor(topCategory),
+                  fontSize: compact ? 8 : 9,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -197,7 +402,7 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
 
   Widget _buildChart(
     BuildContext context, {
-    required List<String> categories,
+    required List<MapEntry<String, double>> categories,
     required bool compact,
     required bool tablet,
     required bool desktop,
@@ -211,16 +416,16 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
     );
 
     return SizedBox(
-      height: chartHeight,
       width: double.infinity,
+      height: chartHeight,
       child: PieChart(
         PieChartData(
           sectionsSpace: compact ? 2 : 3,
           centerSpaceRadius: compact
               ? 38
               : tablet
-              ? 46
-              : 52,
+              ? 44
+              : 50,
           sections: _buildPieSections(
             context,
             categories: categories,
@@ -242,7 +447,7 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
                 return;
               }
 
-              _selectCategory(categories[touchedIndex]);
+              _selectCategory(categories[touchedIndex].key);
             },
           ),
         ),
@@ -254,45 +459,39 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
 
   List<PieChartSectionData> _buildPieSections(
     BuildContext context, {
-    required List<String> categories,
+    required List<MapEntry<String, double>> categories,
     required bool compact,
     required bool tablet,
   }) {
+    final normalRadius = compact
+        ? 46.0
+        : tablet
+        ? 55.0
+        : 63.0;
+
+    final selectedRadius = compact
+        ? 53.0
+        : tablet
+        ? 63.0
+        : 71.0;
+
+    final surface = Theme.of(context).colorScheme.surface;
+
     return List.generate(categories.length, (index) {
-      final category = categories[index];
-      final amount = widget.categoryTotals[category] ?? 0;
-      final color = colors[index % colors.length];
+      final category = categories[index].key;
+      final amount = categories[index].value;
+      final color = _categoryColor(category);
 
       final isSelected = selectedCategory == category;
-
-      final normalRadius = compact
-          ? 48.0
-          : tablet
-          ? 58.0
-          : 66.0;
-
-      final selectedRadius = compact
-          ? 56.0
-          : tablet
-          ? 66.0
-          : 74.0;
 
       return PieChartSectionData(
         color: color,
         value: amount,
         radius: isSelected ? selectedRadius : normalRadius,
-
-        // Important:
-        // Do NOT display category/amount inside the pie chart.
         title: '',
-
         showTitle: false,
-
         borderSide: isSelected
-            ? BorderSide(
-                color: Theme.of(context).colorScheme.surface,
-                width: compact ? 3 : 4,
-              )
+            ? BorderSide(color: surface, width: compact ? 3 : 4)
             : BorderSide.none,
       );
     });
@@ -300,32 +499,44 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
 
   Widget _buildChartHint(BuildContext context, {required bool compact}) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 12 : 16,
-        vertical: compact ? 10 : 12,
+        horizontal: compact ? 10 : 13,
+        vertical: compact ? 9 : 11,
       ),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.45),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.42),
         borderRadius: BorderRadius.circular(compact ? 12 : 14),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.touch_app_rounded,
-            size: compact ? 18 : 20,
-            color: theme.colorScheme.primary,
+          Container(
+            width: compact ? 27 : 30,
+            height: compact ? 27 : 30,
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withOpacity(0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.touch_app_rounded,
+              size: compact ? 14 : 16,
+              color: colorScheme.primary,
+            ),
           ),
-          SizedBox(width: compact ? 8 : 10),
+
+          SizedBox(width: compact ? 8 : 9),
+
           Expanded(
             child: Text(
-              'Tap a section of the chart or a category below to view its details.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: compact ? 11 : 12,
-                color: theme.colorScheme.onSurface.withOpacity(.65),
+              'Tap a category to inspect its spending share and rank.',
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant.withOpacity(0.68),
+                fontSize: compact ? 9.5 : 10.5,
                 height: 1.3,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -338,41 +549,53 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
     BuildContext context, {
     required String category,
     required bool compact,
+    required bool desktop,
   }) {
     final theme = Theme.of(context);
     final color = _categoryColor(category);
 
     final amount = widget.categoryTotals[category] ?? 0;
+
     final percentage = _percentageFor(category);
+
     final rank = _rankFor(category);
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 12 : 16),
+      padding: EdgeInsets.all(
+        desktop
+            ? 15
+            : compact
+            ? 11
+            : 14,
+      ),
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
+        color: color.withOpacity(
+          theme.brightness == Brightness.dark ? 0.10 : 0.055,
+        ),
         borderRadius: BorderRadius.circular(compact ? 14 : 16),
-        border: Border.all(color: color.withOpacity(.20)),
+        border: Border.all(color: color.withOpacity(0.15)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: compact ? 38 : 44,
-                height: compact ? 38 : 44,
+                width: compact ? 34 : 40,
+                height: compact ? 34 : 40,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(.15),
-                  shape: BoxShape.circle,
+                  color: color.withOpacity(0.11),
+                  borderRadius: BorderRadius.circular(compact ? 10 : 12),
                 ),
                 child: Icon(
                   Icons.category_rounded,
                   color: color,
-                  size: compact ? 20 : 23,
+                  size: compact ? 17 : 20,
                 ),
               ),
 
-              SizedBox(width: compact ? 10 : 12),
+              SizedBox(width: compact ? 9 : 11),
 
               Expanded(
                 child: Column(
@@ -382,37 +605,48 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
                       category,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontSize: compact ? 14 : 16,
-                        fontWeight: FontWeight.bold,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: compact ? 13 : 14.5,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
+
                     const SizedBox(height: 2),
+
                     Text(
-                      'Category details',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: compact ? 10 : 11,
-                        color: theme.colorScheme.onSurface.withOpacity(.55),
+                      'Selected spending category',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                          0.58,
+                        ),
+                        fontSize: compact ? 9 : 10,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              IconButton(
-                tooltip: 'Close details',
-                visualDensity: VisualDensity.compact,
-                onPressed: () {
+              InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
                   setState(() {
                     selectedCategory = null;
                   });
                 },
-                icon: const Icon(Icons.close_rounded),
+                child: Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: compact ? 17 : 19,
+                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.60),
+                  ),
+                ),
               ),
             ],
           ),
 
-          SizedBox(height: compact ? 12 : 16),
+          SizedBox(height: compact ? 10 : 13),
 
           Row(
             children: [
@@ -427,7 +661,7 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
                 ),
               ),
 
-              SizedBox(width: compact ? 8 : 12),
+              SizedBox(width: compact ? 7 : 9),
 
               Expanded(
                 child: _buildDetailMetric(
@@ -440,7 +674,7 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
                 ),
               ),
 
-              SizedBox(width: compact ? 8 : 12),
+              SizedBox(width: compact ? 7 : 9),
 
               Expanded(
                 child: _buildDetailMetric(
@@ -468,30 +702,32 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
     required bool compact,
   }) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 10,
-        vertical: compact ? 9 : 11,
+        horizontal: compact ? 7 : 9,
+        vertical: compact ? 8 : 10,
       ),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withOpacity(.65),
+        color: colorScheme.surface.withOpacity(0.62),
         borderRadius: BorderRadius.circular(compact ? 10 : 12),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: compact ? 16 : 18),
+          Icon(icon, color: color, size: compact ? 15 : 17),
 
-          SizedBox(height: compact ? 4 : 6),
+          SizedBox(height: compact ? 4 : 5),
 
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               value,
               maxLines: 1,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontSize: compact ? 12 : 13,
-                fontWeight: FontWeight.bold,
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: compact ? 11.5 : 13,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
@@ -502,9 +738,10 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: compact ? 9 : 10,
-              color: theme.colorScheme.onSurface.withOpacity(.55),
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant.withOpacity(0.55),
+              fontSize: compact ? 8.5 : 9.5,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -514,28 +751,28 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
 
   Widget _buildCategoryList(
     BuildContext context, {
+    required List<MapEntry<String, double>> categories,
     required bool compact,
-    required double sectionSpacing,
+    required bool desktop,
   }) {
-    final categories = widget.categoryTotals.entries.toList();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(
-              Icons.category_rounded,
-              size: compact ? 18 : 20,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-
-            SizedBox(width: compact ? 7 : 8),
-
             Text(
               'Categories',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontSize: compact ? 12 : 14,
-                fontWeight: FontWeight.bold,
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: desktop
+                    ? 14
+                    : compact
+                    ? 11.5
+                    : 13,
+                fontWeight: FontWeight.w800,
               ),
             ),
 
@@ -543,15 +780,20 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
 
             Text(
               '${categories.length} categories',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: compact ? 9 : 10,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(.5),
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant.withOpacity(0.55),
+                fontSize: desktop
+                    ? 10
+                    : compact
+                    ? 8.5
+                    : 9.5,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
 
-        SizedBox(height: compact ? 10 : 12),
+        SizedBox(height: compact ? 9 : 11),
 
         Column(
           children: [
@@ -561,14 +803,15 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
                   bottom: index == categories.length - 1
                       ? 0
                       : compact
-                      ? 8
-                      : 10,
+                      ? 7
+                      : 9,
                 ),
                 child: _buildCategoryItem(
                   context,
                   category: categories[index].key,
                   amount: categories[index].value,
-                  color: colors[index % colors.length],
+                  color: _categoryColor(categories[index].key),
+                  rank: index + 1,
                   compact: compact,
                 ),
               ),
@@ -583,10 +826,14 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
     required String category,
     required double amount,
     required Color color,
+    required int rank,
     required bool compact,
   }) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final isSelected = selectedCategory == category;
+
     final percentage = _percentageFor(category);
 
     return Material(
@@ -598,87 +845,122 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           padding: EdgeInsets.symmetric(
-            horizontal: compact ? 10 : 12,
-            vertical: compact ? 9 : 11,
+            horizontal: compact ? 9 : 11,
+            vertical: compact ? 9 : 10,
           ),
           decoration: BoxDecoration(
             color: isSelected
-                ? color.withOpacity(.12)
-                : theme.colorScheme.surfaceContainerHighest.withOpacity(.35),
+                ? color.withOpacity(
+                    theme.brightness == Brightness.dark ? 0.11 : 0.065,
+                  )
+                : colorScheme.surfaceContainerHighest.withOpacity(0.32),
             borderRadius: BorderRadius.circular(compact ? 12 : 14),
             border: Border.all(
-              color: isSelected ? color.withOpacity(.35) : Colors.transparent,
-              width: 1,
+              color: isSelected ? color.withOpacity(0.25) : Colors.transparent,
             ),
           ),
-          child: Row(
+          child: Column(
             children: [
-              Container(
-                width: compact ? 30 : 34,
-                height: compact ? 30 : 34,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(.14),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.category_rounded,
-                  size: compact ? 15 : 17,
-                  color: color,
-                ),
-              ),
+              Row(
+                children: [
+                  Container(
+                    width: compact ? 27 : 31,
+                    height: compact ? 27 : 31,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.10),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$rank',
+                        style: TextStyle(
+                          color: color,
+                          fontSize: compact ? 9 : 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
 
-              SizedBox(width: compact ? 9 : 11),
+                  SizedBox(width: compact ? 9 : 10),
 
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+                  Expanded(
+                    child: Text(
                       category,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontSize: compact ? 11 : 13,
-                        fontWeight: FontWeight.w600,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: compact ? 11 : 12.5,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-
-                    const SizedBox(height: 2),
-
-                    Text(
-                      '${percentage.toStringAsFixed(1)}% of spending',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: compact ? 9 : 10,
-                        color: theme.colorScheme.onSurface.withOpacity(.50),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(width: compact ? 8 : 12),
-
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  CurrencyFormatter.format(amount),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontSize: compact ? 11 : 13,
-                    fontWeight: FontWeight.bold,
                   ),
-                ),
+
+                  const SizedBox(width: 8),
+
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      CurrencyFormatter.format(amount),
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: compact ? 10.5 : 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 5),
+
+                  Icon(
+                    isSelected
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.chevron_right_rounded,
+                    size: compact ? 17 : 19,
+                    color: isSelected
+                        ? color
+                        : colorScheme.onSurfaceVariant.withOpacity(0.42),
+                  ),
+                ],
               ),
 
-              SizedBox(width: compact ? 4 : 6),
+              SizedBox(height: compact ? 6 : 7),
 
-              Icon(
-                isSelected
-                    ? Icons.keyboard_arrow_up_rounded
-                    : Icons.chevron_right_rounded,
-                size: compact ? 18 : 20,
-                color: isSelected
-                    ? color
-                    : theme.colorScheme.onSurface.withOpacity(.4),
+              Row(
+                children: [
+                  const SizedBox(width: 36),
+
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        minHeight: compact ? 4 : 5,
+                        value: (percentage / 100).clamp(0.0, 1.0),
+                        backgroundColor: colorScheme.outline.withOpacity(0.07),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          color.withOpacity(isSelected ? 0.95 : 0.70),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(width: compact ? 7 : 9),
+
+                  SizedBox(
+                    width: compact ? 34 : 40,
+                    child: Text(
+                      '${percentage.toStringAsFixed(0)}%',
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.58),
+                        fontSize: compact ? 8.5 : 9.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -692,31 +974,87 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
     required bool compact,
     required bool tablet,
   }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Padding(
       padding: EdgeInsets.symmetric(
         vertical: compact
-            ? 10
+            ? 12
             : tablet
-            ? 16
-            : 20,
+            ? 18
+            : 22,
       ),
-      child: EmptyState(
-        icon: Icons.pie_chart_outline_rounded,
-        title: "No Spending Data",
-        message: "Add some expenses to view category analysis.",
-        action: ElevatedButton.icon(
-          icon: Icon(Icons.receipt_long_rounded, size: compact ? 18 : 20),
-          label: Text(
-            "Add Expense",
-            style: TextStyle(fontSize: compact ? 13 : 14),
+      child: Column(
+        children: [
+          Container(
+            width: compact ? 54 : 64,
+            height: compact ? 54 : 64,
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(compact ? 16 : 19),
+            ),
+            child: Icon(
+              Icons.pie_chart_outline_rounded,
+              color: colorScheme.primary,
+              size: compact ? 25 : 29,
+            ),
           ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
-            );
-          },
-        ),
+
+          SizedBox(height: compact ? 10 : 12),
+
+          Text(
+            'No Spending Data',
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize: compact ? 13 : 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 340),
+            child: Text(
+              'Add some expenses to see how your spending is distributed across categories.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant.withOpacity(0.67),
+                fontSize: compact ? 10.5 : 11.5,
+                height: 1.4,
+              ),
+            ),
+          ),
+
+          SizedBox(height: compact ? 13 : 16),
+
+          SizedBox(
+            height: compact ? 36 : 40,
+            child: ElevatedButton.icon(
+              icon: Icon(Icons.add_rounded, size: compact ? 16 : 18),
+              label: Text(
+                'Add Expense',
+                style: TextStyle(
+                  fontSize: compact ? 11 : 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -728,17 +1066,17 @@ class _BudgetBreakdownCardState extends State<BudgetBreakdownCard> {
     required bool landscape,
   }) {
     if (desktop) {
-      return landscape ? 230 : 270;
+      return landscape ? 220 : 245;
     }
 
     if (tablet) {
-      return landscape ? 185 : 240;
+      return landscape ? 175 : 220;
     }
 
     if (compact) {
-      return landscape ? 145 : 195;
+      return landscape ? 140 : 185;
     }
 
-    return landscape ? 155 : 225;
+    return landscape ? 150 : 215;
   }
 }
