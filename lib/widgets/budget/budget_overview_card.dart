@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/utils/currency_formatter.dart';
-import 'budget_stat_item.dart';
 import 'budget_progress_gauge.dart';
 import '../../utils/responsive_helper.dart';
 

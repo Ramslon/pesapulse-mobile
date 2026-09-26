@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../../widgets/empty_state.dart';
 import '../../screens/add_expense_screen.dart';
 import '../../utils/responsive_helper.dart';
 import '../../core/utils/currency_formatter.dart';
