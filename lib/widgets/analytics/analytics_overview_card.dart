@@ -28,14 +28,20 @@ class AnalyticsOverviewCard extends StatelessWidget {
         ? 16.0
         : 22.0;
 
+    final radius = desktop
+        ? 24.0
+        : compact
+        ? 17.0
+        : 21.0;
+
     final iconBoxSize = desktop
         ? 48.0
         : tablet
         ? 46.0
         : compact
-        ? 34.0
+        ? 36.0
         : landscape
-        ? 38.0
+        ? 40.0
         : 44.0;
 
     final iconSize = desktop
@@ -43,171 +49,298 @@ class AnalyticsOverviewCard extends StatelessWidget {
         : tablet
         ? 23.0
         : compact
-        ? 18.0
+        ? 19.0
         : landscape
         ? 20.0
         : 22.0;
 
     final titleSize = desktop
-        ? 18.0
+        ? 19.0
         : tablet
-        ? 17.0
+        ? 17.5
         : compact
-        ? 13.0
-        : landscape
         ? 14.0
-        : 16.0;
+        : landscape
+        ? 14.5
+        : 16.5;
 
     final subtitleSize = desktop
-        ? 14.0
+        ? 12.5
         : tablet
-        ? 13.0
+        ? 12.0
         : compact
         ? 10.0
         : landscape
         ? 10.5
-        : 12.0;
+        : 11.5;
 
     final amountSize = desktop
-        ? 32.0
+        ? 34.0
         : tablet
-        ? 30.0
+        ? 31.0
         : compact
-        ? 22.0
+        ? 23.0
         : landscape
-        ? 24.0
-        : 28.0;
+        ? 25.0
+        : 29.0;
 
-    final headerSpacing = compact
-        ? 8.0
-        : landscape
+    final labelSize = desktop
+        ? 12.5
+        : compact
         ? 10.0
-        : 14.0;
-
-    final headerBottomSpacing = compact
-        ? 14.0
-        : landscape
-        ? 16.0
-        : 22.0;
-
-    final amountLabelSpacing = compact ? 4.0 : 6.0;
-
-    final borderRadius = compact ? 15.0 : 20.0;
-    final iconRadius = compact ? 10.0 : 14.0;
+        : 11.5;
 
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 500),
-      tween: Tween(begin: 0.96, end: 1),
+      tween: Tween(begin: 0.97, end: 1),
       curve: Curves.easeOutCubic,
       builder: (_, scale, child) {
         return Transform.scale(scale: scale, child: child);
       },
-      child: Card(
-        elevation: compact ? 1 : 2,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(cardPadding),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.primary.withOpacity(
+                theme.brightness == Brightness.dark ? 0.07 : 0.05,
+              ),
+              blurRadius: desktop ? 22 : 16,
+              offset: const Offset(0, 7),
+            ),
+          ],
         ),
-        child: Padding(
-          padding: EdgeInsets.all(cardPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(
+              context,
+              colorScheme: colorScheme,
+              compact: compact,
+              desktop: desktop,
+              iconBoxSize: iconBoxSize,
+              iconSize: iconSize,
+              titleSize: titleSize,
+              subtitleSize: subtitleSize,
+            ),
+
+            SizedBox(
+              height: desktop
+                  ? 24
+                  : compact
+                  ? 16
+                  : landscape
+                  ? 18
+                  : 21,
+            ),
+
+            _buildSpendingMetric(
+              context,
+              colorScheme: colorScheme,
+              compact: compact,
+              desktop: desktop,
+              amountSize: amountSize,
+              labelSize: labelSize,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context, {
+    required ColorScheme colorScheme,
+    required bool compact,
+    required bool desktop,
+    required double iconBoxSize,
+    required double iconSize,
+    required double titleSize,
+    required double subtitleSize,
+  }) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: iconBoxSize,
+          height: iconBoxSize,
+          decoration: BoxDecoration(
+            color: colorScheme.primary.withOpacity(0.09),
+            borderRadius: BorderRadius.circular(compact ? 11 : 14),
+            border: Border.all(color: colorScheme.primary.withOpacity(0.10)),
+          ),
+          child: Icon(
+            Icons.insights_rounded,
+            color: colorScheme.primary,
+            size: iconSize,
+          ),
+        ),
+
+        SizedBox(width: compact ? 10 : 12),
+
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ─────────────────────────────────────
-              // Header
-              // ─────────────────────────────────────
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: iconBoxSize,
-                    height: iconBoxSize,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withOpacity(0.10),
-                      borderRadius: BorderRadius.circular(iconRadius),
-                    ),
-                    child: Icon(
-                      Icons.analytics_outlined,
-                      color: colorScheme.primary,
-                      size: iconSize,
-                    ),
-                  ),
-
-                  SizedBox(width: headerSpacing),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Analytics Overview',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontSize: titleSize,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 3),
-
-                        Text(
-                          'Track your spending and financial progress',
-                          maxLines: compact ? 2 : 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: subtitleSize,
-                            height: 1.25,
-                            color: theme.textTheme.bodySmall?.color
-                                ?.withOpacity(0.65),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Text(
+                'Analytics Overview',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
               ),
 
-              SizedBox(height: headerBottomSpacing),
-
-              // ─────────────────────────────────────
-              // Total spending
-              // ─────────────────────────────────────
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.easeOutCubic,
-                tween: Tween(begin: 0, end: totalSpending),
-                builder: (_, value, __) {
-                  return FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      CurrencyFormatter.format(value),
-                      maxLines: 1,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontSize: amountSize,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              SizedBox(height: amountLabelSpacing),
+              const SizedBox(height: 3),
 
               Text(
-                'Total Spending',
+                'Your spending snapshot',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: compact ? 10.0 : 12.0,
-                  color: theme.textTheme.bodySmall?.color?.withOpacity(0.65),
-                  fontWeight: FontWeight.w500,
+                  fontSize: subtitleSize,
+                  height: 1.25,
+                  color: colorScheme.onSurfaceVariant.withOpacity(0.72),
                 ),
               ),
             ],
           ),
         ),
+
+        const SizedBox(width: 10),
+
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 7 : 9,
+            vertical: compact ? 4 : 5,
+          ),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withOpacity(0.60),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            'OVERVIEW',
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant.withOpacity(0.75),
+              fontSize: compact ? 7.5 : 8.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSpendingMetric(
+    BuildContext context, {
+    required ColorScheme colorScheme,
+    required bool compact,
+    required bool desktop,
+    required double amountSize,
+    required double labelSize,
+  }) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: desktop
+            ? 16
+            : compact
+            ? 11
+            : 14,
+        vertical: desktop
+            ? 16
+            : compact
+            ? 12
+            : 14,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.primary.withOpacity(
+          theme.brightness == Brightness.dark ? 0.08 : 0.045,
+        ),
+        borderRadius: BorderRadius.circular(compact ? 14 : 16),
+        border: Border.all(color: colorScheme.primary.withOpacity(0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'TOTAL SPENDING',
+            style: TextStyle(
+              color: colorScheme.primary.withOpacity(0.82),
+              fontSize: labelSize,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+            ),
+          ),
+
+          SizedBox(height: compact ? 5 : 7),
+
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            tween: Tween(begin: 0, end: totalSpending),
+            builder: (_, value, __) {
+              return SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    CurrencyFormatter.format(value),
+                    maxLines: 1,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontSize: amountSize,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.0,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          SizedBox(height: compact ? 5 : 7),
+
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+              ),
+
+              const SizedBox(width: 7),
+
+              Expanded(
+                child: Text(
+                  'Total expenses recorded for the current analytics period',
+                  maxLines: compact ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: compact ? 9.5 : 10.5,
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.68),
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

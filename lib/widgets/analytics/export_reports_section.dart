@@ -20,81 +20,23 @@ class ExportReportsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     final compact = ResponsiveHelper.useCompactLayout(context);
     final landscape = ResponsiveHelper.isLandscape(context);
     final tablet = ResponsiveHelper.isTablet(context);
     final desktop = ResponsiveHelper.isDesktop(context);
 
-    final spacing = ResponsiveHelper.spacing(context);
-    final cardPadding = ResponsiveHelper.cardPadding(context);
-
-    final radius = compact
-        ? 16.0
-        : desktop
-        ? 22.0
-        : 18.0;
+    final contentMaxWidth = ResponsiveHelper.contentMaxWidth(context);
 
     if (isGuest) {
-      return Card(
-        elevation: compact ? 1 : 2,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(radius),
-          onTap: onGuestTap,
-          child: Padding(
-            padding: EdgeInsets.all(cardPadding),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _buildGuestIcon(context, compact: compact, desktop: desktop),
-
-                SizedBox(width: spacing),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Export Reports',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: compact
-                              ? 13
-                              : desktop
-                              ? 16
-                              : null,
-                        ),
-                      ),
-
-                      SizedBox(height: compact ? 4 : 5),
-
-                      Text(
-                        'Create an account to export PDF and CSV reports.',
-                        maxLines: compact ? 2 : 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          height: 1.35,
-                          fontSize: compact ? 11 : 12,
-                          color: theme.textTheme.bodySmall?.color?.withOpacity(
-                            0.7,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(width: compact ? 6 : 10),
-
-                _buildArrowButton(context, compact: compact),
-              ],
+      return FadeSlideAnimation(
+        delay: 400,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentMaxWidth),
+            child: _buildGuestState(
+              context,
+              compact: compact,
+              desktop: desktop,
             ),
           ),
         ),
@@ -103,135 +45,401 @@ class ExportReportsSection extends StatelessWidget {
 
     return FadeSlideAnimation(
       delay: 400,
-      child: _buildExportButtons(
-        context,
-        spacing: spacing,
-        compact: compact,
-        landscape: landscape,
-        tablet: tablet,
-        desktop: desktop,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: contentMaxWidth),
+          child: _buildExportSection(
+            context,
+            compact: compact,
+            landscape: landscape,
+            tablet: tablet,
+            desktop: desktop,
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildGuestIcon(
+  Widget _buildExportSection(
     BuildContext context, {
-    required bool compact,
-    required bool desktop,
-  }) {
-    final size = compact
-        ? 38.0
-        : desktop
-        ? 52.0
-        : 46.0;
-
-    final iconSize = compact
-        ? 20.0
-        : desktop
-        ? 27.0
-        : 24.0;
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(compact ? 11 : 14),
-      ),
-      child: Icon(
-        Icons.picture_as_pdf_outlined,
-        color: Colors.orange,
-        size: iconSize,
-      ),
-    );
-  }
-
-  Widget _buildArrowButton(BuildContext context, {required bool compact}) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    final size = compact ? 30.0 : 34.0;
-    final iconSize = compact ? 12.0 : 14.0;
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(Icons.arrow_forward_ios_rounded, size: iconSize),
-    );
-  }
-
-  Widget _buildExportButtons(
-    BuildContext context, {
-    required double spacing,
     required bool compact,
     required bool landscape,
     required bool tablet,
     required bool desktop,
   }) {
-    // Very compact mobile layouts get stacked buttons.
-    //
-    // This prevents text such as "Export PDF" and "Export CSV"
-    // from being squeezed into very narrow cards.
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
+    final radius = desktop
+        ? 22.0
+        : compact
+        ? 18.0
+        : 20.0;
+
+    final spacing = ResponsiveHelper.spacing(context);
+
     final stackButtons = compact && !landscape && !tablet && !desktop;
 
-    final pdfButton = _ExportButton(
-      icon: Icons.picture_as_pdf_outlined,
-      label: 'Export PDF',
-      color: Colors.red,
-      onPressed: onExportPdf,
-      compact: compact,
-      desktop: desktop,
-    );
-
-    final csvButton = _ExportButton(
-      icon: Icons.table_chart_outlined,
-      label: 'Export CSV',
-      color: Colors.teal,
-      onPressed: onExportCsv,
-      compact: compact,
-      desktop: desktop,
-    );
-
-    if (stackButtons) {
-      return Column(
-        children: [
-          SizedBox(width: double.infinity, child: pdfButton),
-
-          SizedBox(height: spacing),
-
-          SizedBox(width: double.infinity, child: csvButton),
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(cardPadding),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.09)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              theme.brightness == Brightness.dark ? 0.08 : 0.035,
+            ),
+            blurRadius: desktop ? 20 : 14,
+            offset: const Offset(0, 6),
+          ),
         ],
-      );
-    }
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context, compact: compact, desktop: desktop),
+
+          SizedBox(
+            height: desktop
+                ? 18
+                : compact
+                ? 14
+                : 16,
+          ),
+
+          if (stackButtons)
+            Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: _ExportOption(
+                    icon: Icons.picture_as_pdf_rounded,
+                    title: 'Export PDF',
+                    description: 'Create a polished financial report',
+                    accent: const Color(0xFFE53935),
+                    onPressed: onExportPdf,
+                    compact: compact,
+                    desktop: desktop,
+                  ),
+                ),
+
+                SizedBox(height: spacing),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: _ExportOption(
+                    icon: Icons.table_chart_rounded,
+                    title: 'Export CSV',
+                    description: 'Export your financial data as a spreadsheet',
+                    accent: const Color(0xFF0F9D8A),
+                    onPressed: onExportCsv,
+                    compact: compact,
+                    desktop: desktop,
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _ExportOption(
+                    icon: Icons.picture_as_pdf_rounded,
+                    title: 'Export PDF',
+                    description: 'Create a polished financial report',
+                    accent: const Color(0xFFE53935),
+                    onPressed: onExportPdf,
+                    compact: compact,
+                    desktop: desktop,
+                  ),
+                ),
+
+                SizedBox(width: spacing),
+
+                Expanded(
+                  child: _ExportOption(
+                    icon: Icons.table_chart_rounded,
+                    title: 'Export CSV',
+                    description: 'Export your financial data as a spreadsheet',
+                    accent: const Color(0xFF0F9D8A),
+                    onPressed: onExportCsv,
+                    compact: compact,
+                    desktop: desktop,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context, {
+    required bool compact,
+    required bool desktop,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final iconBox = desktop
+        ? 48.0
+        : compact
+        ? 40.0
+        : 44.0;
+
+    final iconSize = desktop
+        ? 24.0
+        : compact
+        ? 20.0
+        : 22.0;
+
+    final titleSize = desktop
+        ? 19.0
+        : compact
+        ? 16.0
+        : 18.0;
+
+    final subtitleSize = desktop
+        ? 12.5
+        : compact
+        ? 11.0
+        : 12.0;
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(child: pdfButton),
+        Container(
+          width: iconBox,
+          height: iconBox,
+          decoration: BoxDecoration(
+            color: colorScheme.primary.withOpacity(0.09),
+            borderRadius: BorderRadius.circular(compact ? 13 : 15),
+            border: Border.all(color: colorScheme.primary.withOpacity(0.10)),
+          ),
+          child: Icon(
+            Icons.file_download_rounded,
+            color: colorScheme.primary,
+            size: iconSize,
+          ),
+        ),
 
-        SizedBox(width: spacing),
+        SizedBox(width: compact ? 10 : 12),
 
-        Expanded(child: csvButton),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Export Your Finances',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
+              ),
+
+              const SizedBox(height: 3),
+
+              Text(
+                'Take your financial data with you',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: subtitleSize,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildGuestState(
+    BuildContext context, {
+    required bool compact,
+    required bool desktop,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final padding = ResponsiveHelper.cardPadding(context);
+
+    final radius = desktop
+        ? 22.0
+        : compact
+        ? 18.0
+        : 20.0;
+
+    final iconBox = desktop
+        ? 52.0
+        : compact
+        ? 42.0
+        : 48.0;
+
+    final iconSize = desktop
+        ? 26.0
+        : compact
+        ? 21.0
+        : 24.0;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onGuestTap,
+        borderRadius: BorderRadius.circular(radius),
+        child: Ink(
+          width: double.infinity,
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: colorScheme.primary.withOpacity(0.11)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(
+                  theme.brightness == Brightness.dark ? 0.08 : 0.035,
+                ),
+                blurRadius: desktop ? 20 : 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: iconBox,
+                height: iconBox,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withOpacity(0.09),
+                  borderRadius: BorderRadius.circular(compact ? 12 : 15),
+                ),
+                child: Icon(
+                  Icons.lock_outline_rounded,
+                  color: colorScheme.primary,
+                  size: iconSize,
+                ),
+              ),
+
+              SizedBox(width: compact ? 10 : 13),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Export Reports',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontSize: desktop
+                                  ? 17
+                                  : compact
+                                  ? 13.5
+                                  : 15.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 7),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'ACCOUNT',
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontSize: compact ? 7.5 : 8.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    Text(
+                      'Create an account to export PDF and CSV reports and keep your report history.',
+                      maxLines: compact ? 3 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: desktop
+                            ? 12.5
+                            : compact
+                            ? 10.5
+                            : 11.5,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(width: compact ? 8 : 12),
+
+              Container(
+                width: compact ? 32 : 36,
+                height: compact ? 32 : 36,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: colorScheme.primary,
+                  size: compact ? 16 : 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _ExportButton extends StatelessWidget {
+class _ExportOption extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final Color color;
+  final String title;
+  final String description;
+  final Color accent;
   final Future Function() onPressed;
   final bool compact;
   final bool desktop;
 
-  const _ExportButton({
+  const _ExportOption({
     required this.icon,
-    required this.label,
-    required this.color,
+    required this.title,
+    required this.description,
+    required this.accent,
     required this.onPressed,
     required this.compact,
     required this.desktop,
@@ -239,49 +447,113 @@ class _ExportButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = compact
-        ? 46.0
-        : desktop
-        ? 56.0
-        : 52.0;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    final iconSize = compact
-        ? 18.0
-        : desktop
+    final radius = desktop
+        ? 17.0
+        : compact
+        ? 15.0
+        : 16.0;
+
+    final iconBox = desktop
+        ? 46.0
+        : compact
+        ? 38.0
+        : 42.0;
+
+    final iconSize = desktop
         ? 23.0
+        : compact
+        ? 19.0
         : 21.0;
 
-    final fontSize = compact
-        ? 12.0
-        : desktop
+    final titleSize = desktop
         ? 14.0
+        : compact
+        ? 12.0
         : 13.0;
 
-    final horizontalPadding = compact
-        ? 8.0
-        : desktop
-        ? 18.0
-        : 12.0;
+    final descriptionSize = desktop
+        ? 11.5
+        : compact
+        ? 9.5
+        : 10.5;
 
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: iconSize),
-        label: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: fontSize),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          elevation: 1,
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(compact ? 12 : 14),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(radius),
+        child: Ink(
+          width: double.infinity,
+          padding: EdgeInsets.all(
+            desktop
+                ? 14
+                : compact
+                ? 10
+                : 12,
+          ),
+          decoration: BoxDecoration(
+            color: accent.withOpacity(
+              theme.brightness == Brightness.dark ? 0.09 : 0.055,
+            ),
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: accent.withOpacity(0.12)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: iconBox,
+                height: iconBox,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.11),
+                  borderRadius: BorderRadius.circular(compact ? 11 : 13),
+                ),
+                child: Icon(icon, color: accent, size: iconSize),
+              ),
+
+              SizedBox(width: compact ? 9 : 11),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: descriptionSize,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: accent.withOpacity(0.85),
+                size: compact ? 17 : 18,
+              ),
+            ],
           ),
         ),
       ),

@@ -27,75 +27,151 @@ class AnalyticsStatsGrid extends StatelessWidget {
     required double iconBoxSize,
     required double valueSize,
     required double titleSize,
-    required double spacing,
     required double radius,
     required bool compact,
-    required bool landscape,
+    required bool desktop,
+    required bool highlight,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Card(
-      elevation: compact ? 1 : 2,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(radius),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(cardPadding),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // ─────────────────────────────────────
-            // Icon
-            // ─────────────────────────────────────
-            Container(
-              width: iconBoxSize,
-              height: iconBoxSize,
-              decoration: BoxDecoration(
-                color: color.withOpacity(.12),
-                shape: BoxShape.circle,
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
+      tween: Tween(begin: 0.96, end: 1.0),
+      builder: (_, scale, child) {
+        return Transform.scale(scale: scale, child: child);
+      },
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(
+            color: highlight
+                ? color.withOpacity(0.16)
+                : colorScheme.outline.withOpacity(0.08),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(
+                highlight
+                    ? 0.10
+                    : theme.brightness == Brightness.dark
+                    ? 0.055
+                    : 0.035,
               ),
-              child: Icon(icon, color: color, size: iconSize),
-            ),
-
-            SizedBox(height: spacing),
-
-            // ─────────────────────────────────────
-            // Value
-            // ─────────────────────────────────────
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: valueSize,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ),
-
-            SizedBox(height: landscape ? 3 : 5),
-
-            // ─────────────────────────────────────
-            // Title
-            // ─────────────────────────────────────
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: titleSize,
-                color: colorScheme.onSurface.withOpacity(.60),
-                fontWeight: FontWeight.w500,
-                height: 1.2,
-              ),
+              blurRadius: desktop ? 18 : 12,
+              offset: const Offset(0, 5),
             ),
           ],
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(cardPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: iconBoxSize,
+                    height: iconBoxSize,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.09),
+                      borderRadius: BorderRadius.circular(compact ? 10 : 12),
+                      border: Border.all(color: color.withOpacity(0.10)),
+                    ),
+                    child: Icon(icon, color: color, size: iconSize),
+                  ),
+
+                  const Spacer(),
+
+                  Container(
+                    width: compact ? 5 : 6,
+                    height: compact ? 5 : 6,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.70),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(
+                height: compact
+                    ? 8
+                    : desktop
+                    ? 12
+                    : 10,
+              ),
+
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant.withOpacity(0.70),
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w700,
+                  height: 1.15,
+                  letterSpacing: 0.05,
+                ),
+              ),
+
+              SizedBox(
+                height: compact
+                    ? 5
+                    : desktop
+                    ? 8
+                    : 6,
+              ),
+
+              Expanded(
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: highlight ? color : colorScheme.onSurface,
+                        fontSize: valueSize,
+                        fontWeight: FontWeight.w900,
+                        height: 1.0,
+                        letterSpacing: -0.7,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(
+                height: compact
+                    ? 7
+                    : desktop
+                    ? 11
+                    : 9,
+              ),
+
+              Container(
+                width: highlight
+                    ? desktop
+                          ? 42
+                          : 34
+                    : desktop
+                    ? 32
+                    : 27,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -110,100 +186,76 @@ class AnalyticsStatsGrid extends StatelessWidget {
 
     final spacing = ResponsiveHelper.spacing(context);
 
-    // ─────────────────────────────────────────────
-    // Responsive card height
-    // ─────────────────────────────────────────────
     final cardHeight = desktop
-        ? 155.0
+        ? 152.0
         : tablet
-        ? (landscape ? 118.0 : 145.0)
+        ? (landscape ? 118.0 : 142.0)
         : landscape
         ? 104.0
         : compact
-        ? 105.0
-        : 125.0;
+        ? 104.0
+        : 124.0;
 
-    // ─────────────────────────────────────────────
-    // Responsive padding
-    // ─────────────────────────────────────────────
     final cardPadding = desktop
-        ? 22.0
+        ? 18.0
         : tablet
-        ? (landscape ? 10.0 : 18.0)
+        ? (landscape ? 11.0 : 16.0)
         : landscape
         ? 8.0
         : compact
         ? 10.0
-        : 16.0;
+        : 14.0;
 
-    // ─────────────────────────────────────────────
-    // Responsive icon
-    // ─────────────────────────────────────────────
     final iconBoxSize = desktop
-        ? 50.0
+        ? 46.0
         : tablet
-        ? (landscape ? 38.0 : 46.0)
+        ? (landscape ? 38.0 : 43.0)
         : landscape
         ? 30.0
         : compact
         ? 32.0
-        : 44.0;
+        : 40.0;
 
     final iconSize = desktop
-        ? 27.0
+        ? 24.0
         : tablet
-        ? (landscape ? 21.0 : 25.0)
+        ? (landscape ? 20.0 : 23.0)
         : landscape
         ? 17.0
         : compact
         ? 17.0
+        : 21.0;
+
+    final valueSize = desktop
+        ? 29.0
+        : tablet
+        ? (landscape ? 21.0 : 26.0)
+        : landscape
+        ? 18.0
+        : compact
+        ? 19.0
         : 23.0;
 
-    // ─────────────────────────────────────────────
-    // Responsive value text
-    // ─────────────────────────────────────────────
-    final valueSize = desktop
-        ? 28.0
-        : tablet
-        ? (landscape ? 21.0 : 25.0)
-        : landscape
-        ? 17.0
-        : compact
-        ? 18.0
-        : 22.0;
-
-    // ─────────────────────────────────────────────
-    // Responsive title
-    // ─────────────────────────────────────────────
     final titleSize = desktop
-        ? 14.0
+        ? 12.5
         : tablet
-        ? (landscape ? 11.0 : 13.0)
+        ? (landscape ? 10.5 : 12.0)
         : landscape
         ? 9.5
         : compact
         ? 10.0
-        : 12.0;
+        : 11.5;
 
-    final cardRadius = compact ? 15.0 : 22.0;
-
-    // Keep vertical spacing small in landscape
-    // to prevent card content from overflowing.
-    final iconSpacing = desktop
-        ? 12.0
+    final radius = desktop
+        ? 21.0
         : tablet
-        ? (landscape ? 5.0 : 12.0)
-        : landscape
-        ? 5.0
+        ? 19.0
         : compact
-        ? 7.0
-        : 12.0;
+        ? 15.0
+        : 18.0;
 
     return Column(
       children: [
-        // ─────────────────────────────────────────
-        // Row 1
-        // ─────────────────────────────────────────
         SizedBox(
           height: cardHeight,
           child: Row(
@@ -215,16 +267,16 @@ class AnalyticsStatsGrid extends StatelessWidget {
                   title: 'Goals',
                   value: totalGoals.toString(),
                   icon: Icons.flag_rounded,
-                  color: Colors.indigo,
+                  color: const Color(0xFF6366F1),
                   cardPadding: cardPadding,
                   iconSize: iconSize,
                   iconBoxSize: iconBoxSize,
                   valueSize: valueSize,
                   titleSize: titleSize,
-                  spacing: iconSpacing,
-                  radius: cardRadius,
+                  radius: radius,
                   compact: compact,
-                  landscape: landscape,
+                  desktop: desktop,
+                  highlight: false,
                 ),
               ),
 
@@ -236,16 +288,16 @@ class AnalyticsStatsGrid extends StatelessWidget {
                   title: 'Completed',
                   value: completedGoals.toString(),
                   icon: Icons.emoji_events_rounded,
-                  color: Colors.green,
+                  color: const Color(0xFF16A34A),
                   cardPadding: cardPadding,
                   iconSize: iconSize,
                   iconBoxSize: iconBoxSize,
                   valueSize: valueSize,
                   titleSize: titleSize,
-                  spacing: iconSpacing,
-                  radius: cardRadius,
+                  radius: radius,
                   compact: compact,
-                  landscape: landscape,
+                  desktop: desktop,
+                  highlight: false,
                 ),
               ),
             ],
@@ -254,9 +306,6 @@ class AnalyticsStatsGrid extends StatelessWidget {
 
         SizedBox(height: spacing),
 
-        // ─────────────────────────────────────────
-        // Row 2
-        // ─────────────────────────────────────────
         SizedBox(
           height: cardHeight,
           child: Row(
@@ -268,16 +317,16 @@ class AnalyticsStatsGrid extends StatelessWidget {
                   title: 'Active',
                   value: activeGoals.toString(),
                   icon: Icons.track_changes_rounded,
-                  color: Colors.orange,
+                  color: const Color(0xFFF59E0B),
                   cardPadding: cardPadding,
                   iconSize: iconSize,
                   iconBoxSize: iconBoxSize,
                   valueSize: valueSize,
                   titleSize: titleSize,
-                  spacing: iconSpacing,
-                  radius: cardRadius,
+                  radius: radius,
                   compact: compact,
-                  landscape: landscape,
+                  desktop: desktop,
+                  highlight: false,
                 ),
               ),
 
@@ -287,18 +336,19 @@ class AnalyticsStatsGrid extends StatelessWidget {
                 child: _buildStatCard(
                   context,
                   title: 'Completion Rate',
-                  value: '${completionRate.toStringAsFixed(0)}%',
+                  value:
+                      '${completionRate.clamp(0.0, 100.0).toStringAsFixed(0)}%',
                   icon: Icons.trending_up_rounded,
-                  color: Colors.blue,
+                  color: const Color(0xFF0F9D8A),
                   cardPadding: cardPadding,
                   iconSize: iconSize,
                   iconBoxSize: iconBoxSize,
                   valueSize: valueSize,
                   titleSize: titleSize,
-                  spacing: iconSpacing,
-                  radius: cardRadius,
+                  radius: radius,
                   compact: compact,
-                  landscape: landscape,
+                  desktop: desktop,
+                  highlight: true,
                 ),
               ),
             ],

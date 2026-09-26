@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:pesapulse_mobile/core/utils/currency_formatter.dart';
@@ -66,11 +68,32 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     }
   }
 
+  // ─────────────────────────────────────────────
+  // DATA
+  // ─────────────────────────────────────────────
+
   List<MapEntry<String, double>> get _validEntries {
-    return widget.monthlyTotals.entries
-        .where((entry) => entry.value > 0)
-        .toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    final entries = widget.monthlyTotals.entries
+        .where((entry) => entry.value >= 0)
+        .toList();
+
+    entries.sort((a, b) => a.key.compareTo(b.key));
+
+    return entries;
+  }
+
+  double get _totalSpending {
+    return _validEntries.fold<double>(0, (sum, entry) => sum + entry.value);
+  }
+
+  double get _averageSpending {
+    final entries = _validEntries;
+
+    if (entries.isEmpty) {
+      return 0;
+    }
+
+    return _totalSpending / entries.length;
   }
 
   double get _maxSpending {
@@ -83,9 +106,62 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     return entries.map((entry) => entry.value).reduce((a, b) => a > b ? a : b);
   }
 
-  double get _totalSpending {
-    return _validEntries.fold(0, (sum, entry) => sum + entry.value);
+  MapEntry<String, double>? get _latestEntry {
+    final entries = _validEntries;
+
+    if (entries.isEmpty) {
+      return null;
+    }
+
+    return entries.last;
   }
+
+  MapEntry<String, double>? get _previousEntry {
+    final entries = _validEntries;
+
+    if (entries.length < 2) {
+      return null;
+    }
+
+    return entries[entries.length - 2];
+  }
+
+  MapEntry<String, double>? get _selectedEntry {
+    if (touchedMonth == null) {
+      return null;
+    }
+
+    for (final entry in _validEntries) {
+      if (entry.key == touchedMonth) {
+        return entry;
+      }
+    }
+
+    return null;
+  }
+
+  double? get _latestChangePercentage {
+    final latest = _latestEntry;
+    final previous = _previousEntry;
+
+    if (latest == null || previous == null) {
+      return null;
+    }
+
+    if (previous.value == 0) {
+      if (latest.value == 0) {
+        return 0;
+      }
+
+      return null;
+    }
+
+    return ((latest.value - previous.value) / previous.value) * 100;
+  }
+
+  // ─────────────────────────────────────────────
+  // LABEL HELPERS
+  // ─────────────────────────────────────────────
 
   String _monthLabel(String key) {
     final parts = key.split('-');
@@ -132,78 +208,371 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     return value.toStringAsFixed(0);
   }
 
-  List<BarChartGroupData> _getMonthlyBars(
-    BuildContext context, {
-    required bool compact,
-    required bool tablet,
-    required bool desktop,
-  }) {
-    final entries = _validEntries;
+  // ─────────────────────────────────────────────
+  // COLORS
+  // ─────────────────────────────────────────────
+
+  Color _chartColor(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final barWidth = desktop
-        ? 22.0
-        : tablet
-        ? 19.0
-        : compact
-        ? 13.0
-        : 16.0;
+    return colorScheme.primary;
+  }
 
-    final barsSpace = compact ? 2.0 : 4.0;
+  Color _trendColor(BuildContext context, double? change) {
+    if (change == null) {
+      return Theme.of(context).colorScheme.onSurfaceVariant;
+    }
+
+    // Higher spending = warning/red.
+    // Lower spending = positive/green.
+    if (change > 0) {
+      return const Color(0xFFEF4444);
+    }
+
+    if (change < 0) {
+      return const Color(0xFF16A34A);
+    }
+
+    return Theme.of(context).colorScheme.onSurfaceVariant;
+  }
+
+  IconData _trendIcon(double? change) {
+    if (change == null) {
+      return Icons.remove_rounded;
+    }
+
+    if (change > 0) {
+      return Icons.trending_up_rounded;
+    }
+
+    if (change < 0) {
+      return Icons.trending_down_rounded;
+    }
+
+    return Icons.trending_flat_rounded;
+  }
+
+  // ─────────────────────────────────────────────
+  // CHART
+  // ─────────────────────────────────────────────
+
+  List<FlSpot> _buildSpots() {
+    final entries = _validEntries;
 
     return entries.asMap().entries.map((item) {
-      final index = item.key;
-      final entry = item.value;
-
-      final isSelected = touchedMonth == entry.key;
-
-      return BarChartGroupData(
-        x: index,
-        barsSpace: barsSpace,
-        showingTooltipIndicators: const [],
-        barRods: [
-          BarChartRodData(
-            toY: entry.value,
-            width: isSelected ? barWidth + 4 : barWidth,
-            color: isSelected
-                ? colorScheme.primary
-                : colorScheme.primary.withOpacity(.72),
-            borderRadius: BorderRadius.circular(compact ? 4 : 6),
-            backDrawRodData: BackgroundBarChartRodData(
-              show: true,
-              toY: _maxSpending * 1.05,
-              color: colorScheme.surfaceContainerHighest,
-            ),
-          ),
-        ],
-      );
+      return FlSpot(item.key.toDouble(), item.value.value);
     }).toList();
   }
 
-  MapEntry<String, double>? get _selectedEntry {
-    if (touchedMonth == null) {
-      return null;
+  double _chartMaxY() {
+    if (_maxSpending <= 0) {
+      return 10;
     }
 
-    for (final entry in _validEntries) {
-      if (entry.key == touchedMonth) {
-        return entry;
+    final padded = _maxSpending * 1.22;
+
+    return padded <= 10 ? 10 : padded;
+  }
+
+  double _horizontalInterval() {
+    final maxY = _chartMaxY();
+
+    return maxY / 4;
+  }
+
+  List<LineChartBarData> _buildLineBars(
+    BuildContext context, {
+    required bool compact,
+  }) {
+    final chartColor = _chartColor(context);
+    final spots = _buildSpots();
+
+    if (spots.isEmpty) {
+      return [];
+    }
+
+    return [
+      LineChartBarData(
+        spots: spots,
+        isCurved: true,
+        curveSmoothness: .32,
+        barWidth: compact ? 2.8 : 3.2,
+        isStrokeCapRound: true,
+        isStrokeJoinRound: true,
+
+        gradient: LinearGradient(
+          colors: [chartColor.withOpacity(.95), chartColor.withOpacity(.72)],
+        ),
+
+        dotData: FlDotData(
+          show: true,
+          checkToShowDot: (spot, barData) {
+            if (touchedMonth == null) {
+              return false;
+            }
+
+            final entries = _validEntries;
+
+            if (spot.x.toInt() < 0 || spot.x.toInt() >= entries.length) {
+              return false;
+            }
+
+            return entries[spot.x.toInt()].key == touchedMonth;
+          },
+          getDotPainter: (spot, percent, barData, index) {
+            return FlDotCirclePainter(
+              radius: compact ? 4.5 : 5.5,
+              color: Theme.of(context).colorScheme.surface,
+              strokeWidth: compact ? 2 : 2.5,
+              strokeColor: chartColor,
+            );
+          },
+        ),
+
+        belowBarData: BarAreaData(
+          show: true,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [chartColor.withOpacity(.20), chartColor.withOpacity(.035)],
+          ),
+        ),
+      ),
+    ];
+  }
+
+  // ─────────────────────────────────────────────
+  // SELECTED MONTH
+  // ─────────────────────────────────────────────
+
+  Widget _buildSelectedMonthCard(
+    BuildContext context,
+    MapEntry<String, double> selected,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final previousIndex =
+        _validEntries.indexWhere((entry) => entry.key == selected.key) - 1;
+
+    double? change;
+
+    if (previousIndex >= 0) {
+      final previous = _validEntries[previousIndex];
+
+      if (previous.value != 0) {
+        change = ((selected.value - previous.value) / previous.value) * 100;
       }
     }
 
-    return null;
+    final trendColor = _trendColor(context, change);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 14,
+        vertical: compact ? 9 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(.42),
+        borderRadius: BorderRadius.circular(compact ? 14 : 16),
+        border: Border.all(color: colorScheme.outline.withOpacity(.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: compact ? 32 : 38,
+            height: compact ? 32 : 38,
+            decoration: BoxDecoration(
+              color: _chartColor(context).withOpacity(.10),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.calendar_month_rounded,
+              color: _chartColor(context),
+              size: compact ? 16 : 19,
+            ),
+          ),
+
+          SizedBox(width: compact ? 8 : 10),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _monthFullLabel(selected.key),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: compact ? 10.5 : 12,
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_percentageOfDisplayedTotal(selected.value).toStringAsFixed(1)}% of displayed spending',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: compact ? 9 : 10.5,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  CurrencyFormatter.format(selected.value),
+                  style: TextStyle(
+                    fontSize: compact ? 12 : 14,
+                    fontWeight: FontWeight.w800,
+                    color: _chartColor(context),
+                  ),
+                ),
+              ),
+
+              if (change != null) ...[
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _trendIcon(change),
+                      size: compact ? 11 : 13,
+                      color: trendColor,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${change.abs().toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: compact ? 9 : 10,
+                        fontWeight: FontWeight.w800,
+                        color: trendColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
   }
+
+  double _percentageOfDisplayedTotal(double amount) {
+    if (_totalSpending <= 0) {
+      return 0;
+    }
+
+    return (amount / _totalSpending) * 100;
+  }
+
+  // ─────────────────────────────────────────────
+  // TOP SUMMARY
+  // ─────────────────────────────────────────────
+
+  Widget _buildSummary(BuildContext context, {required bool compact}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final latest = _latestEntry;
+    final change = _latestChangePercentage;
+    final trendColor = _trendColor(context, change);
+
+    final latestLabel = latest == null
+        ? 'No recent data'
+        : _monthLabel(latest.key);
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Spending pulse',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: compact ? 14 : 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.2,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Monthly movement at a glance',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: compact ? 9.5 : 11,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        if (latest != null)
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 8 : 10,
+              vertical: compact ? 6 : 7,
+            ),
+            decoration: BoxDecoration(
+              color: trendColor.withOpacity(.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: trendColor.withOpacity(.10)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _trendIcon(change),
+                  size: compact ? 13 : 15,
+                  color: trendColor,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  change == null
+                      ? latestLabel
+                      : '${change.abs().toStringAsFixed(0)}% vs previous',
+                  style: TextStyle(
+                    fontSize: compact ? 9 : 10,
+                    fontWeight: FontWeight.w800,
+                    color: trendColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // EMPTY STATE
+  // ─────────────────────────────────────────────
 
   Widget _buildEmptyState(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     final compact = ResponsiveHelper.useCompactLayout(context);
-    final cardPadding = ResponsiveHelper.cardPadding(context);
-    final spacing = ResponsiveHelper.spacing(context);
 
-    final iconContainerSize = compact ? 56.0 : 64.0;
-    final iconSize = compact ? 28.0 : 32.0;
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
+    final spacing = ResponsiveHelper.spacing(context);
 
     return Center(
       child: Padding(
@@ -212,15 +581,15 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: iconContainerSize,
-              height: iconContainerSize,
+              width: compact ? 56 : 64,
+              height: compact ? 56 : 64,
               decoration: BoxDecoration(
                 color: colorScheme.primary.withOpacity(.10),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.show_chart_rounded,
-                size: iconSize,
+                Icons.insights_rounded,
+                size: compact ? 28 : 32,
                 color: colorScheme.primary,
               ),
             ),
@@ -241,7 +610,7 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
               'Add expenses to start seeing your spending trend.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface.withOpacity(.60),
+                color: colorScheme.onSurfaceVariant,
                 height: 1.35,
               ),
             ),
@@ -251,96 +620,9 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     );
   }
 
-  Widget _buildSelectedMonthCard(
-    BuildContext context,
-    MapEntry<String, double> selected,
-  ) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    final compact = ResponsiveHelper.useCompactLayout(context);
-    final cardPadding = ResponsiveHelper.cardPadding(context);
-    final spacing = ResponsiveHelper.spacing(context);
-
-    final percentage = _totalSpending == 0
-        ? 0.0
-        : (selected.value / _totalSpending) * 100;
-
-    return Card(
-      elevation: 1,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(compact ? 14 : 16),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(cardPadding),
-        child: Row(
-          children: [
-            Container(
-              width: compact ? 36 : 42,
-              height: compact ? 36 : 42,
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.calendar_month_rounded,
-                color: colorScheme.primary,
-                size: compact ? 19 : 21,
-              ),
-            ),
-
-            SizedBox(width: spacing),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _monthFullLabel(selected.key),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-
-                  const SizedBox(height: 3),
-
-                  Text(
-                    '${percentage.toStringAsFixed(1)}% of displayed spending',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(.60),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  CurrencyFormatter.format(selected.value),
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: compact ? 14 : 16,
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.primary,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // ─────────────────────────────────────────────
+  // MAIN BUILD
+  // ─────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -348,33 +630,42 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
     final selected = _selectedEntry;
 
     final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final landscape = ResponsiveHelper.isLandscape(context);
+
     final tablet = ResponsiveHelper.isTablet(context);
+
     final desktop = ResponsiveHelper.isDesktop(context);
 
     final chartWidth = AnalyticsLayoutHelper.maxChartWidth(context);
 
-    final cardPadding = ResponsiveHelper.cardPadding(context);
-    final spacing = ResponsiveHelper.spacing(context);
-
     final colorScheme = Theme.of(context).colorScheme;
+
+    final cardPadding = ResponsiveHelper.cardPadding(context);
+
+    final spacing = ResponsiveHelper.spacing(context);
 
     final axisFontSize = desktop
         ? 11.0
         : tablet
         ? 10.5
         : compact
-        ? 9.0
-        : 10.0;
+        ? 8.5
+        : 9.5;
 
     final leftReservedSize = desktop
         ? 52.0
         : tablet
-        ? 50.0
+        ? 48.0
         : compact
-        ? 42.0
-        : 46.0;
+        ? 39.0
+        : 44.0;
 
-    final bottomReservedSize = compact ? 26.0 : 30.0;
+    final bottomReservedSize = compact
+        ? 24.0
+        : landscape
+        ? 26.0
+        : 30.0;
 
     if (validEntries.isEmpty) {
       return FadeSlideAnimation(
@@ -383,10 +674,12 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: chartWidth),
             child: Card(
-              elevation: 2,
+              elevation: 0,
               margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(compact ? 16 : 20),
+                borderRadius: BorderRadius.circular(compact ? 18 : 22),
+                side: BorderSide(color: colorScheme.outline.withOpacity(.07)),
               ),
               child: SizedBox(
                 height: widget.chartHeight,
@@ -399,219 +692,364 @@ class _MonthlySpendingChartState extends State<MonthlySpendingChart> {
       );
     }
 
-    final maxY = _maxSpending == 0 ? 10.0 : _maxSpending * 1.18;
+    final chartMaxY = _chartMaxY();
+    final chartInterval = _horizontalInterval();
 
     return FadeSlideAnimation(
-      delay: 300,
-      child: Column(
-        children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: chartWidth),
-              child: Card(
-                elevation: 2,
+      delay: 280,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: chartWidth),
+          child: Column(
+            children: [
+              Card(
+                elevation: 0,
                 margin: EdgeInsets.zero,
+                clipBehavior: Clip.antiAlias,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(compact ? 16 : 20),
+                  borderRadius: BorderRadius.circular(
+                    desktop
+                        ? 26
+                        : tablet
+                        ? 24
+                        : compact
+                        ? 18
+                        : 22,
+                  ),
+                  side: BorderSide(color: colorScheme.outline.withOpacity(.07)),
                 ),
                 child: Padding(
-                  padding: EdgeInsets.all(cardPadding),
-                  child: SizedBox(
-                    height: widget.chartHeight,
-                    width: double.infinity,
-                    child: BarChart(
-                      BarChartData(
-                        minY: 0,
-                        maxY: maxY,
-                        alignment: BarChartAlignment.spaceAround,
-                        groupsSpace: compact ? 5 : 10,
+                  padding: EdgeInsets.fromLTRB(
+                    cardPadding,
+                    cardPadding,
+                    cardPadding,
+                    compact ? 10 : 14,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSummary(context, compact: compact),
 
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          horizontalInterval: maxY / 4,
-                          getDrawingHorizontalLine: (_) {
-                            return FlLine(
-                              color: colorScheme.outline.withOpacity(.10),
-                              strokeWidth: 1,
-                            );
-                          },
-                        ),
+                      SizedBox(height: compact ? 8 : 12),
 
-                        borderData: FlBorderData(show: false),
+                      SizedBox(
+                        height: widget.chartHeight,
+                        width: double.infinity,
+                        child: LineChart(
+                          LineChartData(
+                            minX: 0,
+                            maxX: math
+                                .max(0, validEntries.length - 1)
+                                .toDouble(),
 
-                        barGroups: _getMonthlyBars(
-                          context,
-                          compact: compact,
-                          tablet: tablet,
-                          desktop: desktop,
-                        ),
+                            minY: 0,
+                            maxY: chartMaxY,
 
-                        barTouchData: BarTouchData(
-                          enabled: true,
-
-                          touchTooltipData: BarTouchTooltipData(
-                            getTooltipColor: (_) => colorScheme.inverseSurface,
-
-                            tooltipPadding: EdgeInsets.symmetric(
-                              horizontal: compact ? 9 : 12,
-                              vertical: compact ? 6 : 8,
+                            clipData: const FlClipData(
+                              top: false,
+                              bottom: false,
+                              left: false,
+                              right: false,
                             ),
 
-                            tooltipMargin: 8,
+                            gridData: FlGridData(
+                              show: true,
+                              drawVerticalLine: false,
+                              horizontalInterval: chartInterval,
+                              getDrawingHorizontalLine: (_) {
+                                return FlLine(
+                                  color: colorScheme.outline.withOpacity(.075),
+                                  strokeWidth: 1,
+                                );
+                              },
+                            ),
 
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              final entries = _validEntries;
+                            borderData: FlBorderData(show: false),
 
-                              if (groupIndex < 0 ||
-                                  groupIndex >= entries.length) {
-                                return null;
-                              }
-
-                              final monthKey = entries[groupIndex].key;
-
-                              final actualValue = entries[groupIndex].value;
-
-                              return BarTooltipItem(
-                                '${_monthFullLabel(monthKey)}\n',
-                                TextStyle(
-                                  color: colorScheme.onInverseSurface,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: compact ? 11 : 13,
+                            extraLinesData: ExtraLinesData(
+                              horizontalLines: [
+                                HorizontalLine(
+                                  y: _averageSpending,
+                                  color: colorScheme.onSurfaceVariant
+                                      .withOpacity(.35),
+                                  strokeWidth: 1,
+                                  dashArray: [5, 5],
                                 ),
-                                children: [
-                                  TextSpan(
-                                    text:
-                                        'KES ${actualValue.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      color: colorScheme.onInverseSurface,
-                                      fontSize: compact ? 10 : 12,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
+                              ],
+                            ),
 
-                          touchCallback:
-                              (FlTouchEvent event, BarTouchResponse? response) {
-                                final spot = response?.spot;
+                            lineBarsData: _buildLineBars(
+                              context,
+                              compact: compact,
+                            ),
 
-                                if (!event.isInterestedForInteractions ||
-                                    spot == null) {
-                                  if (touchedMonth != null) {
-                                    setState(() {
-                                      touchedMonth = null;
-                                    });
-                                  }
-                                  return;
-                                }
+                            lineTouchData: LineTouchData(
+                              enabled: true,
+                              handleBuiltInTouches: true,
 
-                                final entries = _validEntries;
+                              touchTooltipData: LineTouchTooltipData(
+                                getTooltipColor: (_) =>
+                                    colorScheme.inverseSurface,
+                                tooltipPadding: EdgeInsets.symmetric(
+                                  horizontal: compact ? 9 : 12,
+                                  vertical: compact ? 7 : 9,
+                                ),
+                                tooltipMargin: 10,
 
-                                final groupIndex = spot.touchedBarGroupIndex;
+                                getTooltipItems: (spots) {
+                                  return spots.map((spot) {
+                                    final entries = _validEntries;
 
-                                if (groupIndex < 0 ||
-                                    groupIndex >= entries.length) {
-                                  return;
-                                }
+                                    final index = spot.x.toInt();
 
-                                final monthKey = entries[groupIndex].key;
+                                    if (index < 0 || index >= entries.length) {
+                                      return null;
+                                    }
 
-                                if (touchedMonth != monthKey) {
-                                  setState(() {
-                                    touchedMonth = monthKey;
-                                  });
-                                }
-                              },
-                        ),
+                                    final entry = entries[index];
 
-                        titlesData: FlTitlesData(
-                          topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
+                                    return LineTooltipItem(
+                                      '${_monthFullLabel(entry.key)}\n',
+                                      TextStyle(
+                                        color: colorScheme.onInverseSurface,
+                                        fontSize: compact ? 10.5 : 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      children: [
+                                        TextSpan(
+                                          text: CurrencyFormatter.format(
+                                            entry.value,
+                                          ),
+                                          style: TextStyle(
+                                            color: colorScheme.onInverseSurface,
+                                            fontSize: compact ? 10 : 11,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList();
+                                },
+                              ),
 
-                          rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
+                              touchCallback:
+                                  (
+                                    FlTouchEvent event,
+                                    LineTouchResponse? response,
+                                  ) {
+                                    final spots = response?.lineBarSpots;
 
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: leftReservedSize,
-                              interval: maxY / 4,
-                              getTitlesWidget: (value, meta) {
-                                return Text(
-                                  _formatAxisValue(value),
-                                  style: TextStyle(
-                                    fontSize: axisFontSize,
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                );
-                              },
+                                    if (!event.isInterestedForInteractions ||
+                                        spots == null ||
+                                        spots.isEmpty) {
+                                      if (touchedMonth != null) {
+                                        setState(() {
+                                          touchedMonth = null;
+                                        });
+                                      }
+
+                                      return;
+                                    }
+
+                                    final index = spots.first.x.toInt();
+
+                                    final entries = _validEntries;
+
+                                    if (index < 0 || index >= entries.length) {
+                                      return;
+                                    }
+
+                                    final key = entries[index].key;
+
+                                    if (touchedMonth != key) {
+                                      setState(() {
+                                        touchedMonth = key;
+                                      });
+                                    }
+                                  },
+                            ),
+
+                            titlesData: FlTitlesData(
+                              topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+
+                              rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: leftReservedSize,
+                                  interval: chartInterval,
+                                  getTitlesWidget: (value, meta) {
+                                    if (value == 0) {
+                                      return const SizedBox.shrink();
+                                    }
+
+                                    return Text(
+                                      _formatAxisValue(value),
+                                      style: TextStyle(
+                                        fontSize: axisFontSize,
+                                        color: colorScheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  interval: 1,
+                                  reservedSize: bottomReservedSize,
+                                  getTitlesWidget: (value, meta) {
+                                    final index = value.toInt();
+
+                                    if (index < 0 ||
+                                        index >= validEntries.length) {
+                                      return const SizedBox.shrink();
+                                    }
+
+                                    final key = validEntries[index].key;
+
+                                    final isSelected = touchedMonth == key;
+
+                                    return SideTitleWidget(
+                                      axisSide: AxisSide.bottom,
+                                      child: AnimatedDefaultTextStyle(
+                                        duration: const Duration(
+                                          milliseconds: 180,
+                                        ),
+                                        style: TextStyle(
+                                          fontSize: axisFontSize,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w800
+                                              : FontWeight.w600,
+                                          color: isSelected
+                                              ? _chartColor(context)
+                                              : colorScheme.onSurfaceVariant,
+                                        ),
+                                        child: Text(_monthLabel(key)),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
                           ),
-
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              interval: 1,
-                              reservedSize: bottomReservedSize,
-                              getTitlesWidget: (value, meta) {
-                                final index = value.toInt();
-
-                                if (index < 0 || index >= validEntries.length) {
-                                  return const SizedBox.shrink();
-                                }
-
-                                final monthKey = validEntries[index].key;
-
-                                return SideTitleWidget(
-                                  axisSide: AxisSide.bottom,
-                                  child: Text(
-                                    _monthLabel(monthKey),
-                                    style: TextStyle(
-                                      fontSize: axisFontSize,
-                                      fontWeight: FontWeight.w600,
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                          duration: const Duration(milliseconds: 450),
+                          curve: Curves.easeOutCubic,
                         ),
                       ),
-                    ),
+
+                      SizedBox(height: compact ? 8 : 10),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    color: _chartColor(context),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Monthly spending',
+                                  style: TextStyle(
+                                    fontSize: compact ? 9 : 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 18,
+                                height: 1,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.onSurfaceVariant
+                                      .withOpacity(.35),
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Average '
+                                '${CurrencyFormatter.format(_averageSpending)}',
+                                style: TextStyle(
+                                  fontSize: compact ? 9 : 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
+
+              if (selected != null) ...[
+                SizedBox(height: spacing),
+                _buildSelectedMonthCard(context, selected),
+              ],
+
+              SizedBox(height: spacing),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Displayed total ',
+                    style: TextStyle(
+                      fontSize: compact ? 10 : 11,
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    CurrencyFormatter.format(_totalSpending),
+                    style: TextStyle(
+                      fontSize: compact ? 11 : 12,
+                      fontWeight: FontWeight.w800,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 3,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: colorScheme.onSurfaceVariant,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${validEntries.length} months',
+                    style: TextStyle(
+                      fontSize: compact ? 10 : 11,
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-
-          if (selected != null) ...[
-            SizedBox(height: spacing),
-            _buildSelectedMonthCard(context, selected),
-          ],
-
-          SizedBox(height: spacing),
-
-          Text(
-            'Total displayed spending: '
-            'KES ${_totalSpending.toStringAsFixed(2)}',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              fontSize: compact
-                  ? 13
-                  : tablet
-                  ? 16
-                  : 14,
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onSurface,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

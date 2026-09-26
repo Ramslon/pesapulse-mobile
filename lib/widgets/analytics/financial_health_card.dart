@@ -29,10 +29,10 @@ class FinancialHealthCard extends StatelessWidget {
     final tablet = ResponsiveHelper.isTablet(context);
     final desktop = ResponsiveHelper.isDesktop(context);
 
-    final spacing = ResponsiveHelper.spacing(context);
     final cardPadding = ResponsiveHelper.cardPadding(context);
+    final spacing = ResponsiveHelper.spacing(context);
 
-    final score = healthScore.clamp(0.0, 100.0);
+    final score = healthScore.clamp(0.0, 100.0).toDouble();
 
     final radius = desktop
         ? 28.0
@@ -54,13 +54,13 @@ class FinancialHealthCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [color, Color.lerp(color, Colors.black, 0.16) ?? color],
+            colors: [color, Color.lerp(color, Colors.black, 0.18) ?? color],
           ),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.20),
-              blurRadius: desktop ? 22 : 18,
-              offset: const Offset(0, 8),
+              color: color.withOpacity(0.22),
+              blurRadius: desktop ? 24 : 18,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -78,13 +78,13 @@ class FinancialHealthCard extends StatelessWidget {
 
               SizedBox(
                 height: desktop
-                    ? 26
+                    ? 28
                     : compact
                     ? 18
                     : 24,
               ),
 
-              _buildScoreSection(
+              _buildMainContent(
                 context,
                 score: score,
                 compact: compact,
@@ -97,18 +97,13 @@ class FinancialHealthCard extends StatelessWidget {
 
               SizedBox(
                 height: desktop
-                    ? 26
+                    ? 24
                     : compact
-                    ? 18
-                    : 22,
+                    ? 16
+                    : 20,
               ),
 
-              _buildRecommendation(
-                context,
-                compact: compact,
-                desktop: desktop,
-                spacing: spacing,
-              ),
+              _buildRecommendation(context, compact: compact, desktop: desktop),
             ],
           ),
         ),
@@ -129,22 +124,22 @@ class FinancialHealthCard extends StatelessWidget {
         : 46.0;
 
     final iconSize = desktop
-        ? 27.0
+        ? 26.0
         : compact
         ? 20.0
-        : 25.0;
+        : 24.0;
 
     final titleSize = desktop
         ? 21.0
         : compact
         ? 16.0
-        : 20.0;
+        : 19.0;
 
     final subtitleSize = desktop
         ? 13.0
         : compact
         ? 10.5
-        : 12.5;
+        : 12.0;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -153,9 +148,9 @@ class FinancialHealthCard extends StatelessWidget {
           width: iconBox,
           height: iconBox,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.16),
-            borderRadius: BorderRadius.circular(compact ? 11 : 15),
-            border: Border.all(color: Colors.white.withOpacity(0.18)),
+            color: Colors.white.withOpacity(0.14),
+            borderRadius: BorderRadius.circular(compact ? 12 : 15),
+            border: Border.all(color: Colors.white.withOpacity(0.14)),
           ),
           child: Icon(icon, color: Colors.white, size: iconSize),
         ),
@@ -173,19 +168,20 @@ class FinancialHealthCard extends StatelessWidget {
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: titleSize,
-                  fontWeight: FontWeight.bold,
-                  height: 1.15,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  letterSpacing: -0.2,
                 ),
               ),
 
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
 
               Text(
-                'Your current financial wellbeing',
+                'A snapshot of your financial wellbeing',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: Colors.white.withOpacity(0.70),
                   fontSize: subtitleSize,
                   height: 1.25,
                 ),
@@ -194,32 +190,30 @@ class FinancialHealthCard extends StatelessWidget {
           ),
         ),
 
-        SizedBox(width: compact ? 6 : 10),
+        const SizedBox(width: 10),
 
-        Flexible(
-          flex: 0,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: compact ? 90 : 130),
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 8 : 11,
-                vertical: compact ? 5 : 6,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.16),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.16)),
-              ),
-              child: Text(
-                healthStatus,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: compact ? 10 : 12,
-                  fontWeight: FontWeight.bold,
-                ),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: compact ? 92 : 125),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 8 : 11,
+              vertical: compact ? 5 : 7,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.14),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.14)),
+            ),
+            child: Text(
+              healthStatus,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: compact ? 9.5 : 11.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2,
               ),
             ),
           ),
@@ -228,7 +222,7 @@ class FinancialHealthCard extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreSection(
+  Widget _buildMainContent(
     BuildContext context, {
     required double score,
     required bool compact,
@@ -238,43 +232,43 @@ class FinancialHealthCard extends StatelessWidget {
     required bool desktop,
     required double spacing,
   }) {
-    final scoreCircleSize = desktop
-        ? 126.0
-        : tablet
-        ? 116.0
-        : compact
-        ? 88.0
-        : landscape
-        ? 96.0
-        : 108.0;
+    final stackLayout = compact && !landscape;
 
-    final scoreSize = desktop
-        ? 46.0
+    final circleSize = desktop
+        ? 132.0
+        : tablet
+        ? 122.0
         : compact
-        ? 30.0
-        : 42.0;
+        ? 94.0
+        : landscape
+        ? 102.0
+        : 112.0;
+
+    final scoreFontSize = desktop
+        ? 46.0
+        : tablet
+        ? 42.0
+        : compact
+        ? 32.0
+        : 40.0;
 
     final strokeWidth = compact ? 7.0 : 9.0;
 
-    // On very narrow compact screens, vertical layout gives
-    // the score enough room and prevents text from being squeezed.
-    final stackScoreContent = compact && !landscape;
-
-    if (stackScoreContent) {
+    if (stackLayout) {
       return Column(
         children: [
           Center(
-            child: _buildScoreCircle(
+            child: _buildScoreGauge(
               score: score,
-              size: scoreCircleSize,
-              scoreSize: scoreSize,
+              size: circleSize,
+              scoreFontSize: scoreFontSize,
               strokeWidth: strokeWidth,
             ),
           ),
 
-          SizedBox(height: spacing),
+          SizedBox(height: dense ? 14 : 18),
 
-          _buildScoreInformation(
+          _buildHealthSummary(
             context,
             score: score,
             compact: compact,
@@ -288,23 +282,23 @@ class FinancialHealthCard extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _buildScoreCircle(
+        _buildScoreGauge(
           score: score,
-          size: scoreCircleSize,
-          scoreSize: scoreSize,
+          size: circleSize,
+          scoreFontSize: scoreFontSize,
           strokeWidth: strokeWidth,
         ),
 
         SizedBox(
           width: desktop
-              ? 24
+              ? 26
               : compact
-              ? 12
+              ? 14
               : 20,
         ),
 
         Expanded(
-          child: _buildScoreInformation(
+          child: _buildHealthSummary(
             context,
             score: score,
             compact: compact,
@@ -316,46 +310,71 @@ class FinancialHealthCard extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreCircle({
+  Widget _buildScoreGauge({
     required double score,
     required double size,
-    required double scoreSize,
+    required double scoreFontSize,
     required double strokeWidth,
   }) {
     return SizedBox(
       width: size,
       height: size,
       child: TweenAnimationBuilder<double>(
-        duration: const Duration(milliseconds: 1000),
+        duration: const Duration(milliseconds: 1100),
         curve: Curves.easeOutCubic,
         tween: Tween<double>(begin: 0, end: score / 100),
-        builder: (context, value, child) {
+        builder: (context, progress, child) {
           return CustomPaint(
             painter: _HealthScorePainter(
-              progress: value,
+              progress: progress,
               color: Colors.white,
-              trackColor: Colors.white.withOpacity(0.14),
+              trackColor: Colors.white.withOpacity(0.13),
               strokeWidth: strokeWidth,
             ),
             child: Center(
-              child: TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.easeOutCubic,
-                tween: Tween<double>(begin: 0, end: score),
-                builder: (_, animatedScore, __) {
-                  return FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      animatedScore.toStringAsFixed(0),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeOutCubic,
+                      tween: Tween<double>(begin: 0, end: score),
+                      builder: (_, animatedScore, __) {
+                        return SizedBox(
+                          width: double.infinity,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              animatedScore.toStringAsFixed(0),
+                              maxLines: 1,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: scoreFontSize,
+                                fontWeight: FontWeight.w900,
+                                height: 0.95,
+                                letterSpacing: -1.0,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Text(
+                      'out of 100',
+                      maxLines: 1,
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: scoreSize,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
+                        color: Colors.white.withOpacity(0.68),
+                        fontSize: size < 100 ? 8.5 : 10.5,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
             ),
           );
@@ -364,24 +383,24 @@ class FinancialHealthCard extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreInformation(
+  Widget _buildHealthSummary(
     BuildContext context, {
     required double score,
     required bool compact,
     required bool desktop,
     required bool centered,
   }) {
-    final labelSize = desktop
+    final titleSize = desktop
         ? 14.0
         : compact
-        ? 11.0
-        : 13.0;
+        ? 10.5
+        : 12.0;
 
-    final valueSize = desktop
-        ? 21.0
+    final statusSize = desktop
+        ? 24.0
         : compact
-        ? 16.0
-        : 18.0;
+        ? 18.0
+        : 21.0;
 
     final descriptionSize = desktop
         ? 13.5
@@ -395,24 +414,29 @@ class FinancialHealthCard extends StatelessWidget {
           : CrossAxisAlignment.start,
       children: [
         Text(
-          'Health Score',
+          'YOUR FINANCIAL POSITION',
           textAlign: centered ? TextAlign.center : TextAlign.start,
           style: TextStyle(
-            color: Colors.white70,
-            fontSize: labelSize,
-            fontWeight: FontWeight.w500,
+            color: Colors.white.withOpacity(0.62),
+            fontSize: titleSize,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
           ),
         ),
 
-        const SizedBox(height: 5),
+        const SizedBox(height: 6),
 
         Text(
-          '${score.toStringAsFixed(0)} / 100',
+          healthStatus,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           textAlign: centered ? TextAlign.center : TextAlign.start,
           style: TextStyle(
             color: Colors.white,
-            fontSize: valueSize,
-            fontWeight: FontWeight.bold,
+            fontSize: statusSize,
+            fontWeight: FontWeight.w900,
+            height: 1.08,
+            letterSpacing: -0.4,
           ),
         ),
 
@@ -422,12 +446,67 @@ class FinancialHealthCard extends StatelessWidget {
           _scoreDescription(score),
           textAlign: centered ? TextAlign.center : TextAlign.start,
           style: TextStyle(
-            color: Colors.white70,
+            color: Colors.white.withOpacity(0.72),
             fontSize: descriptionSize,
-            height: 1.35,
+            height: 1.4,
           ),
         ),
+
+        const SizedBox(height: 12),
+
+        _buildScoreRangeIndicator(
+          context,
+          score: score,
+          compact: compact,
+          centered: centered,
+        ),
       ],
+    );
+  }
+
+  Widget _buildScoreRangeIndicator(
+    BuildContext context, {
+    required double score,
+    required bool compact,
+    required bool centered,
+  }) {
+    final label = _scoreRangeLabel(score);
+
+    return Align(
+      alignment: centered ? Alignment.center : Alignment.centerLeft,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 9 : 11,
+          vertical: compact ? 5 : 6,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.11),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.12)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: compact ? 6 : 7,
+              height: compact ? 6 : 7,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: compact ? 9.5 : 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -435,30 +514,44 @@ class FinancialHealthCard extends StatelessWidget {
     BuildContext context, {
     required bool compact,
     required bool desktop,
-    required double spacing,
   }) {
-    final iconBox = compact ? 30.0 : 34.0;
-    final iconSize = compact ? 17.0 : 19.0;
+    final iconBox = desktop
+        ? 38.0
+        : compact
+        ? 30.0
+        : 34.0;
+
+    final iconSize = desktop
+        ? 20.0
+        : compact
+        ? 16.0
+        : 18.0;
 
     final titleSize = desktop
+        ? 13.5
+        : compact
+        ? 10.5
+        : 12.0;
+
+    final bodySize = desktop
         ? 14.0
         : compact
         ? 11.0
-        : 13.0;
-
-    final recommendationSize = desktop
-        ? 14.0
-        : compact
-        ? 11.5
-        : 13.5;
+        : 12.5;
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 11 : 15),
+      padding: EdgeInsets.all(
+        desktop
+            ? 15
+            : compact
+            ? 11
+            : 14,
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.10),
         borderRadius: BorderRadius.circular(compact ? 14 : 17),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
+        border: Border.all(color: Colors.white.withOpacity(0.11)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,40 +560,40 @@ class FinancialHealthCard extends StatelessWidget {
             width: iconBox,
             height: iconBox,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
+              color: Colors.white.withOpacity(0.13),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.lightbulb_outline_rounded,
+              Icons.auto_awesome_rounded,
               color: Colors.white,
               size: iconSize,
             ),
           ),
 
-          SizedBox(width: spacing),
+          SizedBox(width: compact ? 9 : 12),
 
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Recommendation',
+                  'Next best move',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: titleSize,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
 
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
 
                 Text(
-                  recommendation.isEmpty
-                      ? 'Keep monitoring your spending and financial goals.'
+                  recommendation.trim().isEmpty
+                      ? 'Keep monitoring your spending, savings, and budget progress.'
                       : recommendation,
                   style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: recommendationSize,
+                    color: Colors.white.withOpacity(0.72),
+                    fontSize: bodySize,
                     height: 1.45,
                   ),
                 ),
@@ -514,18 +607,42 @@ class FinancialHealthCard extends StatelessWidget {
 
   String _scoreDescription(double score) {
     if (score >= 80) {
-      return 'You are maintaining a strong financial position.';
+      return 'Your finances are in a strong position. Keep protecting the habits that are working.';
     }
 
     if (score >= 60) {
-      return 'Your finances are generally healthy with some room to improve.';
+      return 'Your finances are generally healthy, with a few areas that could be improved.';
     }
 
     if (score >= 40) {
-      return 'Your finances are fair. A few improvements could make a difference.';
+      return 'Your finances are fairly balanced, but there is room to strengthen your spending and saving habits.';
     }
 
-    return 'Consider reviewing your spending and savings habits.';
+    if (score >= 20) {
+      return 'Your finances need attention. Focus on controlling spending and rebuilding financial stability.';
+    }
+
+    return 'Your current position needs attention. Review spending, budget pressure, and savings progress.';
+  }
+
+  String _scoreRangeLabel(double score) {
+    if (score >= 80) {
+      return 'Strong financial position';
+    }
+
+    if (score >= 60) {
+      return 'Generally healthy';
+    }
+
+    if (score >= 40) {
+      return 'Room to improve';
+    }
+
+    if (score >= 20) {
+      return 'Needs attention';
+    }
+
+    return 'Critical attention needed';
   }
 }
 
@@ -560,15 +677,21 @@ class _HealthScorePainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
     canvas.drawCircle(center, radius, trackPaint);
 
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * progress.clamp(0.0, 1.0),
-      false,
-      progressPaint,
-    );
+    final normalizedProgress = progress.clamp(0.0, 1.0);
+
+    if (normalizedProgress > 0) {
+      canvas.drawArc(
+        rect,
+        -math.pi / 2,
+        2 * math.pi * normalizedProgress,
+        false,
+        progressPaint,
+      );
+    }
   }
 
   @override

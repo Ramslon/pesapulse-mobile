@@ -19,18 +19,18 @@ class RecommendationCard extends StatelessWidget {
   });
 
   Color _accentColor(BuildContext context) {
-    switch (budgetStatus.toLowerCase()) {
+    switch (budgetStatus.trim().toLowerCase()) {
       case 'healthy':
-        return Colors.green;
+        return const Color(0xFF16A34A);
 
       case 'warning':
-        return Colors.orange;
+        return const Color(0xFFF59E0B);
 
       case 'overspent':
-        return Colors.deepOrange;
+        return const Color(0xFFF97316);
 
       case 'critical':
-        return Colors.red;
+        return const Color(0xFFDC2626);
 
       default:
         return Theme.of(context).colorScheme.primary;
@@ -38,7 +38,7 @@ class RecommendationCard extends StatelessWidget {
   }
 
   IconData _statusIcon() {
-    switch (budgetStatus.toLowerCase()) {
+    switch (budgetStatus.trim().toLowerCase()) {
       case 'critical':
         return Icons.warning_rounded;
 
@@ -49,26 +49,45 @@ class RecommendationCard extends StatelessWidget {
         return Icons.info_outline_rounded;
 
       case 'healthy':
-        return Icons.check_circle_outline_rounded;
+        return Icons.check_circle_rounded;
 
       default:
-        return Icons.lightbulb_outline_rounded;
+        return Icons.auto_awesome_rounded;
+    }
+  }
+
+  String _statusTitle() {
+    switch (budgetStatus.trim().toLowerCase()) {
+      case 'healthy':
+        return 'Your spending is on track';
+
+      case 'warning':
+        return 'Your budget needs attention';
+
+      case 'overspent':
+        return 'Your spending is over budget';
+
+      case 'critical':
+        return 'Immediate budget attention needed';
+
+      default:
+        return 'Your financial picture at a glance';
     }
   }
 
   String _statusDescription() {
-    switch (budgetStatus.toLowerCase()) {
+    switch (budgetStatus.trim().toLowerCase()) {
       case 'healthy':
         return 'Your spending is within a healthy range.';
 
       case 'warning':
-        return 'Keep an eye on your spending as you approach your budget.';
+        return 'You are approaching your current budget limit.';
 
       case 'overspent':
-        return 'Your spending has exceeded the current budget.';
+        return 'Spending has exceeded your current budget.';
 
       case 'critical':
-        return 'Immediate attention is recommended for your spending.';
+        return 'Your current spending requires close attention.';
 
       default:
         return 'Review your spending to stay on track.';
@@ -81,14 +100,14 @@ class RecommendationCard extends StatelessWidget {
     }
 
     if (usage >= 80) {
-      return 'Approaching limit';
+      return 'Near limit';
     }
 
     if (usage >= 50) {
-      return 'Moderate usage';
+      return 'Moderate';
     }
 
-    return 'Healthy usage';
+    return 'Healthy';
   }
 
   @override
@@ -96,32 +115,45 @@ class RecommendationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final accentColor = _accentColor(context);
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final tablet = ResponsiveHelper.isTablet(context);
+
+    final desktop = ResponsiveHelper.isDesktop(context);
+
+    final dark = theme.brightness == Brightness.dark;
+
+    final accent = _accentColor(context);
 
     final usage = budgetUsage.clamp(0.0, 100.0);
 
-    final isDark = theme.brightness == Brightness.dark;
+    final softAccent = accent.withOpacity(dark ? .14 : .075);
 
-    final isCompact = ResponsiveHelper.useCompactLayout(context);
-    final isDense = ResponsiveHelper.useDenseVerticalLayout(context);
+    final cardRadius = desktop
+        ? 24.0
+        : tablet
+        ? 22.0
+        : compact
+        ? 18.0
+        : 21.0;
 
-    final cardPadding = ResponsiveHelper.cardPadding(context);
+    final cardPadding = desktop
+        ? 20.0
+        : tablet
+        ? 18.0
+        : compact
+        ? 12.0
+        : 16.0;
 
-    final normalSpacing = ResponsiveHelper.spacing(context);
+    final spacing = ResponsiveHelper.spacing(context);
 
-    final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
+    final recommendationText = recommendation.trim().isEmpty
+        ? 'Keep tracking your spending and financial goals to receive more personalized recommendations.'
+        : recommendation.trim();
 
-    final cardBackground = isDark
-        ? colorScheme.surfaceContainerHighest
-        : colorScheme.surface;
-
-    final softAccent = accentColor.withOpacity(isDark ? 0.16 : 0.09);
-
-    final iconSize = isCompact ? 42.0 : 46.0;
-
-    final titleFontSize = isCompact ? 17.0 : 18.0;
-
-    final recommendationFontSize = isCompact ? 13.5 : 14.5;
+    final categoryText = topCategory.trim().isEmpty
+        ? 'No category data'
+        : topCategory.trim();
 
     return Center(
       child: ConstrainedBox(
@@ -131,145 +163,260 @@ class RecommendationCard extends StatelessWidget {
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: cardBackground,
-            borderRadius: BorderRadius.circular(isCompact ? 18 : 22),
-            border: Border.all(color: accentColor.withOpacity(0.16)),
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(cardRadius),
+            border: Border.all(color: colorScheme.outline.withOpacity(.07)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.12 : 0.06),
-                blurRadius: isCompact ? 12 : 16,
+                color: Colors.black.withOpacity(dark ? .10 : .045),
+                blurRadius: compact ? 12 : 18,
                 offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: Padding(
-            padding: EdgeInsets.all(cardPadding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ---------------------------------------------------------
-                // Header
-                // ---------------------------------------------------------
-                Row(
+          padding: EdgeInsets.all(cardPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ─────────────────────────────────────
+              // Header
+              // ─────────────────────────────────────
+              Row(
+                children: [
+                  Container(
+                    width: compact ? 40 : 44,
+                    height: compact ? 40 : 44,
+                    decoration: BoxDecoration(
+                      color: softAccent,
+                      borderRadius: BorderRadius.circular(compact ? 12 : 14),
+                    ),
+                    child: Icon(
+                      _statusIcon(),
+                      color: accent,
+                      size: compact ? 21 : 23,
+                    ),
+                  ),
+
+                  SizedBox(width: spacing),
+
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Financial Insight',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontSize: compact ? 14 : 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -.15,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _statusTitle(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: compact ? 9.5 : 11,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: softAccent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      budgetStatus.isEmpty
+                          ? 'REVIEW'
+                          : budgetStatus.toUpperCase(),
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: compact ? 8.5 : 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .55,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: compact ? 12 : 16),
+
+              // ─────────────────────────────────────
+              // Main recommendation
+              // ─────────────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(compact ? 12 : 14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [softAccent, accent.withOpacity(dark ? .07 : .035)],
+                  ),
+                  borderRadius: BorderRadius.circular(compact ? 14 : 16),
+                  border: Border.all(color: accent.withOpacity(.08)),
+                ),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: iconSize,
-                      height: iconSize,
+                      width: compact ? 28 : 32,
+                      height: compact ? 28 : 32,
                       decoration: BoxDecoration(
-                        color: softAccent,
-                        borderRadius: BorderRadius.circular(
-                          isCompact ? 13 : 15,
-                        ),
+                        color: accent.withOpacity(.12),
+                        shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        _statusIcon(),
-                        color: accentColor,
-                        size: isCompact ? 23 : 25,
+                        Icons.auto_awesome_rounded,
+                        color: accent,
+                        size: compact ? 15 : 17,
                       ),
                     ),
 
-                    SizedBox(width: normalSpacing),
+                    SizedBox(width: compact ? 9 : 11),
 
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Smart Recommendation',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontSize: titleFontSize,
+                            'Smart recommendation',
+                            style: TextStyle(
+                              color: accent,
+                              fontSize: compact ? 10 : 11,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
 
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 5),
 
                           Text(
-                            'Personalized guidance based on your spending',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.textTheme.bodySmall?.color
-                                  ?.withOpacity(0.65),
+                            recommendationText,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontSize: compact ? 12 : 13.5,
+                              height: 1.45,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    SizedBox(width: normalSpacing * 0.5),
-
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isCompact ? 8 : 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: softAccent,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        budgetStatus.isEmpty
-                            ? 'REVIEW'
-                            : budgetStatus.toUpperCase(),
-                        style: TextStyle(
-                          color: accentColor,
-                          fontSize: isCompact ? 9.5 : 10.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
+              ),
 
-                SizedBox(
-                  height: isDense ? normalSpacing : sectionSpacing * 0.75,
-                ),
+              SizedBox(height: compact ? 12 : 16),
 
-                // ---------------------------------------------------------
-                // Main recommendation
-                // ---------------------------------------------------------
+              // ─────────────────────────────────────
+              // Financial snapshot
+              // ─────────────────────────────────────
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stacked = constraints.maxWidth < 430;
+
+                  if (stacked) {
+                    return Column(
+                      children: [
+                        _buildCategoryMetric(context, categoryText, compact),
+
+                        const SizedBox(height: 10),
+
+                        _buildBudgetMetric(context, usage, accent, compact),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _buildCategoryMetric(
+                          context,
+                          categoryText,
+                          compact,
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      Expanded(
+                        child: _buildBudgetMetric(
+                          context,
+                          usage,
+                          accent,
+                          compact,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+
+              if (categoryAdvice.trim().isNotEmpty) ...[
+                SizedBox(height: compact ? 12 : 14),
+
+                // ─────────────────────────────────
+                // Spending tip
+                // ─────────────────────────────────
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.all(isCompact ? 14 : 16),
+                  padding: EdgeInsets.all(compact ? 11 : 13),
                   decoration: BoxDecoration(
-                    color: softAccent,
-                    borderRadius: BorderRadius.circular(isCompact ? 15 : 17),
+                    color: colorScheme.surfaceContainerHighest.withOpacity(
+                      dark ? .40 : .52,
+                    ),
+                    borderRadius: BorderRadius.circular(compact ? 13 : 15),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.auto_awesome_rounded,
-                        color: accentColor,
-                        size: isCompact ? 20 : 21,
+                      Container(
+                        width: compact ? 28 : 32,
+                        height: compact ? 28 : 32,
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withOpacity(.09),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.tips_and_updates_rounded,
+                          size: compact ? 14 : 16,
+                          color: colorScheme.primary,
+                        ),
                       ),
 
-                      SizedBox(width: normalSpacing * 0.75),
+                      SizedBox(width: compact ? 8 : 10),
 
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'What you should know',
+                              'Spending tip',
                               style: TextStyle(
-                                color: accentColor,
-                                fontSize: 12,
+                                fontSize: compact ? 9.5 : 10.5,
                                 fontWeight: FontWeight.w800,
+                                color: colorScheme.primary,
                               ),
                             ),
 
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
 
                             Text(
-                              recommendation.isEmpty
-                                  ? 'Keep tracking your spending and financial goals to receive more personalized recommendations.'
-                                  : recommendation,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontSize: recommendationFontSize,
-                                height: 1.5,
-                                fontWeight: FontWeight.w500,
+                              categoryAdvice.trim(),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontSize: compact ? 11.5 : 12.5,
+                                height: 1.4,
                               ),
                             ),
                           ],
@@ -278,213 +425,181 @@ class RecommendationCard extends StatelessWidget {
                     ],
                   ),
                 ),
+              ],
 
-                SizedBox(height: sectionSpacing * 0.75),
+              SizedBox(height: compact ? 10 : 12),
 
-                // ---------------------------------------------------------
-                // Top spending category
-                // ---------------------------------------------------------
-                Row(
-                  children: [
-                    Container(
-                      width: isCompact ? 38 : 40,
-                      height: isCompact ? 38 : 40,
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
+              // ─────────────────────────────────────
+              // Status description
+              // ─────────────────────────────────────
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.insights_rounded,
+                    size: compact ? 14 : 16,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      _statusDescription(),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: compact ? 10 : 11,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.35,
                       ),
-                      child: Icon(
-                        Icons.pie_chart_outline_rounded,
-                        size: 21,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-
-                    SizedBox(width: normalSpacing * 0.85),
-
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Top Spending Category',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.textTheme.bodySmall?.color
-                                  ?.withOpacity(0.60),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-
-                          const SizedBox(height: 2),
-
-                          Text(
-                            topCategory.isEmpty
-                                ? 'No category data'
-                                : topCategory,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: theme.iconTheme.color?.withOpacity(0.45),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: sectionSpacing * 0.7),
-
-                // ---------------------------------------------------------
-                // Category advice
-                // ---------------------------------------------------------
-                if (categoryAdvice.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(isCompact ? 13 : 15),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(
-                        isDark ? 0.55 : 0.65,
-                      ),
-                      borderRadius: BorderRadius.circular(isCompact ? 14 : 16),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.tips_and_updates_outlined,
-                          color: colorScheme.primary,
-                          size: 21,
-                        ),
-
-                        SizedBox(width: normalSpacing * 0.75),
-
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Spending Tip',
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-
-                              const SizedBox(height: 5),
-
-                              Text(
-                                categoryAdvice,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  height: 1.45,
-                                  fontSize: isCompact ? 12.5 : 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ),
                   ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-                SizedBox(height: sectionSpacing * 0.75),
+  Widget _buildCategoryMetric(
+    BuildContext context,
+    String category,
+    bool compact,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-                // ---------------------------------------------------------
-                // Budget usage
-                // ---------------------------------------------------------
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Budget Usage',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.textTheme.bodySmall?.color
-                                  ?.withOpacity(0.60),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(compact ? 10 : 12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(
+          theme.brightness == Brightness.dark ? .38 : .55,
+        ),
+        borderRadius: BorderRadius.circular(compact ? 13 : 15),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: compact ? 30 : 34,
+            height: compact ? 30 : 34,
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withOpacity(.09),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.pie_chart_rounded,
+              size: compact ? 15 : 17,
+              color: colorScheme.primary,
+            ),
+          ),
 
-                          const SizedBox(height: 3),
+          SizedBox(width: compact ? 8 : 10),
 
-                          TweenAnimationBuilder<double>(
-                            duration: const Duration(milliseconds: 900),
-                            curve: Curves.easeOutCubic,
-                            tween: Tween<double>(begin: 0, end: usage),
-                            builder: (_, value, __) {
-                              return Text(
-                                '${value.toStringAsFixed(1)}%',
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: accentColor,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: softAccent,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _usageLabel(usage),
-                        style: TextStyle(
-                          color: accentColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                TweenAnimationBuilder<double>(
-                  duration: const Duration(milliseconds: 900),
-                  curve: Curves.easeOutCubic,
-                  tween: Tween<double>(begin: 0, end: usage / 100),
-                  builder: (_, value, __) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: LinearProgressIndicator(
-                        value: value,
-                        minHeight: isCompact ? 8 : 9,
-                        backgroundColor: colorScheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 7),
-
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  _statusDescription(),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 12,
-                    color: theme.textTheme.bodySmall?.color?.withOpacity(0.60),
+                  'Top category',
+                  style: TextStyle(
+                    fontSize: compact ? 9 : 10,
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  category,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: compact ? 11 : 12,
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBudgetMetric(
+    BuildContext context,
+    double usage,
+    Color accent,
+    bool compact,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(compact ? 10 : 12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(
+          theme.brightness == Brightness.dark ? .38 : .55,
         ),
+        borderRadius: BorderRadius.circular(compact ? 13 : 15),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Budget usage',
+                  style: TextStyle(
+                    fontSize: compact ? 9 : 10,
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                '${usage.toStringAsFixed(0)}%',
+                style: TextStyle(
+                  fontSize: compact ? 12 : 13,
+                  fontWeight: FontWeight.w900,
+                  color: accent,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 7),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              tween: Tween<double>(begin: 0, end: usage / 100),
+              builder: (_, value, __) {
+                return LinearProgressIndicator(
+                  value: value.clamp(0.0, 1.0),
+                  minHeight: compact ? 6 : 7,
+                  backgroundColor: accent.withOpacity(.10),
+                  valueColor: AlwaysStoppedAnimation<Color>(accent),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          Text(
+            _usageLabel(usage),
+            style: TextStyle(
+              fontSize: compact ? 8.5 : 9.5,
+              fontWeight: FontWeight.w700,
+              color: accent,
+            ),
+          ),
+        ],
       ),
     );
   }

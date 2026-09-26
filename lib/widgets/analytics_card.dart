@@ -28,16 +28,9 @@ class AnalyticsCard extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final hasBoundedHeight = constraints.hasBoundedHeight;
-        final hasBoundedWidth = constraints.hasBoundedWidth;
-
-        final width = hasBoundedWidth
+        final width = constraints.hasBoundedWidth
             ? constraints.maxWidth
             : ResponsiveHelper.width(context);
-
-        // ─────────────────────────────────────
-        // Responsive sizing
-        // ─────────────────────────────────────
 
         final veryNarrow = width < 155;
         final narrow = width < 190;
@@ -79,110 +72,149 @@ class AnalyticsCard extends StatelessWidget {
           veryNarrow: veryNarrow,
         );
 
-        final spacing = _calculateSpacing(
-          compact: effectiveCompact,
-          desktop: desktop,
-          veryNarrow: veryNarrow,
-        );
-
         final radius = desktop
-            ? 22.0
+            ? 21.0
             : tablet
-            ? 20.0
+            ? 19.0
             : effectiveCompact
-            ? 16.0
-            : 20.0;
+            ? 15.0
+            : 18.0;
 
-        final dividerHeight = veryNarrow
+        final topSpacing = veryNarrow
+            ? 8.0
+            : effectiveCompact
+            ? 10.0
+            : desktop
+            ? 13.0
+            : 11.0;
+
+        final valueSpacing = veryNarrow
             ? 5.0
             : effectiveCompact
-            ? 8.0
-            : 12.0;
+            ? 7.0
+            : 9.0;
 
-        final cardContent = Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ─────────────────────────────────
-            // Icon
-            // ─────────────────────────────────
-            Container(
-              width: iconBoxSize,
-              height: iconBoxSize,
-              decoration: BoxDecoration(
-                color: color.withOpacity(.12),
-                shape: BoxShape.circle,
+        return TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOutCubic,
+          tween: Tween(begin: 0.96, end: 1.0),
+          builder: (_, scale, child) {
+            return Transform.scale(scale: scale, child: child);
+          },
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(radius),
+              border: Border.all(color: colorScheme.outline.withOpacity(0.08)),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(
+                    theme.brightness == Brightness.dark ? 0.07 : 0.055,
+                  ),
+                  blurRadius: desktop ? 18 : 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Icon + subtle accent indicator.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: iconBoxSize,
+                        height: iconBoxSize,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.09),
+                          borderRadius: BorderRadius.circular(
+                            veryNarrow
+                                ? 9
+                                : effectiveCompact
+                                ? 11
+                                : 13,
+                          ),
+                          border: Border.all(color: color.withOpacity(0.10)),
+                        ),
+                        child: Icon(icon, color: color, size: iconSize),
+                      ),
+
+                      const Spacer(),
+
+                      Container(
+                        width: veryNarrow ? 5 : 6,
+                        height: veryNarrow ? 5 : 6,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.70),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: topSpacing),
+
+                  // Metric title.
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.72),
+                      fontWeight: FontWeight.w700,
+                      fontSize: titleSize,
+                      letterSpacing: 0.05,
+                      height: 1.15,
+                    ),
+                  ),
+
+                  SizedBox(height: valueSpacing),
+
+                  // Metric value.
+                  _buildValue(context, valueSize: valueSize),
+
+                  SizedBox(
+                    height: veryNarrow
+                        ? 7
+                        : effectiveCompact
+                        ? 9
+                        : 11,
+                  ),
+
+                  // Semantic accent line.
+                  Container(
+                    width: veryNarrow
+                        ? 22
+                        : effectiveCompact
+                        ? 30
+                        : desktop
+                        ? 42
+                        : 36,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ],
               ),
-              alignment: Alignment.center,
-              child: Icon(icon, color: color, size: iconSize),
             ),
-
-            SizedBox(height: spacing),
-
-            // ─────────────────────────────────
-            // Title
-            // ─────────────────────────────────
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withOpacity(.65),
-                fontWeight: FontWeight.w600,
-                fontSize: titleSize,
-                letterSpacing: .1,
-                height: 1.1,
-              ),
-            ),
-
-            // ─────────────────────────────────
-            // Divider
-            // ─────────────────────────────────
-            Divider(
-              color: colorScheme.onSurface.withOpacity(.08),
-              thickness: .8,
-              height: dividerHeight,
-            ),
-
-            // ─────────────────────────────────
-            // Amount
-            // ─────────────────────────────────
-            _buildValue(
-              context,
-              theme,
-              valueSize: valueSize,
-              hasBoundedHeight: hasBoundedHeight,
-            ),
-          ],
-        );
-
-        return Card(
-          elevation: effectiveCompact ? 1 : 2,
-          shadowColor: color.withOpacity(.12),
-          surfaceTintColor: color.withOpacity(.025),
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius),
           ),
-          child: Padding(padding: EdgeInsets.all(padding), child: cardContent),
         );
       },
     );
   }
 
-  // ─────────────────────────────────────────
-  // VALUE
-  // ─────────────────────────────────────────
+  Widget _buildValue(BuildContext context, {required double valueSize}) {
+    final theme = Theme.of(context);
 
-  Widget _buildValue(
-    BuildContext context,
-    ThemeData theme, {
-    required double valueSize,
-    required bool hasBoundedHeight,
-  }) {
-    final valueWidget = TweenAnimationBuilder<double>(
+    return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 750),
       curve: Curves.easeOutCubic,
       builder: (context, animation, child) {
         return Opacity(
@@ -203,38 +235,16 @@ class AnalyticsCard extends StatelessWidget {
             maxLines: 1,
             softWrap: false,
             style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
               fontSize: valueSize,
-              height: 1.1,
-              letterSpacing: -.25,
+              fontWeight: FontWeight.w900,
+              height: 1.0,
+              letterSpacing: -0.7,
             ),
           ),
         ),
       ),
     );
-
-    // If the card has a fixed height, allow the
-    // amount to consume only the remaining space.
-    //
-    // This prevents bottom overflow on tablet/desktop
-    // cards that have an explicit height.
-    if (hasBoundedHeight) {
-      return Flexible(
-        fit: FlexFit.loose,
-        child: Align(alignment: Alignment.bottomLeft, child: valueWidget),
-      );
-    }
-
-    // On mobile the card may have natural height.
-    //
-    // Do NOT use Expanded/Flexible here because the
-    // card can be inside an unbounded-height Column.
-    return Align(alignment: Alignment.centerLeft, child: valueWidget);
   }
-
-  // ─────────────────────────────────────────
-  // PADDING
-  // ─────────────────────────────────────────
 
   double _calculatePadding({
     required bool compact,
@@ -258,12 +268,8 @@ class AnalyticsCard extends StatelessWidget {
       return 12;
     }
 
-    return 15;
+    return 14;
   }
-
-  // ─────────────────────────────────────────
-  // ICON BOX
-  // ─────────────────────────────────────────
 
   double _calculateIconBoxSize({
     required bool compact,
@@ -287,12 +293,8 @@ class AnalyticsCard extends StatelessWidget {
       return 32;
     }
 
-    return 38;
+    return 37;
   }
-
-  // ─────────────────────────────────────────
-  // ICON
-  // ─────────────────────────────────────────
 
   double _calculateIconSize({
     required bool compact,
@@ -305,23 +307,19 @@ class AnalyticsCard extends StatelessWidget {
     }
 
     if (desktop) {
-      return 24;
+      return 23;
     }
 
     if (tablet) {
-      return 22;
+      return 21;
     }
 
     if (compact) {
       return 17;
     }
 
-    return 20;
+    return 19;
   }
-
-  // ─────────────────────────────────────────
-  // TITLE
-  // ─────────────────────────────────────────
 
   double _calculateTitleSize({
     required bool compact,
@@ -334,23 +332,19 @@ class AnalyticsCard extends StatelessWidget {
     }
 
     if (desktop) {
-      return 14;
+      return 13.5;
     }
 
     if (tablet) {
-      return 13;
+      return 12.5;
     }
 
     if (compact) {
       return 10.5;
     }
 
-    return 12;
+    return 11.5;
   }
-
-  // ─────────────────────────────────────────
-  // VALUE
-  // ─────────────────────────────────────────
 
   double _calculateValueSize({
     required bool compact,
@@ -359,45 +353,21 @@ class AnalyticsCard extends StatelessWidget {
     required bool veryNarrow,
   }) {
     if (veryNarrow) {
-      return 12;
+      return 13;
     }
 
     if (desktop) {
-      return 20;
+      return 21;
     }
 
     if (tablet) {
-      return 18;
+      return 19;
     }
 
     if (compact) {
-      return 14;
+      return 15;
     }
 
-    return 17;
-  }
-
-  // ─────────────────────────────────────────
-  // SPACING
-  // ─────────────────────────────────────────
-
-  double _calculateSpacing({
-    required bool compact,
-    required bool desktop,
-    required bool veryNarrow,
-  }) {
-    if (veryNarrow) {
-      return 5;
-    }
-
-    if (desktop) {
-      return 9;
-    }
-
-    if (compact) {
-      return 6;
-    }
-
-    return 8;
+    return 18;
   }
 }
