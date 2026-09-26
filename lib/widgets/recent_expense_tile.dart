@@ -27,28 +27,28 @@ class RecentExpenseTile extends StatelessWidget {
       case 'entertainment':
         return Colors.pink;
       default:
-        return Colors.grey;
+        return Colors.blueGrey;
     }
   }
 
   IconData categoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'food':
-        return Icons.restaurant;
+        return Icons.restaurant_rounded;
       case 'transport':
-        return Icons.directions_car;
+        return Icons.directions_car_rounded;
       case 'shopping':
-        return Icons.shopping_bag;
+        return Icons.shopping_bag_rounded;
       case 'bills':
-        return Icons.receipt_long;
+        return Icons.receipt_long_rounded;
       case 'health':
-        return Icons.favorite;
+        return Icons.favorite_rounded;
       case 'education':
-        return Icons.school;
+        return Icons.school_rounded;
       case 'entertainment':
-        return Icons.movie;
+        return Icons.movie_rounded;
       default:
-        return Icons.account_balance_wallet;
+        return Icons.account_balance_wallet_rounded;
     }
   }
 
@@ -56,185 +56,253 @@ class RecentExpenseTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final compact = ResponsiveHelper.useCompactLayout(context);
     final landscape = ResponsiveHelper.isLandscape(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    final category = expense['category'] ?? 'Other';
+    final category = (expense['category'] ?? 'Other').toString().trim().isEmpty
+        ? 'Other'
+        : expense['category'].toString();
+
+    final title = (expense['title'] ?? 'Untitled expense').toString();
+
+    final amount = double.tryParse(expense['amount']?.toString() ?? '') ?? 0.0;
+
     final color = categoryColor(category);
 
-    final amount = double.tryParse(expense["amount"].toString()) ?? 0;
-
-    // Responsive dimensions
-    final avatarRadius = compact
-        ? 21.0
+    final avatarSize = compact
+        ? 42.0
         : landscape
-        ? 23.0
-        : 24.0;
+        ? 46.0
+        : 48.0;
 
     final iconSize = compact
+        ? 20.0
+        : landscape
         ? 21.0
-        : landscape
-        ? 23.0
-        : 24.0;
+        : 22.0;
 
-    final titleFontSize = compact
+    final titleSize = compact
+        ? 13.5
+        : landscape
         ? 14.0
-        : landscape
-        ? 15.0
-        : 16.0;
+        : 14.5;
 
-    final categoryFontSize = compact
-        ? 12.0
-        : landscape
-        ? 12.5
-        : 13.0;
-
-    final dateFontSize = compact
+    final categorySize = compact
         ? 11.0
         : landscape
         ? 11.5
         : 12.0;
 
-    final amountFontSize = compact
+    final amountSize = compact
         ? 13.0
         : landscape
-        ? 15.0
-        : 16.0;
+        ? 14.0
+        : 15.0;
 
-    final horizontalPadding = compact ? 2.0 : 4.0;
-    final verticalPadding = compact ? 8.0 : 10.0;
+    final horizontalPadding = compact ? 2.0 : 3.0;
+    final verticalPadding = compact
+        ? 8.0
+        : landscape
+        ? 9.0
+        : 10.0;
 
-    final contentSpacing = compact ? 10.0 : 14.0;
-    final trailingSpacing = compact ? 8.0 : 12.0;
+    final contentGap = compact
+        ? 10.0
+        : landscape
+        ? 11.0
+        : 12.0;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ExpenseDetailsScreen(expense: expense),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ExpenseDetailsScreen(expense: expense),
+            ),
+          );
+        },
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
           ),
-        );
-      },
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: horizontalPadding,
-          vertical: verticalPadding,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Hero(
-              tag: "expense_${expense["id"]}",
-              child: CircleAvatar(
-                radius: avatarRadius,
-                backgroundColor: color.withOpacity(.12),
-                child: Icon(
-                  categoryIcon(category),
-                  color: color,
-                  size: iconSize,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Category icon
+              Hero(
+                tag: 'expense_${expense["id"]}',
+                child: Container(
+                  width: avatarSize,
+                  height: avatarSize,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(compact ? 13 : 15),
+                    border: Border.all(color: color.withOpacity(0.08)),
+                  ),
+                  child: Icon(
+                    categoryIcon(category),
+                    color: color,
+                    size: iconSize,
+                  ),
                 ),
               ),
-            ),
 
-            SizedBox(width: contentSpacing),
+              SizedBox(width: contentGap),
 
-            // Main information
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // Main information
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w700,
+                        height: 1.15,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+
+                    SizedBox(height: compact ? 4 : 5),
+
+                    Row(
+                      children: [
+                        // Category badge
+                        Flexible(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 6 : 7,
+                              vertical: compact ? 3 : 3.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: Text(
+                              category,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: color,
+                                fontWeight: FontWeight.w700,
+                                fontSize: categorySize,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(width: compact ? 7 : 8),
+
+                        Container(
+                          width: 3,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: colorScheme.onSurface.withOpacity(0.30),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+
+                        SizedBox(width: compact ? 7 : 8),
+
+                        Flexible(
+                          child: Text(
+                            formatDate(expense['expense_date']?.toString()),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: colorScheme.onSurface.withOpacity(0.52),
+                              fontSize: categorySize,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(width: compact ? 7 : 10),
+
+              // Amount + navigation cue
+              Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    expense["title"] ?? "",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: titleFontSize,
-                      fontWeight: FontWeight.w600,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      CurrencyFormatter.format(amount),
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: amountSize,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.1,
+                        color: Colors.red.shade600,
+                      ),
                     ),
                   ),
 
-                  SizedBox(height: compact ? 3 : 4),
+                  const SizedBox(height: 4),
 
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          category,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.w500,
-                            fontSize: categoryFontSize,
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(width: compact ? 6 : 8),
-
-                      Container(
-                        width: compact ? 3 : 4,
-                        height: compact ? 3 : 4,
-                        decoration: const BoxDecoration(
-                          color: Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-
-                      SizedBox(width: compact ? 6 : 8),
-
-                      Flexible(
-                        child: Text(
-                          formatDate(expense["expense_date"]),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: dateFontSize,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: compact ? 17 : 18,
+                    color: colorScheme.onSurface.withOpacity(0.30),
                   ),
                 ],
               ),
-            ),
-
-            SizedBox(width: trailingSpacing),
-
-            // Amount
-            Flexible(
-              flex: 0,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  CurrencyFormatter.format(amount),
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: amountFontSize,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  String formatDate(String date) {
-    final expenseDate = DateTime.parse(date);
+  String formatDate(String? date) {
+    if (date == null || date.trim().isEmpty) {
+      return 'Date unavailable';
+    }
+
+    final expenseDate = DateTime.tryParse(date);
+
+    if (expenseDate == null) {
+      return date;
+    }
+
     final today = DateTime.now();
 
-    final difference = today.difference(expenseDate).inDays;
+    final todayDate = DateTime(today.year, today.month, today.day);
 
-    if (difference == 0) return "Today";
-    if (difference == 1) return "Yesterday";
+    final targetDate = DateTime(
+      expenseDate.year,
+      expenseDate.month,
+      expenseDate.day,
+    );
 
-    return "${expenseDate.day}/${expenseDate.month}/${expenseDate.year}";
+    final difference = todayDate.difference(targetDate).inDays;
+
+    if (difference == 0) {
+      return 'Today';
+    }
+
+    if (difference == 1) {
+      return 'Yesterday';
+    }
+
+    if (difference > 1 && difference < 7) {
+      return '$difference days ago';
+    }
+
+    return '${expenseDate.day}/${expenseDate.month}/${expenseDate.year}';
   }
 }

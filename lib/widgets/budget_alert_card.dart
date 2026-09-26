@@ -99,24 +99,6 @@ class BudgetAlertCard extends StatelessWidget {
         ? 11.0
         : 14.0;
 
-    final iconBoxSize = desktop
-        ? 40.0
-        : compact
-        ? 31.0
-        : 36.0;
-
-    final iconSize = desktop
-        ? 20.0
-        : compact
-        ? 15.0
-        : 18.0;
-
-    final titleSize = desktop
-        ? 13.5
-        : compact
-        ? 10.5
-        : 12.0;
-
     final descriptionSize = desktop
         ? 12.5
         : compact
