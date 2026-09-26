@@ -15,122 +15,196 @@ class BudgetStatusBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     final compact = ResponsiveHelper.useCompactLayout(context);
-
     final tablet = ResponsiveHelper.isTablet(context);
-
     final desktop = ResponsiveHelper.isDesktop(context);
+    final landscape = ResponsiveHelper.isLandscape(context);
 
-    final horizontalPadding = _horizontalPadding(
-      compact: compact,
-      tablet: tablet,
-      desktop: desktop,
-    );
+    final radius = desktop
+        ? 16.0
+        : compact
+        ? 13.0
+        : 15.0;
 
-    final verticalPadding = _verticalPadding(
-      compact: compact,
-      tablet: tablet,
-      desktop: desktop,
-    );
+    final horizontalPadding = desktop
+        ? 14.0
+        : tablet
+        ? 12.0
+        : compact
+        ? 9.0
+        : 11.0;
 
-    final labelSize = _labelSize(
-      compact: compact,
-      tablet: tablet,
-      desktop: desktop,
-    );
+    final verticalPadding = desktop
+        ? 10.0
+        : compact
+        ? 7.0
+        : landscape
+        ? 8.0
+        : 9.0;
 
-    final statusSize = _statusSize(
-      compact: compact,
-      tablet: tablet,
-      desktop: desktop,
-    );
+    final labelSize = desktop
+        ? 10.5
+        : compact
+        ? 8.0
+        : 9.5;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Text(
-            "Monthly Budget",
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(.7),
-              fontWeight: FontWeight.w600,
-              fontSize: labelSize,
+    final statusSize = desktop
+        ? 11.5
+        : compact
+        ? 9.0
+        : 10.5;
+
+    final iconBoxSize = desktop
+        ? 32.0
+        : compact
+        ? 27.0
+        : 30.0;
+
+    final iconSize = desktop
+        ? 17.0
+        : compact
+        ? 14.0
+        : 16.0;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
+      ),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(
+          theme.brightness == Brightness.dark ? 0.08 : 0.045,
+        ),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: statusColor.withOpacity(0.13)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: iconBoxSize,
+            height: iconBoxSize,
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.10),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _statusIcon(statusText),
+              color: statusColor,
+              size: iconSize,
             ),
           ),
-        ),
 
-        const SizedBox(width: 12),
+          SizedBox(width: compact ? 8 : 10),
 
-        Flexible(
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: verticalPadding,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'CURRENT BUDGET STATUS',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.62),
+                    fontSize: labelSize,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.75,
+                  ),
+                ),
+
+                const SizedBox(height: 2),
+
+                Text(
+                  'Monthly Budget',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: compact ? 10.5 : 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(.12),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: statusColor.withOpacity(.18)),
-            ),
-            child: Text(
-              statusText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: statusColor,
-                fontWeight: FontWeight.bold,
-                fontSize: statusSize,
+          ),
+
+          const SizedBox(width: 10),
+
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: compact ? 105 : 145),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 8 : 10,
+                vertical: compact ? 5 : 6,
+              ),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: statusColor.withOpacity(0.13)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: compact ? 5 : 6,
+                    height: compact ? 5 : 6,
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+
+                  const SizedBox(width: 6),
+
+                  Flexible(
+                    child: Text(
+                      statusText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: statusSize,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  double _horizontalPadding({
-    required bool compact,
-    required bool tablet,
-    required bool desktop,
-  }) {
-    if (desktop) return 16;
-    if (tablet) return 14;
-    if (compact) return 10;
-    return 12;
-  }
+  IconData _statusIcon(String status) {
+    final normalized = status.toLowerCase();
 
-  double _verticalPadding({
-    required bool compact,
-    required bool tablet,
-    required bool desktop,
-  }) {
-    if (desktop) return 7;
-    if (tablet) return 6;
-    if (compact) return 4;
-    return 6;
-  }
+    if (normalized.contains('over') ||
+        normalized.contains('exceed') ||
+        normalized.contains('critical')) {
+      return Icons.error_outline_rounded;
+    }
 
-  double _labelSize({
-    required bool compact,
-    required bool tablet,
-    required bool desktop,
-  }) {
-    if (desktop) return 16;
-    if (tablet) return 15;
-    if (compact) return 13;
-    return 15;
-  }
+    if (normalized.contains('warning') ||
+        normalized.contains('caution') ||
+        normalized.contains('high') ||
+        normalized.contains('risk')) {
+      return Icons.warning_amber_rounded;
+    }
 
-  double _statusSize({
-    required bool compact,
-    required bool tablet,
-    required bool desktop,
-  }) {
-    if (desktop) return 14;
-    if (tablet) return 13;
-    if (compact) return 12;
-    return 14;
+    if (normalized.contains('good') ||
+        normalized.contains('healthy') ||
+        normalized.contains('track') ||
+        normalized.contains('safe')) {
+      return Icons.check_circle_outline_rounded;
+    }
+
+    return Icons.account_balance_wallet_outlined;
   }
 }
