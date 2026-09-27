@@ -14,71 +14,178 @@ class ExpenseCategoryFilters extends StatelessWidget {
     required this.onCategorySelected,
   });
 
+  Color _categoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Colors.orange;
+      case 'transport':
+        return Colors.blue;
+      case 'shopping':
+        return Colors.purple;
+      case 'bills':
+        return Colors.red;
+      case 'health':
+        return Colors.green;
+      case 'education':
+        return Colors.indigo;
+      case 'entertainment':
+        return Colors.pink;
+      case 'other':
+        return Colors.blueGrey;
+      case 'all':
+      default:
+        return Colors.teal;
+    }
+  }
+
+  IconData _categoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Icons.restaurant_rounded;
+      case 'transport':
+        return Icons.directions_car_rounded;
+      case 'shopping':
+        return Icons.shopping_bag_rounded;
+      case 'bills':
+        return Icons.receipt_long_rounded;
+      case 'health':
+        return Icons.favorite_rounded;
+      case 'education':
+        return Icons.school_rounded;
+      case 'entertainment':
+        return Icons.movie_rounded;
+      case 'other':
+        return Icons.account_balance_wallet_rounded;
+      case 'all':
+      default:
+        return Icons.apps_rounded;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final compact = ResponsiveHelper.useCompactLayout(context);
+
     final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
 
-    final chipHeight = compact ? 42.0 : 45.0;
-    final chipFontSize = compact ? 11.0 : 13.0;
-    final categoryTitleFontSize = compact ? 13.0 : 14.0;
-
     final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
-    final surfaceColor = theme.colorScheme.surfaceContainerHighest;
+    final colorScheme = theme.colorScheme;
+
+    final chipHeight = compact ? 43.0 : 47.0;
 
     return Padding(
-      padding: EdgeInsets.only(left: horizontalPadding, top: compact ? 10 : 15),
+      padding: EdgeInsets.only(
+        left: horizontalPadding,
+        right: horizontalPadding,
+        top: compact ? 9 : 12,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Category",
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: categoryTitleFontSize,
-            ),
+          Row(
+            children: [
+              Icon(
+                Icons.category_outlined,
+                size: compact ? 14 : 15,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'CATEGORY',
+                style: TextStyle(
+                  fontSize: compact ? 10 : 10.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.85,
+                  color: colorScheme.onSurface.withOpacity(0.55),
+                ),
+              ),
+            ],
           ),
 
-          SizedBox(height: compact ? 8 : 10),
+          SizedBox(height: compact ? 8 : 9),
 
           SizedBox(
             height: chipHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: categories.length,
-              separatorBuilder: (_, __) => SizedBox(width: compact ? 6 : 8),
+              separatorBuilder: (_, __) => SizedBox(width: compact ? 7 : 8),
               itemBuilder: (context, index) {
                 final category = categories[index];
+
                 final selected = category == selectedCategory;
 
-                return ChoiceChip(
-                  label: Text(
-                    category,
-                    style: TextStyle(fontSize: chipFontSize),
+                final color = _categoryColor(category);
+
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(23),
+                    boxShadow: selected
+                        ? [
+                            BoxShadow(
+                              color: color.withOpacity(0.16),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
                   ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(23),
+                      onTap: () {
+                        onCategorySelected(category);
+                      },
+                      child: Container(
+                        height: chipHeight,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 9 : 11,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected ? color : color.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(23),
+                          border: Border.all(
+                            color: selected ? color : color.withOpacity(0.13),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: compact ? 27 : 29,
+                              height: compact ? 27 : 29,
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? Colors.white.withOpacity(0.16)
+                                    : color.withOpacity(0.10),
+                                borderRadius: BorderRadius.circular(9),
+                              ),
+                              child: Icon(
+                                _categoryIcon(category),
+                                size: compact ? 14 : 15,
+                                color: selected ? Colors.white : color,
+                              ),
+                            ),
 
-                  selected: selected,
+                            const SizedBox(width: 7),
 
-                  selectedColor: primaryColor,
-
-                  backgroundColor: surfaceColor,
-
-                  labelStyle: TextStyle(
-                    color: selected ? Colors.white : null,
-                    fontWeight: FontWeight.w600,
-                    fontSize: chipFontSize,
+                            Text(
+                              category,
+                              style: TextStyle(
+                                fontSize: compact ? 11 : 12,
+                                fontWeight: FontWeight.w700,
+                                color: selected
+                                    ? Colors.white
+                                    : colorScheme.onSurface.withOpacity(0.74),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-
-                  showCheckmark: false,
-
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-
-                  onSelected: (_) {
-                    onCategorySelected(category);
-                  },
                 );
               },
             ),
