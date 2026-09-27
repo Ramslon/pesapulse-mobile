@@ -657,7 +657,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               child: Icon(
                 Icons.account_balance_wallet_rounded,
-                color: colorScheme.primary,
+                color: Colors.blue,
                 size: desktop
                     ? 23
                     : compact
@@ -734,7 +734,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         subtitle: hasExpenses ? "Total Recorded" : "No expenses yet",
         value: totalCount.toString(),
         icon: Icons.receipt_long_rounded,
-        iconColor: colorScheme.primary,
+        iconColor: Colors.green,
       ),
 
       DashboardCard(
@@ -1539,7 +1539,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _DashboardAction(
         icon: Icons.receipt_long_rounded,
         title: 'Expense',
-        color: colorScheme.primary,
+        color: Colors.green,
         onTap: () {
           Navigator.push(
             context,
@@ -1550,7 +1550,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _DashboardAction(
         icon: Icons.account_balance_wallet_rounded,
         title: 'Budget',
-        color: const Color(0xFF2563EB),
+        color: Colors.blue,
         onTap: () {
           Navigator.push(
             context,
