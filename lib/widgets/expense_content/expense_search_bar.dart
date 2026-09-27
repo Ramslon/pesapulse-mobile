@@ -19,15 +19,31 @@ class ExpenseSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final landscape = ResponsiveHelper.isLandscape(context);
+
     final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
+
     final spacing = ResponsiveHelper.spacing(context);
 
-    final borderRadius = compact ? 14.0 : 16.0;
-    final iconSize = compact ? 20.0 : 24.0;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    final surfaceColor = Theme.of(context).colorScheme.surfaceContainerHighest;
+    final isSearching = controller.text.trim().isNotEmpty;
 
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final radius = compact ? 15.0 : 17.0;
+
+    final iconSize = compact
+        ? 19.0
+        : landscape
+        ? 20.0
+        : 21.0;
+
+    final fieldHeight = compact
+        ? 49.0
+        : landscape
+        ? 50.0
+        : 52.0;
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -37,53 +53,127 @@ class ExpenseSearchBar extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: controller,
-              textInputAction: TextInputAction.search,
-              onChanged: onChanged,
-              decoration: InputDecoration(
-                hintText: "Search expenses...",
-
-                prefixIcon: Icon(Icons.search, size: iconSize),
-
-                suffixIcon: controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.close, size: iconSize),
-                        onPressed: onClear,
-                      )
-                    : null,
-
-                filled: true,
-                fillColor: surfaceColor,
-
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(borderRadius),
-                  borderSide: BorderSide.none,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: fieldHeight,
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(radius),
+                border: Border.all(
+                  color: isSearching
+                      ? colorScheme.primary.withOpacity(0.45)
+                      : colorScheme.outline.withOpacity(0.09),
+                  width: isSearching ? 1.2 : 1,
                 ),
-
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(borderRadius),
-                  borderSide: BorderSide.none,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(
+                      isSearching ? 0.045 : 0.025,
+                    ),
+                    blurRadius: isSearching ? 12 : 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: controller,
+                textInputAction: TextInputAction.search,
+                onChanged: onChanged,
+                style: TextStyle(
+                  fontSize: compact ? 13 : 14,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
                 ),
+                decoration: InputDecoration(
+                  hintText: 'Search transactions...',
+                  hintStyle: TextStyle(
+                    fontSize: compact ? 13 : 14,
+                    fontWeight: FontWeight.w500,
+                    color: colorScheme.onSurface.withOpacity(0.42),
+                  ),
 
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(borderRadius),
-                  borderSide: BorderSide(color: primaryColor),
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.only(
+                      left: compact ? 6 : 8,
+                      right: compact ? 3 : 4,
+                    ),
+                    child: Icon(
+                      Icons.search_rounded,
+                      size: iconSize,
+                      color: isSearching
+                          ? colorScheme.primary
+                          : colorScheme.onSurface.withOpacity(0.48),
+                    ),
+                  ),
+
+                  prefixIconConstraints: BoxConstraints(
+                    minWidth: compact ? 40 : 44,
+                    minHeight: fieldHeight,
+                  ),
+
+                  suffixIcon: isSearching
+                      ? IconButton(
+                          tooltip: 'Clear search',
+                          splashRadius: 18,
+                          onPressed: onClear,
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: compact ? 18 : 19,
+                            color: colorScheme.onSurface.withOpacity(0.48),
+                          ),
+                        )
+                      : null,
+
+                  suffixIconConstraints: BoxConstraints(
+                    minWidth: compact ? 40 : 44,
+                    minHeight: fieldHeight,
+                  ),
+
+                  filled: false,
+
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: compact ? 4 : 6,
+                  ),
+
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                 ),
               ),
             ),
           ),
 
-          SizedBox(width: spacing * 0.5),
+          SizedBox(width: spacing * 0.55),
 
-          Container(
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              borderRadius: BorderRadius.circular(borderRadius),
-            ),
-            child: IconButton(
-              onPressed: onSort,
-              icon: Icon(Icons.tune, size: iconSize),
+          // Sort / filter action
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(radius),
+              onTap: onSort,
+              child: Container(
+                width: fieldHeight,
+                height: fieldHeight,
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(radius),
+                  border: Border.all(
+                    color: colorScheme.outline.withOpacity(0.09),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.025),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.tune_rounded,
+                  size: compact ? 19 : 21,
+                  color: colorScheme.primary,
+                ),
+              ),
             ),
           ),
         ],
