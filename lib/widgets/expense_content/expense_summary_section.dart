@@ -149,7 +149,7 @@ class ExpenseSummarySection extends StatelessWidget {
                     child: Icon(
                       Icons.receipt_long_rounded,
                       size: compact ? 15 : 16,
-                      color: colorScheme.primary,
+                      color: Colors.green,
                     ),
                   ),
                 ],

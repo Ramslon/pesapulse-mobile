@@ -121,7 +121,7 @@ class ExpenseListHeader extends StatelessWidget {
             ),
             child: Icon(
               Icons.receipt_long_rounded,
-              color: colorScheme.primary,
+              color: Colors.green,
               size: compact ? 21 : 23,
             ),
           ),

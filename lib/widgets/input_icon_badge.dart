@@ -7,7 +7,7 @@ class InputIconBadge extends StatelessWidget {
   final Color color;
 
   /// Optional icon size override.
-  /// If null, ResponsiveHelper determines the size.
+  /// If null, ResponsiveHelper determines the icon size.
   final double? size;
 
   const InputIconBadge({
@@ -20,56 +20,55 @@ class InputIconBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = ResponsiveHelper.useCompactLayout(context);
+
     final landscape = ResponsiveHelper.isLandscape(context);
+
     final tablet = ResponsiveHelper.isTablet(context);
+
     final desktop = ResponsiveHelper.isDesktop(context);
 
-    // Responsive icon size
     final iconSize =
         size ??
         (desktop
-            ? 22.0
+            ? 20.0
             : tablet
-            ? 21.0
+            ? 19.0
             : compact
-            ? 16.0
+            ? 15.0
             : landscape
             ? 17.0
-            : 20.0);
+            : 18.0);
 
-    // Responsive badge size
     final badgeSize = desktop
-        ? 44.0
+        ? 38.0
         : tablet
-        ? 42.0
+        ? 36.0
         : compact
+        ? 30.0
+        : landscape
         ? 32.0
-        : landscape
-        ? 34.0
-        : 42.0;
+        : 36.0;
 
-    // Responsive outer padding
-    final badgePadding = desktop
-        ? 8.0
-        : tablet
-        ? 7.0
-        : compact
-        ? 5.0
+    final radius = compact
+        ? 9.0
         : landscape
-        ? 5.0
-        : 8.0;
+        ? 10.0
+        : 11.0;
 
-    return Padding(
-      padding: EdgeInsets.all(badgePadding),
-      child: Container(
-        width: badgeSize,
-        height: badgeSize,
-        decoration: BoxDecoration(
-          color: color.withOpacity(.21),
-          borderRadius: BorderRadius.circular(badgeSize / 2),
+    return SizedBox(
+      width: badgeSize,
+      height: badgeSize,
+      child: Center(
+        child: Container(
+          width: badgeSize,
+          height: badgeSize,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: color.withOpacity(0.07)),
+          ),
+          child: Icon(icon, color: color, size: iconSize),
         ),
-        alignment: Alignment.center,
-        child: Icon(icon, color: color, size: iconSize),
       ),
     );
   }
