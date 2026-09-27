@@ -13,6 +13,7 @@ class ExpenseItemCard extends StatelessWidget {
   final Future<void> Function()? onEdit;
   final Future<void> Function()? onDelete;
   final Future<void> Function()? onDuplicate;
+
   const ExpenseItemCard({
     super.key,
     required this.expense,
@@ -40,41 +41,67 @@ class ExpenseItemCard extends StatelessWidget {
       case 'entertainment':
         return Colors.pink;
       default:
-        return Colors.grey;
+        return Colors.blueGrey;
     }
   }
 
   IconData categoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'food':
-        return Icons.restaurant;
+        return Icons.restaurant_rounded;
       case 'transport':
-        return Icons.directions_car;
+        return Icons.directions_car_rounded;
       case 'shopping':
-        return Icons.shopping_bag;
+        return Icons.shopping_bag_rounded;
       case 'bills':
-        return Icons.receipt_long;
+        return Icons.receipt_long_rounded;
       case 'health':
-        return Icons.favorite;
+        return Icons.favorite_rounded;
       case 'education':
-        return Icons.school;
+        return Icons.school_rounded;
       case 'entertainment':
-        return Icons.movie;
+        return Icons.movie_rounded;
       default:
-        return Icons.account_balance_wallet;
+        return Icons.account_balance_wallet_rounded;
     }
   }
 
-  String formatDate(String date) {
-    final expenseDate = DateTime.parse(date);
-    final today = DateTime.now();
+  String formatDate(String? date) {
+    if (date == null || date.trim().isEmpty) {
+      return 'Date unavailable';
+    }
 
-    final difference = today.difference(expenseDate).inDays;
+    final expenseDate = DateTime.tryParse(date);
 
-    if (difference == 0) return "Today";
-    if (difference == 1) return "Yesterday";
+    if (expenseDate == null) {
+      return date;
+    }
 
-    return "${expenseDate.day}/${expenseDate.month}/${expenseDate.year}";
+    final now = DateTime.now();
+
+    final today = DateTime(now.year, now.month, now.day);
+
+    final targetDate = DateTime(
+      expenseDate.year,
+      expenseDate.month,
+      expenseDate.day,
+    );
+
+    final difference = today.difference(targetDate).inDays;
+
+    if (difference == 0) {
+      return 'Today';
+    }
+
+    if (difference == 1) {
+      return 'Yesterday';
+    }
+
+    if (difference > 1 && difference < 7) {
+      return '$difference days ago';
+    }
+
+    return '${expenseDate.day}/${expenseDate.month}/${expenseDate.year}';
   }
 
   Widget _buildHighlightedText(
@@ -83,12 +110,16 @@ class ExpenseItemCard extends StatelessWidget {
     String query,
     bool compact,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     final textStyle = TextStyle(
-      fontSize: compact ? 14 : 16,
-      fontWeight: FontWeight.w600,
+      fontSize: compact ? 13.5 : 14.5,
+      fontWeight: FontWeight.w700,
+      height: 1.15,
+      color: colorScheme.onSurface,
     );
 
-    if (query.isEmpty) {
+    if (query.trim().isEmpty) {
       return Text(
         text,
         maxLines: 1,
@@ -117,15 +148,15 @@ class ExpenseItemCard extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       text: TextSpan(
-        style: textStyle.copyWith(
-          color: Theme.of(context).textTheme.bodyMedium?.color,
-        ),
+        style: textStyle,
         children: [
           TextSpan(text: text.substring(0, start)),
           TextSpan(
             text: text.substring(start, end),
             style: textStyle.copyWith(
-              color: Theme.of(context).colorScheme.primary,
+              color: colorScheme.primary,
+              fontWeight: FontWeight.w900,
+              backgroundColor: colorScheme.primary.withOpacity(0.10),
             ),
           ),
           TextSpan(text: text.substring(end)),
@@ -137,29 +168,33 @@ class ExpenseItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = ResponsiveHelper.useCompactLayout(context);
+
     final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
 
-    final category = expense["category"] ?? "Other";
+    final category = (expense['category'] ?? 'Other').toString();
+
+    final title = (expense['title'] ?? 'Untitled expense').toString();
+
+    final amount = double.tryParse(expense['amount']?.toString() ?? '') ?? 0.0;
+
     final color = categoryColor(category);
 
-    final amount = double.tryParse(expense["amount"].toString()) ?? 0;
-
     return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 260),
       tween: Tween(begin: 0, end: 1),
-      curve: Curves.easeOut,
+      curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         return Opacity(
           opacity: value,
           child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
+            offset: Offset(0, 12 * (1 - value)),
             child: child,
           ),
         );
       },
       child: Dismissible(
-        key: ValueKey(expense["id"]),
-
+        key: ValueKey('${expense["id"]}_${expense["client_id"] ?? ""}'),
+        direction: DismissDirection.horizontal,
         confirmDismiss: (direction) async {
           if (direction == DismissDirection.startToEnd) {
             await onEdit?.call();
@@ -170,143 +205,183 @@ class ExpenseItemCard extends StatelessWidget {
           return false;
         },
         background: _buildEditBackground(context, compact),
-
         secondaryBackground: _buildDeleteBackground(context, compact),
-
         child: _buildCard(
-          context,
-          compact,
-          horizontalPadding,
-          category,
-          color,
-          amount,
+          context: context,
+          compact: compact,
+          horizontalPadding: horizontalPadding,
+          category: category,
+          title: title,
+          color: color,
+          amount: amount,
         ),
       ),
     );
   }
 
-  Widget _buildCard(
-    BuildContext context,
-    bool compact,
-    double horizontalPadding,
-    String category,
-    Color color,
-    double amount,
-  ) {
+  Widget _buildCard({
+    required BuildContext context,
+    required bool compact,
+    required double horizontalPadding,
+    required String category,
+    required String title,
+    required Color color,
+    required double amount,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final radius = compact ? 16.0 : 18.0;
+
     return Container(
       margin: EdgeInsets.symmetric(
         horizontal: horizontalPadding,
-        vertical: compact ? 6 : 8,
+        vertical: compact ? 5 : 6,
       ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: Theme.of(context).colorScheme.surface,
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.07)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.04),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(radius),
         child: Row(
           children: [
-            Container(width: compact ? 4 : 5, color: color),
+            // Category accent
+            Container(
+              width: compact ? 4 : 5,
+              height: compact ? 78 : 88,
+              color: color.withOpacity(0.85),
+            ),
 
             Expanded(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ExpenseDetailsScreen(expense: expense),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ExpenseDetailsScreen(expense: expense),
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      compact ? 11 : 14,
+                      compact ? 10 : 12,
+                      compact ? 8 : 11,
+                      compact ? 10 : 12,
                     ),
-                  );
-                },
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 12 : 16,
-                    vertical: compact ? 11 : 14,
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: compact ? 20 : 24,
-                        backgroundColor: color.withOpacity(.12),
-                        child: Icon(
-                          categoryIcon(category),
-                          color: color,
-                          size: compact ? 20 : 24,
-                        ),
-                      ),
-
-                      SizedBox(width: compact ? 10 : 14),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildHighlightedText(
-                              context,
-                              expense["title"] ?? "",
-                              searchQuery,
-                              compact,
+                    child: Row(
+                      children: [
+                        // Category icon
+                        Container(
+                          width: compact ? 40 : 46,
+                          height: compact ? 40 : 46,
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(
+                              compact ? 12 : 14,
                             ),
+                          ),
+                          child: Icon(
+                            categoryIcon(category),
+                            color: color,
+                            size: compact ? 19 : 21,
+                          ),
+                        ),
 
-                            const SizedBox(height: 4),
+                        SizedBox(width: compact ? 10 : 12),
 
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    category,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: color,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: compact ? 11 : 13,
+                        // Main information
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildHighlightedText(
+                                context,
+                                title,
+                                searchQuery,
+                                compact,
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: compact ? 6 : 7,
+                                        vertical: compact ? 2.5 : 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: color.withOpacity(0.08),
+                                        borderRadius: BorderRadius.circular(7),
+                                      ),
+                                      child: Text(
+                                        category,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: color,
+                                          fontSize: compact ? 10.5 : 11.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
 
-                                SizedBox(width: compact ? 5 : 8),
+                                  SizedBox(width: compact ? 6 : 8),
 
-                                Container(
-                                  width: 4,
-                                  height: 4,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.grey,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-
-                                SizedBox(width: compact ? 5 : 8),
-
-                                Flexible(
-                                  child: Text(
-                                    formatDate(expense["expense_date"]),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: compact ? 10 : 12,
+                                  Container(
+                                    width: 3,
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.onSurface.withOpacity(
+                                        0.28,
+                                      ),
+                                      shape: BoxShape.circle,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+
+                                  SizedBox(width: compact ? 6 : 8),
+
+                                  Flexible(
+                                    child: Text(
+                                      formatDate(
+                                        expense['expense_date']?.toString(),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: colorScheme.onSurface
+                                            .withOpacity(0.52),
+                                        fontSize: compact ? 10.5 : 11.5,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
-                      SizedBox(width: compact ? 6 : 12),
+                        SizedBox(width: compact ? 6 : 10),
 
-                      _buildAmountAndMenu(context, compact, amount),
-                    ],
+                        _buildAmountAndMenu(context, compact, amount),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -322,69 +397,83 @@ class ExpenseItemCard extends StatelessWidget {
     bool compact,
     double amount,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: compact ? 105 : 150),
-          child: Text(
-            CurrencyFormatter.format(amount),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.end,
-            style: TextStyle(
-              fontSize: compact ? 12 : 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
+          constraints: BoxConstraints(maxWidth: compact ? 105 : 145),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              currencyFormatter(amount),
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: compact ? 12.5 : 15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.15,
+                color: Colors.red.shade600,
+              ),
             ),
           ),
         ),
 
-        SizedBox(height: compact ? 2 : 4),
+        const SizedBox(height: 2),
 
         PopupMenuButton<String>(
           padding: EdgeInsets.zero,
-          iconSize: compact ? 18 : 20,
-          icon: const Icon(Icons.more_vert),
+          constraints: const BoxConstraints(minWidth: 185),
+          iconSize: compact ? 18 : 19,
+          icon: Icon(
+            Icons.more_horiz_rounded,
+            color: colorScheme.onSurface.withOpacity(0.42),
+          ),
           onSelected: (value) async {
             switch (value) {
-              case "edit":
+              case 'edit':
                 await onEdit?.call();
                 break;
 
-              case "delete":
+              case 'delete':
                 await onDelete?.call();
                 break;
 
-              case "duplicate":
+              case 'duplicate':
                 await onDuplicate?.call();
                 break;
             }
           },
-          itemBuilder: (_) => const [
-            PopupMenuItem(
-              value: "edit",
-              child: Row(
-                children: [Icon(Icons.edit), SizedBox(width: 10), Text("Edit")],
-              ),
-            ),
-            PopupMenuItem(
-              value: "delete",
+          itemBuilder: (_) => [
+            const PopupMenuItem<String>(
+              value: 'edit',
               child: Row(
                 children: [
-                  Icon(Icons.delete, color: Colors.red),
+                  Icon(Icons.edit_outlined),
                   SizedBox(width: 10),
-                  Text("Delete"),
+                  Text('Edit'),
                 ],
               ),
             ),
-            PopupMenuItem(
-              value: "duplicate",
+            PopupMenuItem<String>(
+              value: 'delete',
               child: Row(
                 children: [
-                  Icon(Icons.copy),
+                  Icon(Icons.delete_outline, color: Colors.red),
+                  const SizedBox(width: 10),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'duplicate',
+              child: Row(
+                children: [
+                  Icon(Icons.copy_outlined),
                   SizedBox(width: 10),
-                  Text("Duplicate"),
+                  Text('Duplicate'),
                 ],
               ),
             ),
@@ -397,21 +486,25 @@ class ExpenseItemCard extends StatelessWidget {
   Widget _buildEditBackground(BuildContext context, bool compact) {
     return Container(
       alignment: Alignment.centerLeft,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 22),
       decoration: BoxDecoration(
-        color: Colors.blue,
-        borderRadius: BorderRadius.circular(18),
+        color: Colors.blue.shade600,
+        borderRadius: BorderRadius.circular(compact ? 16 : 18),
       ),
       child: Row(
         children: [
-          Icon(Icons.edit, color: Colors.white, size: compact ? 20 : 24),
+          Icon(
+            Icons.edit_outlined,
+            color: Colors.white,
+            size: compact ? 20 : 23,
+          ),
           SizedBox(width: compact ? 6 : 8),
           Text(
-            "Edit",
+            'Edit',
             style: TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: compact ? 13 : 14,
+              fontWeight: FontWeight.w800,
+              fontSize: compact ? 12 : 13,
             ),
           ),
         ],
@@ -422,24 +515,28 @@ class ExpenseItemCard extends StatelessWidget {
   Widget _buildDeleteBackground(BuildContext context, bool compact) {
     return Container(
       alignment: Alignment.centerRight,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 22),
       decoration: BoxDecoration(
-        color: Colors.red,
-        borderRadius: BorderRadius.circular(18),
+        color: Colors.red.shade600,
+        borderRadius: BorderRadius.circular(compact ? 16 : 18),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Text(
-            "Delete",
+            'Delete',
             style: TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: compact ? 13 : 14,
+              fontWeight: FontWeight.w800,
+              fontSize: compact ? 12 : 13,
             ),
           ),
           SizedBox(width: compact ? 6 : 8),
-          Icon(Icons.delete, color: Colors.white, size: compact ? 20 : 24),
+          Icon(
+            Icons.delete_outline,
+            color: Colors.white,
+            size: compact ? 20 : 23,
+          ),
         ],
       ),
     );
