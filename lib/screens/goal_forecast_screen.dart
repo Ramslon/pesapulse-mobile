@@ -2172,76 +2172,6 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
   }
 
   // ===========================================================================
-  // ERROR
-  // ===========================================================================
-
-  Widget _buildErrorState(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: Padding(
-          padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-          child: _card(
-            context,
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: scheme.error.withOpacity(.08),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Icon(
-                    Icons.cloud_off_rounded,
-                    color: scheme.error,
-                    size: 30,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                Text(
-                  'Unable to load goal forecast',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  _errorMessage ??
-                      'Something went wrong while loading the forecast.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                FilledButton.icon(
-                  onPressed: _loadForecast,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Try Again'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ===========================================================================
   // CONTENT
   // ===========================================================================
 
@@ -2269,6 +2199,13 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (_errorMessage != null && _data.isNotEmpty) ...[
+                    PremiumInlineError(
+                      message: _errorMessage!,
+                      accentColor: _premiumPurple,
+                    ),
+                    SizedBox(height: sectionSpacing),
+                  ],
                   _buildHero(context),
 
                   SizedBox(height: sectionSpacing),
@@ -2349,9 +2286,22 @@ class _GoalForecastScreenState extends State<GoalForecastScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const PremiumLoadingState(
+              title: 'Preparing goal forecast',
+              message: 'Analyzing your savings progress and target timeline...',
+              accentColor: _premiumPurple,
+              icon: Icons.auto_awesome_rounded,
+            )
           : _errorMessage != null && _data.isEmpty
-          ? _buildErrorState(context)
+          ? PremiumErrorState(
+              title: 'Unable to load goal forecast',
+              message:
+                  _errorMessage ??
+                  'Something went wrong while loading your goal forecast.',
+              onRetry: _loadForecast,
+              accentColor: _premiumPurple,
+              icon: Icons.cloud_off_rounded,
+            )
           : _buildContent(context),
     );
   }
