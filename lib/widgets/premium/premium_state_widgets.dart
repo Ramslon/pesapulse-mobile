@@ -140,7 +140,6 @@ class PremiumErrorState extends StatelessWidget {
     final compact = ResponsiveHelper.useCompactLayout(context);
 
     final errorColor = theme.colorScheme.error;
-    final accent = accentColor ?? errorColor;
 
     return Center(
       child: SingleChildScrollView(
@@ -227,14 +226,15 @@ class PremiumInlineError extends StatelessWidget {
     final compact = ResponsiveHelper.useCompactLayout(context);
 
     final errorColor = theme.colorScheme.error;
+    final accent = accentColor ?? errorColor;
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(compact ? 12 : 14),
       decoration: BoxDecoration(
-        color: errorColor.withOpacity(0.07),
+        color: errorColor.withOpacity(.07),
         borderRadius: BorderRadius.circular(compact ? 14 : 16),
-        border: Border.all(color: errorColor.withOpacity(0.15)),
+        border: Border.all(color: errorColor.withOpacity(.15)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,7 +243,7 @@ class PremiumInlineError extends StatelessWidget {
             width: compact ? 30 : 32,
             height: compact ? 30 : 32,
             decoration: BoxDecoration(
-              color: errorColor.withOpacity(0.09),
+              color: accent.withOpacity(.10),
               borderRadius: BorderRadius.circular(9),
             ),
             child: Icon(

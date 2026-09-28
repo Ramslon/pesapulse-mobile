@@ -14,10 +14,13 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
   final Map<String, dynamic> tracking;
   final String currencySymbol;
 
+  final Future<void> Function()? onRefresh;
+
   const AdvancedGoalTrackingScreen({
     super.key,
     required this.tracking,
     this.currencySymbol = 'KES',
+    this.onRefresh,
   });
 
   // ---------------------------------------------------------------------------
@@ -80,67 +83,83 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
           )
         : <Map<String, dynamic>>[];
 
+    return AppScaffold(
+      appBar: const AdaptiveAppBar(title: 'Advanced Goal Tracking'),
+      body: onRefresh == null
+          ? _buildScrollableContent(context, summary, dataQuality, goals)
+          : RefreshIndicator(
+              onRefresh: onRefresh!,
+              child: _buildScrollableContent(
+                context,
+                summary,
+                dataQuality,
+                goals,
+              ),
+            ),
+    );
+  }
+
+  Widget _buildScrollableContent(
+    BuildContext context,
+    Map<String, dynamic> summary,
+    Map<String, dynamic> dataQuality,
+    List<Map<String, dynamic>> goals,
+  ) {
     final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
     final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
 
-    return AppScaffold(
-      appBar: const AdaptiveAppBar(title: 'Advanced Goal Tracking'),
-      body: RefreshIndicator(
-        onRefresh: () async {},
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            16,
-            horizontalPadding,
-            32,
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        16,
+        horizontalPadding,
+        32,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ResponsiveHelper.contentMaxWidth(context),
           ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: ResponsiveHelper.contentMaxWidth(context),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeroHeader(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeroHeader(context),
 
-                  SizedBox(height: sectionSpacing),
+              SizedBox(height: sectionSpacing),
 
-                  _buildPortfolioSummary(context, summary),
+              _buildPortfolioSummary(context, summary),
 
-                  SizedBox(height: sectionSpacing),
+              SizedBox(height: sectionSpacing),
 
-                  if (goals.isEmpty)
-                    _buildNoGoalsCard(context)
-                  else ...[
-                    _buildSectionHeading(
+              if (goals.isEmpty)
+                _buildNoGoalsCard(context)
+              else ...[
+                _buildSectionHeading(
+                  context,
+                  icon: Icons.track_changes_rounded,
+                  title: 'Goal intelligence',
+                  subtitle: 'Detailed progress, pace and schedule analysis',
+                ),
+
+                const SizedBox(height: 14),
+
+                ...goals.asMap().entries.map((entry) {
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: sectionSpacing),
+                    child: _buildGoalIntelligenceCard(
                       context,
-                      icon: Icons.track_changes_rounded,
-                      title: 'Goal intelligence',
-                      subtitle: 'Detailed progress, pace and schedule analysis',
+                      entry.value,
+                      entry.key,
                     ),
+                  );
+                }),
+              ],
 
-                    SizedBox(height: 14),
+              SizedBox(height: sectionSpacing),
 
-                    ...goals.asMap().entries.map((entry) {
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: sectionSpacing),
-                        child: _buildGoalIntelligenceCard(
-                          context,
-                          entry.value,
-                          entry.key,
-                        ),
-                      );
-                    }),
-                  ],
-
-                  SizedBox(height: sectionSpacing),
-
-                  _buildDataQuality(context, dataQuality),
-                ],
-              ),
-            ),
+              _buildDataQuality(context, dataQuality),
+            ],
           ),
         ),
       ),
@@ -756,18 +775,22 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
 
   double _analysisCardHeight(BuildContext context) {
     if (ResponsiveHelper.isMobilePortrait(context)) {
-      return 196;
+      return 220;
     }
 
     if (ResponsiveHelper.isMobileLandscape(context)) {
-      return 190;
+      return 220;
     }
 
     if (ResponsiveHelper.isTabletPortrait(context)) {
-      return 205;
+      return 225;
     }
 
-    return 210;
+    if (ResponsiveHelper.isTabletLandscape(context)) {
+      return 225;
+    }
+
+    return 230;
   }
 
   // ---------------------------------------------------------------------------
@@ -954,6 +977,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
     );
 
     final variancePositive = variance >= 0;
+    final theme = Theme.of(context);
 
     return _analysisCard(
       context,
@@ -961,6 +985,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
       title: 'Schedule',
       accent: _premiumPurple,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -981,11 +1006,11 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(11),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
             decoration: BoxDecoration(
               color: (variancePositive ? Colors.green : Colors.orange)
                   .withOpacity(0.08),
@@ -1005,8 +1030,11 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
 
                 Expanded(
                   child: Text(
-                    'Variance ${variance >= 0 ? '+' : ''}${variance.toStringAsFixed(1)}%',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    'Variance ${variance >= 0 ? '+' : ''}'
+                    '${variance.toStringAsFixed(1)}%',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1015,7 +1043,7 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
             ),
           ),
 
-          const Spacer(),
+          const SizedBox(height: 10),
 
           _detailRow(context, 'Schedule', _formatDays(daysAhead)),
         ],
@@ -1027,29 +1055,33 @@ class AdvancedGoalTrackingScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.45),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 11,
             ),
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
 
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
               value,
+              maxLines: 1,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
