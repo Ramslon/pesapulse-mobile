@@ -6,6 +6,7 @@ import '../utils/responsive_helper.dart';
 
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
+import '../widgets/premium/premium_state_widgets.dart';
 
 const Color _premiumPurple = Color(0xFF6D3FD9);
 const Color _premiumPurpleDark = Color(0xFF34205F);
@@ -135,11 +136,23 @@ class _AdvancedBudgetInsightsScreenState
 
   Widget _buildBody(ThemeData theme) {
     if (_isLoading && _data == null) {
-      return _buildLoadingState(theme);
+      return const PremiumLoadingState(
+        title: 'Analyzing your budget',
+        message: 'Building your premium budget insights...',
+        accentColor: _premiumPurple,
+        icon: Icons.auto_awesome_rounded,
+      );
     }
 
     if (_errorMessage != null && _data == null) {
-      return _buildErrorState(theme);
+      return PremiumErrorState(
+        title: 'Unable to load Budget Intelligence',
+        message: _errorMessage ?? 'Something went wrong.',
+        onRetry: _loadInsights,
+        accentColor: _premiumPurple,
+        icon: Icons.cloud_off_rounded,
+        retryLabel: 'Try Again',
+      );
     }
 
     if (_data == null) {
@@ -147,9 +160,7 @@ class _AdvancedBudgetInsightsScreenState
     }
 
     final compact = ResponsiveHelper.useCompactLayout(context);
-
     final landscape = ResponsiveHelper.isLandscape(context);
-
     final desktop = ResponsiveHelper.isDesktop(context);
 
     final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
@@ -186,6 +197,15 @@ class _AdvancedBudgetInsightsScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_errorMessage != null) ...[
+                    PremiumInlineError(
+                      message: _errorMessage!,
+                      accentColor: _premiumPurple,
+                    ),
+
+                    SizedBox(height: sectionSpacing),
+                  ],
+
                   _buildHero(theme),
 
                   SizedBox(height: sectionSpacing),
@@ -1737,50 +1757,6 @@ class _AdvancedBudgetInsightsScreenState
     return value[0].toUpperCase() + value.substring(1);
   }
 
-  Widget _buildLoadingState(ThemeData theme) {
-    final compact = ResponsiveHelper.useCompactLayout(context);
-
-    final colorScheme = theme.colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(compact ? 24 : 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: compact ? 64 : 72,
-              height: compact ? 64 : 72,
-              decoration: BoxDecoration(
-                color: _premiumPurple.withOpacity(0.09),
-                borderRadius: BorderRadius.circular(compact ? 18 : 20),
-              ),
-              child: CircularProgressIndicator(
-                strokeWidth: compact ? 3 : 3.2,
-                color: _premiumPurple,
-              ),
-            ),
-            SizedBox(height: compact ? 15 : 18),
-            Text(
-              'Analyzing your budget',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              'Building your premium budget insights...',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildNoDataState(ThemeData theme) {
     final compact = ResponsiveHelper.useCompactLayout(context);
 
@@ -1821,79 +1797,6 @@ class _AdvancedBudgetInsightsScreenState
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(ThemeData theme) {
-    final compact = ResponsiveHelper.useCompactLayout(context);
-
-    final padding = ResponsiveHelper.horizontalPadding(context);
-
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: padding,
-          vertical: compact ? 20 : 28,
-        ),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 520),
-          padding: EdgeInsets.all(compact ? 18 : 24),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(compact ? 19 : 22),
-            border: Border.all(
-              color: theme.colorScheme.error.withOpacity(0.12),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: compact ? 58 : 66,
-                height: compact ? 58 : 66,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.error.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(
-                  Icons.cloud_off_rounded,
-                  size: compact ? 27 : 30,
-                  color: theme.colorScheme.error,
-                ),
-              ),
-
-              SizedBox(height: compact ? 13 : 16),
-
-              Text(
-                'Unable to load Budget Intelligence',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Text(
-                _errorMessage ?? 'Something went wrong.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  height: 1.4,
-                ),
-              ),
-
-              SizedBox(height: compact ? 16 : 20),
-
-              FilledButton.icon(
-                onPressed: _loadInsights,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Try Again'),
-              ),
-            ],
-          ),
         ),
       ),
     );
