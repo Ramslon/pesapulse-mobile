@@ -12,7 +12,6 @@ import '../widgets/app/app_scaffold.dart';
 
 const Color _premiumPurple = Color(0xFF6D3FD9);
 const Color _premiumPurpleDark = Color(0xFF34205F);
-
 const Color _analyticsTeal = Color(0xFF14B8A6);
 
 class SpendingForecastScreen extends StatefulWidget {
@@ -37,6 +36,10 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     super.initState();
     _loadForecast();
   }
+
+  // ============================================================
+  // DATA
+  // ============================================================
 
   Future<void> _loadForecast({bool refresh = false}) async {
     if (refresh) {
@@ -158,6 +161,106 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     }
   }
 
+  Color _categoryColor(String category) {
+    const categoryColors = {
+      'Food': Colors.orange,
+      'Transport': Colors.blue,
+      'Shopping': Colors.purple,
+      'Bills': Colors.red,
+      'Entertainment': Colors.pink,
+      'Health': Colors.green,
+      'Education': Colors.indigo,
+      'Other': Colors.blueGrey,
+    };
+
+    return categoryColors[category] ?? Colors.blueGrey;
+  }
+
+  IconData _categoryIcon(String category) {
+    switch (category) {
+      case 'Food':
+        return Icons.restaurant_rounded;
+
+      case 'Transport':
+        return Icons.directions_car_rounded;
+
+      case 'Shopping':
+        return Icons.shopping_bag_rounded;
+
+      case 'Bills':
+        return Icons.receipt_long_rounded;
+
+      case 'Entertainment':
+        return Icons.movie_rounded;
+
+      case 'Health':
+        return Icons.health_and_safety_rounded;
+
+      case 'Education':
+        return Icons.school_rounded;
+
+      case 'Other':
+      default:
+        return Icons.category_rounded;
+    }
+  }
+
+  List<Map<String, dynamic>> get _history {
+    final value = _data['history']?['monthly'];
+
+    if (value is! List) {
+      return [];
+    }
+
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  List<Map<String, dynamic>> get _forecast {
+    final value = _data['forecast']?['monthly'];
+
+    if (value is! List) {
+      return [];
+    }
+
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  List<Map<String, dynamic>> get _categories {
+    final value = _data['categories']?['breakdown'];
+
+    if (value is! List) {
+      return [];
+    }
+
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  List<Map<String, dynamic>> get _recommendations {
+    final value = _data['recommendations'];
+
+    if (value is! List) {
+      return [];
+    }
+
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  // ============================================================
+  // COLORS / STATES
+  // ============================================================
+
   Color _trendColor(String direction, ColorScheme scheme) {
     switch (direction) {
       case 'increasing':
@@ -217,13 +320,10 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     switch (level) {
       case 'high':
         return Colors.green;
-
       case 'medium':
         return _analyticsTeal;
-
       case 'low':
         return Colors.orange;
-
       default:
         return scheme.outline;
     }
@@ -255,57 +355,9 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     }
   }
 
-  List<Map<String, dynamic>> get _history {
-    final value = _data['history']?['monthly'];
-
-    if (value is! List) {
-      return [];
-    }
-
-    return value
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-  }
-
-  List<Map<String, dynamic>> get _forecast {
-    final value = _data['forecast']?['monthly'];
-
-    if (value is! List) {
-      return [];
-    }
-
-    return value
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-  }
-
-  List<Map<String, dynamic>> get _categories {
-    final value = _data['categories']?['breakdown'];
-
-    if (value is! List) {
-      return [];
-    }
-
-    return value
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-  }
-
-  List<Map<String, dynamic>> get _recommendations {
-    final value = _data['recommendations'];
-
-    if (value is! List) {
-      return [];
-    }
-
-    return value
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-  }
+  // ============================================================
+  // COMMON UI
+  // ============================================================
 
   Widget _sectionTitle(
     BuildContext context,
@@ -321,8 +373,16 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 21, color: _analyticsTeal),
-            const SizedBox(width: 9),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: _analyticsTeal.withOpacity(.10),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, size: 20, color: _analyticsTeal),
+            ),
+            const SizedBox(width: 11),
           ],
           Expanded(
             child: Column(
@@ -339,7 +399,8 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
                   Text(
                     subtitle,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(.68),
+                      color: theme.colorScheme.onSurface.withOpacity(.64),
+                      height: 1.35,
                     ),
                   ),
                 ],
@@ -351,20 +412,44 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     );
   }
 
+  Widget _card({
+    required BuildContext context,
+    required Widget child,
+    EdgeInsets? padding,
+  }) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding:
+            padding ?? EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
+        child: child,
+      ),
+    );
+  }
+
+  // ============================================================
+  // HERO
+  // ============================================================
+
   Widget _buildHero(BuildContext context, Map<String, dynamic> period) {
     final theme = Theme.of(context);
-
-    final compact = ResponsiveHelper.useCompactLayout(context);
 
     final historicalMonths = _toInt(period['historical_months']);
 
     final forecastMonths = _toInt(period['forecast_months']);
 
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    final dense = ResponsiveHelper.useDenseVerticalLayout(context);
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
+      padding: EdgeInsets.all(
+        compact ? 18 : ResponsiveHelper.cardPadding(context) + 2,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(compact ? 22 : 28),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -374,8 +459,8 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
         boxShadow: [
           BoxShadow(
             color: _premiumPurple.withOpacity(.18),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -383,8 +468,8 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: compact ? 46 : 52,
-            height: compact ? 46 : 52,
+            width: compact ? 46 : 56,
+            height: compact ? 46 : 56,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(.10),
               shape: BoxShape.circle,
@@ -392,11 +477,11 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
             child: Icon(
               Icons.auto_graph_rounded,
               color: Colors.white,
-              size: compact ? 24 : 28,
+              size: compact ? 24 : 29,
             ),
           ),
 
-          SizedBox(width: compact ? 12 : 16),
+          SizedBox(width: compact ? 12 : 17),
 
           Expanded(
             child: Column(
@@ -411,45 +496,31 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
                         style: theme.textTheme.headlineSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          height: 1.15,
                         ),
                       ),
                     ),
 
-                    const SizedBox(width: 10),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(.10),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'PREMIUM',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: .6,
-                        ),
-                      ),
-                    ),
+                    if (!compact) ...[
+                      const SizedBox(width: 12),
+                      _premiumBadge(),
+                    ],
                   ],
                 ),
 
-                const SizedBox(height: 6),
+                if (compact) ...[const SizedBox(height: 8), _premiumBadge()],
+
+                SizedBox(height: dense ? 9 : 12),
 
                 Text(
                   'Use your historical spending patterns to understand what may happen next.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(.72),
-                    height: 1.4,
+                    color: Colors.white.withOpacity(.74),
+                    height: 1.45,
                   ),
                 ),
 
-                const SizedBox(height: 14),
+                SizedBox(height: dense ? 12 : 16),
 
                 Wrap(
                   spacing: 8,
@@ -473,11 +544,31 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     );
   }
 
+  Widget _premiumBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(.10)),
+      ),
+      child: const Text(
+        'PREMIUM',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          letterSpacing: .7,
+        ),
+      ),
+    );
+  }
+
   Widget _heroChip({required IconData icon, required String label}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(.20),
+        color: Colors.black.withOpacity(.18),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(.08)),
       ),
@@ -499,8 +590,13 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     );
   }
 
+  // ============================================================
+  // SUMMARY
+  // ============================================================
+
   Widget _buildSummaryGrid(BuildContext context) {
     final theme = Theme.of(context);
+
     final history = _data['history'] as Map<String, dynamic>? ?? {};
 
     final totalSpending = _toDouble(history['total_spending']);
@@ -530,89 +626,113 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = ResponsiveHelper.useCompactLayout(context);
+    final columns = ResponsiveHelper.gridColumns(
+      context,
+      mobilePortrait: 2,
+      mobileLandscape: 3,
+      tabletPortrait: 3,
+      tabletLandscape: 4,
+      desktop: 4,
+    );
 
-        // Dynamically adjust columns
-        final crossAxisCount = compact
-            ? 2
-            : constraints.maxWidth >= 1200
-            ? 4
-            : constraints.maxWidth >= 800
-            ? 3
-            : 2;
+    final spacing = ResponsiveHelper.spacing(context);
 
-        final spacing = ResponsiveHelper.spacing(context);
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        crossAxisSpacing: spacing,
+        mainAxisSpacing: spacing,
+        childAspectRatio: _summaryCardAspectRatio(context),
+      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
 
-        // Dynamically adjust aspect ratio
-        final childAspectRatio = compact
-            ? 1.3
-            : constraints.maxWidth >= 1200
-            ? 2.2
-            : constraints.maxWidth >= 800
-            ? 1.8
-            : 1.5;
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: spacing,
-            mainAxisSpacing: spacing,
-            childAspectRatio: childAspectRatio,
-          ),
-          itemBuilder: (context, index) {
-            final item = items[index];
-
-            return Card(
-              elevation: 0,
-              child: Padding(
-                padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(item.$3, color: _analyticsTeal),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.$1,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(.65),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.$2,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+        return _card(
+          context: context,
+          child: _buildCardContent(context, theme, item),
         );
       },
     );
   }
 
-  Widget _buildHistoryChart(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+  double _summaryCardAspectRatio(BuildContext context) {
+    if (ResponsiveHelper.isMobilePortrait(context)) {
+      return 1.25;
+    }
 
+    if (ResponsiveHelper.isMobileLandscape(context)) {
+      return 1.55;
+    }
+
+    if (ResponsiveHelper.isTabletPortrait(context)) {
+      return 1.45;
+    }
+
+    if (ResponsiveHelper.isTabletLandscape(context)) {
+      return 1.55;
+    }
+
+    return 1.65;
+  }
+
+  Widget _buildCardContent(
+    BuildContext context,
+    ThemeData theme,
+    (String, String, IconData) item,
+  ) {
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: compact ? 32 : 38,
+          height: compact ? 32 : 38,
+          decoration: BoxDecoration(
+            color: _analyticsTeal.withOpacity(.10),
+            borderRadius: BorderRadius.circular(compact ? 9 : 11),
+          ),
+          child: Icon(item.$3, color: _analyticsTeal, size: compact ? 18 : 20),
+        ),
+        SizedBox(height: compact ? 8 : 12),
+        Text(
+          item.$1,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontSize: compact ? 11 : 12,
+            color: theme.colorScheme.onSurface.withOpacity(.62),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          item.$2,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontSize: compact ? 13 : 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // HISTORY CHART
+  // ============================================================
+
+  Widget _buildHistoryChart(BuildContext context) {
     if (_history.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     final spots = <FlSpot>[];
 
@@ -620,174 +740,199 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
       spots.add(FlSpot(index.toDouble(), _toDouble(_history[index]['spent'])));
     }
 
-    final maxValue = _history.fold<double>(0, (max, item) {
-      return math.max(max, _toDouble(item['spent']));
-    });
+    final maxValue = _history.fold<double>(
+      0,
+      (max, item) => math.max(max, _toDouble(item['spent'])),
+    );
 
     final maxY = maxValue <= 0 ? 1.0 : maxValue * 1.25;
 
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Historical spending',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Monthly spending across the selected historical period.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: scheme.onSurface.withOpacity(.65),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: ResponsiveHelper.isLandscape(context) ? 220 : 260,
-              child: LineChart(
-                LineChartData(
-                  minY: 0,
-                  maxY: maxY,
-                  minX: 0,
-                  maxX: (_history.length - 1).toDouble(),
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: maxY <= 4 ? 1 : maxY / 4,
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 48,
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            value >= 1000
-                                ? '${(value / 1000).toStringAsFixed(1)}k'
-                                : value.toStringAsFixed(0),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: scheme.onSurface.withOpacity(.55),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-                          final index = value.round();
+    final chartHeight = ResponsiveHelper.useDenseVerticalLayout(context)
+        ? 230.0
+        : ResponsiveHelper.isDesktop(context)
+        ? 300.0
+        : 270.0;
 
-                          if (index < 0 || index >= _history.length) {
-                            return const SizedBox.shrink();
-                          }
-
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              _monthLabel(
-                                _history[index]['month']?.toString() ?? '',
-                              ),
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: scheme.onSurface.withOpacity(.6),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: spots,
-                      isCurved: true,
-                      barWidth: 3,
-                      color: _analyticsTeal,
-                      dotData: const FlDotData(show: true),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: _analyticsTeal.withOpacity(.10),
-                      ),
-                    ),
-                  ],
+    return _card(
+      context: context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Historical spending',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'Monthly spending across the selected historical period.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurface.withOpacity(.62),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: chartHeight,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: maxY,
+                minX: 0,
+                maxX: (_history.length - 1).toDouble(),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: maxY <= 4 ? 1 : maxY / 4,
                 ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 48,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value >= 1000
+                              ? '${(value / 1000).toStringAsFixed(1)}k'
+                              : value.toStringAsFixed(0),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: scheme.onSurface.withOpacity(.52),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.round();
+
+                        if (index < 0 || index >= _history.length) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            _monthLabel(
+                              _history[index]['month']?.toString() ?? '',
+                            ),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: scheme.onSurface.withOpacity(.58),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    barWidth: 3,
+                    color: _analyticsTeal,
+                    dotData: const FlDotData(show: true),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: _analyticsTeal.withOpacity(.10),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  // ============================================================
+  // TREND
+  // ============================================================
 
   Widget _buildTrendCard(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
     final trend = _data['trend'] as Map<String, dynamic>? ?? {};
+
     final direction = trend['direction']?.toString() ?? 'insufficient_data';
+
     final slope = _toDouble(trend['slope']);
 
     final color = _trendColor(direction, scheme);
 
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              backgroundColor: color.withOpacity(.12),
-              foregroundColor: color,
-              child: Icon(_trendIcon(direction)),
+    return _card(
+      context: context,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withOpacity(.10),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _trendTitle(direction),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+            child: Icon(_trendIcon(direction), color: color),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _trendTitle(direction),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    _trendDescription(direction),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface.withOpacity(.68),
-                      height: 1.4,
-                    ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  _trendDescription(direction),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurface.withOpacity(.68),
+                    height: 1.4,
                   ),
-                  const SizedBox(height: 10),
-                  Text(
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
                     'Trend slope: ${slope.toStringAsFixed(2)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withOpacity(.58),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  // ============================================================
+  // FORECAST
+  // ============================================================
 
   Widget _buildForecastSection(BuildContext context) {
     final theme = Theme.of(context);
@@ -800,63 +945,51 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     final canForecast = _data['data_quality']?['can_forecast'] == true;
 
     if (!canForecast || monthly.isEmpty) {
-      return Card(
-        elevation: 0,
-        child: Padding(
-          padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.lock_clock_outlined, color: _analyticsTeal),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Forecast not available yet',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+      return _card(
+        context: context,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: _analyticsTeal.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.lock_clock_outlined,
+                    color: _analyticsTeal,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Forecast not available yet',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _data['confidence']?['message']?.toString() ??
-                    'There is not enough historical spending data to produce a reliable forecast.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurface.withOpacity(.68),
-                  height: 1.45,
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _data['confidence']?['message']?.toString() ??
+                  'There is not enough historical spending data to produce a reliable forecast.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurface.withOpacity(.68),
+                height: 1.45,
               ),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: _analyticsTeal.withOpacity(.07),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.info_outline_rounded,
-                      size: 20,
-                      color: _analyticsTeal,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'PesaPulse will start forecasting once enough monthly spending history is available.',
-                        style: theme.textTheme.bodySmall?.copyWith(height: 1.4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 14),
+            _infoBanner(
+              context,
+              'PesaPulse will start forecasting once enough monthly spending history is available.',
+            ),
+          ],
         ),
       );
     }
@@ -870,87 +1003,76 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     final highestMonth =
         forecast['highest_projected_month'] as Map<String, dynamic>?;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Card(
-          elevation: 0,
-          child: Padding(
-            padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Projected spending',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = ResponsiveHelper.useCompactLayout(context);
+    final items = [
+      ('Total projected', _money(totalProjected), Icons.summarize_outlined),
+      (
+        'Average per month',
+        _money(averageProjected),
+        Icons.calendar_view_month_outlined,
+      ),
+      (
+        'Highest projected month',
+        highestMonth == null
+            ? '—'
+            : _monthLongLabel(highestMonth['month']?.toString() ?? ''),
+        Icons.arrow_upward_rounded,
+      ),
+    ];
 
-                    final items = [
-                      (
-                        'Total projected',
-                        _money(totalProjected),
-                        Icons.summarize_outlined,
-                      ),
-                      (
-                        'Average per month',
-                        _money(averageProjected),
-                        Icons.calendar_view_month_outlined,
-                      ),
-                      (
-                        'Highest projected month',
-                        highestMonth == null
-                            ? '—'
-                            : _monthLongLabel(
-                                highestMonth['month']?.toString() ?? '',
-                              ),
-                        Icons.arrow_upward_rounded,
-                      ),
-                    ];
-
-                    if (compact || constraints.maxWidth < 850) {
-                      return Column(
-                        children: [
-                          for (var i = 0; i < items.length; i++) ...[
-                            if (i > 0) const Divider(height: 24),
-                            _buildMetricRow(
-                              context,
-                              label: items[i].$1,
-                              value: items[i].$2,
-                              icon: items[i].$3,
-                            ),
-                          ],
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      children: [
-                        for (var i = 0; i < items.length; i++) ...[
-                          Expanded(
-                            child: _buildMetricRow(
-                              context,
-                              label: items[i].$1,
-                              value: items[i].$2,
-                              icon: items[i].$3,
-                            ),
-                          ),
-                          if (i < items.length - 1) const SizedBox(width: 16),
-                        ],
-                      ],
-                    );
-                  },
-                ),
-              ],
+    return _card(
+      context: context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Projected spending',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = ResponsiveHelper.useCompactLayout(context);
+
+              if (compact ||
+                  ResponsiveHelper.isMobileLandscape(context) ||
+                  constraints.maxWidth < 700) {
+                return Column(
+                  children: [
+                    for (var i = 0; i < items.length; i++) ...[
+                      if (i > 0) const Divider(height: 24),
+                      _buildMetricRow(
+                        context,
+                        label: items[i].$1,
+                        value: items[i].$2,
+                        icon: items[i].$3,
+                      ),
+                    ],
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    Expanded(
+                      child: _buildMetricRow(
+                        context,
+                        label: items[i].$1,
+                        value: items[i].$2,
+                        icon: items[i].$3,
+                      ),
+                    ),
+                    if (i < items.length - 1)
+                      SizedBox(width: ResponsiveHelper.spacing(context)),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -965,7 +1087,15 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: _analyticsTeal, size: 21),
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: _analyticsTeal.withOpacity(.10),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: _analyticsTeal, size: 19),
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -993,6 +1123,10 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     );
   }
 
+  // ============================================================
+  // CONFIDENCE
+  // ============================================================
+
   Widget _buildConfidenceCard(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -1007,45 +1141,50 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
     final color = _confidenceColor(level, scheme);
 
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              backgroundColor: color.withOpacity(.12),
-              foregroundColor: color,
-              child: Icon(_confidenceIcon(level)),
+    return _card(
+      context: context,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withOpacity(.10),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _confidenceTitle(level),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+            child: Icon(_confidenceIcon(level), color: color),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _confidenceTitle(level),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    message,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface.withOpacity(.68),
-                      height: 1.4,
-                    ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  message,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurface.withOpacity(.68),
+                    height: 1.4,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  // ============================================================
+  // CATEGORIES
+  // ============================================================
 
   Widget _buildCategories(BuildContext context) {
     if (_categories.isEmpty) {
@@ -1055,93 +1194,145 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Category contribution',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+    return _card(
+      context: context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Category contribution',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 6),
-            Text(
-              'How your historical spending is distributed across categories.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: scheme.onSurface.withOpacity(.65),
-              ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'How your historical spending is distributed across categories.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurface.withOpacity(.62),
             ),
-            const SizedBox(height: 18),
-            for (var index = 0; index < _categories.length; index++) ...[
-              if (index > 0) const SizedBox(height: 16),
-              _buildCategoryRow(context, _categories[index]),
-            ],
+          ),
+          const SizedBox(height: 18),
+          for (var index = 0; index < _categories.length; index++) ...[
+            if (index > 0) SizedBox(height: ResponsiveHelper.spacing(context)),
+            _buildCategoryRow(context, _categories[index]),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildCategoryRow(
-    BuildContext context,
-    Map<String, dynamic> category,
-  ) {
+  Widget _buildCategoryRow(BuildContext context, Map<String, dynamic> item) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    final name = category['category']?.toString() ?? 'Other';
+    final category = item['category']?.toString() ?? 'Other';
+    final amount = _toDouble(item['amount']);
 
-    final amount = _toDouble(category['historical_spending']);
+    final percentage = _toDouble(
+      item['percentage'] ??
+          item['percent'] ??
+          item['share'] ??
+          item['contribution'],
+    );
 
-    final percentage = _toDouble(category['percentage']);
+    final color = _categoryColor(category);
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                name,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+    final displayPercentage = percentage > 1 ? percentage : percentage * 100;
+
+    return Container(
+      padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context) * 0.75),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.045),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.10)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(_categoryIcon(category), color: color, size: 21),
+              ),
+
+              SizedBox(width: ResponsiveHelper.spacing(context) * 0.7),
+
+              Expanded(
+                child: Text(
+                  category,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
+
+              const SizedBox(width: 8),
+
+              Text(
+                _money(amount),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: ResponsiveHelper.spacing(context) * 0.65),
+
+          if (percentage > 0) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: (displayPercentage / 100).clamp(0.0, 1.0),
+                      minHeight: 7,
+                      backgroundColor: color.withOpacity(0.10),
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                Text(
+                  '${displayPercentage.toStringAsFixed(1)}%',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
-            Text(
-              _money(amount),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+          ] else ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: 0,
+                minHeight: 7,
+                backgroundColor: scheme.onSurface.withOpacity(0.08),
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(99),
-          child: LinearProgressIndicator(
-            value: (percentage / 100).clamp(0, 1),
-            minHeight: 8,
-            backgroundColor: scheme.surfaceContainerHighest,
-            color: _analyticsTeal,
-          ),
-        ),
-        const SizedBox(height: 5),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            '${percentage.toStringAsFixed(1)}%',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: scheme.onSurface.withOpacity(.58),
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+
+  // ============================================================
+  // RECOMMENDATIONS
+  // ============================================================
 
   Widget _buildRecommendations(BuildContext context) {
     if (_recommendations.isEmpty) {
@@ -1150,26 +1341,23 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
     final theme = Theme.of(context);
 
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Recommendations',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+    return _card(
+      context: context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recommendations',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 12),
-            for (var index = 0; index < _recommendations.length; index++) ...[
-              if (index > 0) const Divider(height: 24),
-              _buildRecommendation(context, _recommendations[index]),
-            ],
+          ),
+          const SizedBox(height: 12),
+          for (var index = 0; index < _recommendations.length; index++) ...[
+            if (index > 0) const Divider(height: 24),
+            _buildRecommendation(context, _recommendations[index]),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1204,7 +1392,15 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: _analyticsTeal, size: 22),
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: _analyticsTeal.withOpacity(.10),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: _analyticsTeal, size: 20),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -1220,6 +1416,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     priority.toUpperCase(),
                     style: theme.textTheme.labelSmall?.copyWith(
@@ -1244,9 +1441,12 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     );
   }
 
+  // ============================================================
+  // DATA QUALITY
+  // ============================================================
+
   Widget _buildDataQuality(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
 
     final quality = _data['data_quality'] as Map<String, dynamic>? ?? {};
 
@@ -1262,74 +1462,60 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
     final basis = quality['forecast_basis']?.toString() ?? '';
 
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.fact_check_outlined, color: _analyticsTeal),
-                const SizedBox(width: 10),
-                Text(
-                  'Data quality',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildQualityRow(context, 'Historical months', '$monthsAvailable'),
-            _buildQualityRow(
-              context,
-              'Months with spending',
-              '$monthsWithSpending',
-            ),
-            _buildQualityRow(
-              context,
-              'Forecast available',
-              canForecast ? 'Yes' : 'Not yet',
-            ),
-            if (basis.isNotEmpty)
-              _buildQualityRow(context, 'Forecast basis', basis),
-            if (currentMonthPartial &&
-                partialMonthNote != null &&
-                partialMonthNote.isNotEmpty) ...[
-              const SizedBox(height: 12),
+    return _card(
+      context: context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
               Container(
-                padding: const EdgeInsets.all(14),
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: _analyticsTeal.withOpacity(.07),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _analyticsTeal.withOpacity(.12)),
+                  color: _analyticsTeal.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(11),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 20,
-                      color: _analyticsTeal,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        partialMonthNote,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurface.withOpacity(.72),
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: const Icon(
+                  Icons.fact_check_outlined,
+                  color: _analyticsTeal,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Data quality',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          _buildQualityRow(context, 'Historical months', '$monthsAvailable'),
+          _buildQualityRow(
+            context,
+            'Months with spending',
+            '$monthsWithSpending',
+          ),
+          _buildQualityRow(
+            context,
+            'Forecast available',
+            canForecast ? 'Yes' : 'Not yet',
+          ),
+          if (basis.isNotEmpty)
+            _buildQualityRow(context, 'Forecast basis', basis),
+          if (currentMonthPartial &&
+              partialMonthNote != null &&
+              partialMonthNote.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _infoBanner(
+              context,
+              partialMonthNote,
+              icon: Icons.calendar_today_outlined,
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1338,7 +1524,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 11),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1365,6 +1551,41 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     );
   }
 
+  // ============================================================
+  // INFO / ERROR
+  // ============================================================
+
+  Widget _infoBanner(
+    BuildContext context,
+    String message, {
+    IconData icon = Icons.info_outline_rounded,
+  }) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _analyticsTeal.withOpacity(.07),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _analyticsTeal.withOpacity(.12)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: _analyticsTeal),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildErrorState(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -1374,40 +1595,49 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
         constraints: const BoxConstraints(maxWidth: 460),
         child: Padding(
           padding: EdgeInsets.all(ResponsiveHelper.cardPadding(context)),
-          child: Card(
-            elevation: 0,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.cloud_off_rounded, size: 46, color: scheme.error),
-                  const SizedBox(height: 14),
-                  Text(
-                    'Unable to load spending forecast',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+          child: _card(
+            context: context,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: scheme.error.withOpacity(.10),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _errorMessage ??
-                        'Something went wrong while loading the forecast.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface.withOpacity(.68),
-                      height: 1.4,
-                    ),
+                  child: Icon(
+                    Icons.cloud_off_rounded,
+                    size: 32,
+                    color: scheme.error,
                   ),
-                  const SizedBox(height: 18),
-                  FilledButton.icon(
-                    onPressed: () => _loadForecast(),
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Try Again'),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Unable to load spending forecast',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _errorMessage ??
+                      'Something went wrong while loading the forecast.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurface.withOpacity(.68),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: () => _loadForecast(),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try Again'),
+                ),
+              ],
             ),
           ),
         ),
@@ -1415,8 +1645,14 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
     );
   }
 
+  // ============================================================
+  // CONTENT
+  // ============================================================
+
   Widget _buildContent(BuildContext context) {
     final period = _data['period'] as Map<String, dynamic>? ?? {};
+
+    final sectionSpacing = ResponsiveHelper.sectionSpacing(context);
 
     return RefreshIndicator(
       onRefresh: () => _loadForecast(refresh: true),
@@ -1430,16 +1666,16 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
             child: Padding(
               padding: EdgeInsets.fromLTRB(
                 ResponsiveHelper.horizontalPadding(context),
-                ResponsiveHelper.spacing(context),
+                sectionSpacing,
                 ResponsiveHelper.horizontalPadding(context),
-                ResponsiveHelper.sectionSpacing(context) * 2,
+                sectionSpacing * 2,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildHero(context, period),
 
-                  SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+                  SizedBox(height: sectionSpacing),
 
                   _sectionTitle(
                     context,
@@ -1451,11 +1687,11 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
                   _buildSummaryGrid(context),
 
-                  SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+                  SizedBox(height: sectionSpacing),
 
                   _buildHistoryChart(context),
 
-                  SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+                  SizedBox(height: sectionSpacing),
 
                   _sectionTitle(
                     context,
@@ -1465,7 +1701,7 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
                   _buildTrendCard(context),
 
-                  SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+                  SizedBox(height: sectionSpacing),
 
                   _sectionTitle(
                     context,
@@ -1477,27 +1713,35 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
 
                   _buildForecastSection(context),
 
-                  SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+                  SizedBox(height: sectionSpacing),
 
                   _buildConfidenceCard(context),
 
                   if (_categories.isNotEmpty) ...[
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-
+                    SizedBox(height: sectionSpacing),
                     _sectionTitle(
                       context,
                       'Category contribution',
+                      subtitle:
+                          'See which categories have contributed most to your historical spending.',
                       icon: Icons.category_outlined,
                     ),
                     _buildCategories(context),
                   ],
 
                   if (_recommendations.isNotEmpty) ...[
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+                    SizedBox(height: sectionSpacing),
+                    _sectionTitle(
+                      context,
+                      'Smart recommendations',
+                      subtitle:
+                          'Insights generated from your spending patterns.',
+                      icon: Icons.lightbulb_outline_rounded,
+                    ),
                     _buildRecommendations(context),
                   ],
 
-                  SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+                  SizedBox(height: sectionSpacing),
 
                   _buildDataQuality(context),
                 ],
@@ -1508,6 +1752,10 @@ class _SpendingForecastScreenState extends State<SpendingForecastScreen> {
       ),
     );
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
