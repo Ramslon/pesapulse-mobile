@@ -5,6 +5,7 @@ import '../services/api_services.dart';
 import '../utils/responsive_helper.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
+import '../widgets/premium/premium_state_widgets.dart';
 
 const Color _premiumPurple = Color(0xFF6D3FD9);
 const Color _premiumPurpleDark = Color(0xFF34205F);
@@ -297,18 +298,44 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
   }
 
   Widget _buildBody(ThemeData theme) {
+    // Initial loading: no simulation data exists yet.
     if (_isLoading && _data == null) {
-      return _buildLoadingState(theme);
+      return const PremiumLoadingState(
+        title: 'Preparing budget simulation',
+        message: 'Loading your current budget position...',
+        accentColor: _premiumPurple,
+        icon: Icons.science_outlined,
+      );
     }
 
+    // Initial loading failure: no usable data exists.
+    if (_errorMessage != null && _data == null) {
+      return PremiumErrorState(
+        title: 'Unable to load budget simulation',
+        message:
+            _errorMessage ??
+            'Something went wrong while loading the simulation.',
+        onRetry: _loadInitialSimulation,
+        accentColor: _premiumPurple,
+        icon: Icons.cloud_off_rounded,
+        retryLabel: 'Try Again',
+      );
+    }
+
+    // Defensive fallback.
     if (_data == null) {
-      return _buildErrorState(theme);
+      return PremiumErrorState(
+        title: 'Budget simulation unavailable',
+        message: 'No simulation data is currently available.',
+        onRetry: _loadInitialSimulation,
+        accentColor: _premiumPurple,
+        icon: Icons.analytics_outlined,
+        retryLabel: 'Reload',
+      );
     }
 
     final compact = ResponsiveHelper.useCompactLayout(context);
-
     final landscape = ResponsiveHelper.isLandscape(context);
-
     final desktop = ResponsiveHelper.isDesktop(context);
 
     final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
@@ -343,6 +370,16 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Refresh/simulation error while existing data
+                  // remains visible.
+                  if (_errorMessage != null) ...[
+                    PremiumInlineError(
+                      message: _errorMessage!,
+                      accentColor: _premiumPurple,
+                    ),
+                    SizedBox(height: sectionSpacing),
+                  ],
+
                   _buildHero(theme, compact),
 
                   SizedBox(height: sectionSpacing),
@@ -364,11 +401,6 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
                   SizedBox(height: sectionSpacing),
 
                   _buildSimulationExplanation(theme, compact),
-
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 16),
-                    _buildInlineError(theme),
-                  ],
                 ],
               ),
             ),
@@ -1606,155 +1638,6 @@ class _BudgetSimulationScreenState extends State<BudgetSimulationScreen> {
   // ============================================================
   // ERROR / LOADING
   // ============================================================
-
-  Widget _buildLoadingState(ThemeData theme) {
-    final compact = ResponsiveHelper.useCompactLayout(context);
-
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(compact ? 24 : 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: compact ? 66 : 74,
-              height: compact ? 66 : 74,
-              decoration: BoxDecoration(
-                color: _premiumPurple.withOpacity(0.09),
-                borderRadius: BorderRadius.circular(compact ? 19 : 21),
-              ),
-              child: CircularProgressIndicator(
-                strokeWidth: compact ? 3 : 3.2,
-                color: _premiumPurple,
-              ),
-            ),
-
-            SizedBox(height: compact ? 15 : 18),
-
-            Text(
-              'Preparing budget simulation',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-
-            const SizedBox(height: 5),
-
-            Text(
-              'Loading your current budget position...',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(ThemeData theme) {
-    final compact = ResponsiveHelper.useCompactLayout(context);
-
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(compact ? 20 : 28),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 520),
-          padding: EdgeInsets.all(compact ? 18 : 24),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(compact ? 19 : 22),
-            border: Border.all(
-              color: theme.colorScheme.error.withOpacity(0.12),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: compact ? 58 : 66,
-                height: compact ? 58 : 66,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.error.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(
-                  Icons.cloud_off_rounded,
-                  size: compact ? 27 : 30,
-                  color: theme.colorScheme.error,
-                ),
-              ),
-
-              SizedBox(height: compact ? 13 : 16),
-
-              Text(
-                'Unable to load budget simulation',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Text(
-                _errorMessage ??
-                    'Something went wrong while loading the simulation.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  height: 1.4,
-                ),
-              ),
-
-              SizedBox(height: compact ? 16 : 20),
-
-              FilledButton.icon(
-                onPressed: _loadInitialSimulation,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Try Again'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInlineError(ThemeData theme) {
-    final compact = ResponsiveHelper.useCompactLayout(context);
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(compact ? 12 : 14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.error.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(compact ? 14 : 16),
-        border: Border.all(color: theme.colorScheme.error.withOpacity(0.16)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.error_outline_rounded,
-            color: theme.colorScheme.error,
-            size: compact ? 18 : 20,
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              _errorMessage!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
