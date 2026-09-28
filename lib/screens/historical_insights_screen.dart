@@ -8,6 +8,7 @@ import '../services/api_services.dart';
 import '../utils/responsive_helper.dart';
 import '../widgets/app/adaptive_app_bar.dart';
 import '../widgets/app/app_scaffold.dart';
+import '../widgets/premium/premium_state_widgets.dart';
 
 const Color _premiumPurple = Color(0xFF6D3FD9);
 const Color _premiumPurpleDark = Color(0xFF34205F);
@@ -91,7 +92,7 @@ class _HistoricalInsightsScreenState extends State<HistoricalInsightsScreen> {
     final message = error.toString();
 
     if (message.startsWith('Exception: ')) {
-      return message.substring(11);
+      return message.substring('Exception: '.length);
     }
 
     return message;
@@ -313,14 +314,40 @@ class _HistoricalInsightsScreenState extends State<HistoricalInsightsScreen> {
   }
 
   Widget _buildBody(BuildContext context, ThemeData theme) {
+    // Initial loading: there is no historical data to display yet.
     if (_isLoading && _data == null) {
-      return const Center(
-        child: CircularProgressIndicator(color: _analyticsTeal),
+      return const PremiumLoadingState(
+        title: 'Preparing historical insights',
+        message: 'Analyzing your spending history and identifying patterns...',
+        accentColor: _premiumPurple,
+        icon: Icons.auto_graph_rounded,
       );
     }
 
+    // Initial load failed: there is no existing data to keep on screen.
+    if (_errorMessage != null && _data == null) {
+      return PremiumErrorState(
+        title: 'Unable to load historical insights',
+        message:
+            _errorMessage ??
+            'Something went wrong while loading your historical spending data.',
+        onRetry: _loadHistoricalInsights,
+        accentColor: _premiumPurple,
+        icon: Icons.cloud_off_rounded,
+        retryLabel: 'Try Again',
+      );
+    }
+
+    // Defensive fallback.
     if (_data == null) {
-      return _buildErrorState(context);
+      return PremiumErrorState(
+        title: 'Historical insights unavailable',
+        message: 'No historical insight data is currently available.',
+        onRetry: _loadHistoricalInsights,
+        accentColor: _premiumPurple,
+        icon: Icons.analytics_outlined,
+        retryLabel: 'Reload',
+      );
     }
 
     final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
@@ -346,27 +373,48 @@ class _HistoricalInsightsScreenState extends State<HistoricalInsightsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildHero(context),
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-                    _buildPeriodSelector(context),
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-                    _buildSummary(context),
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-                    _buildTrendCard(context),
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-                    _buildMonthlyHistory(context),
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-                    _buildHighestLowest(context),
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-                    _buildCategorySection(context),
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-                    _buildInsightsSection(context),
-                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
-                    _buildDataQuality(context),
+                    // Existing data remains visible if a refresh fails.
                     if (_errorMessage != null) ...[
+                      PremiumInlineError(
+                        message: _errorMessage!,
+                        accentColor: _analyticsTeal,
+                      ),
                       const SizedBox(height: 16),
-                      _buildInlineError(context),
                     ],
+
+                    _buildHero(context),
+
+                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+
+                    _buildPeriodSelector(context),
+
+                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+
+                    _buildSummary(context),
+
+                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+
+                    _buildTrendCard(context),
+
+                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+
+                    _buildMonthlyHistory(context),
+
+                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+
+                    _buildHighestLowest(context),
+
+                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+
+                    _buildCategorySection(context),
+
+                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+
+                    _buildInsightsSection(context),
+
+                    SizedBox(height: ResponsiveHelper.sectionSpacing(context)),
+
+                    _buildDataQuality(context),
                   ],
                 ),
               ),
@@ -374,6 +422,8 @@ class _HistoricalInsightsScreenState extends State<HistoricalInsightsScreen> {
           ),
         ),
 
+        // Keep the lightweight refresh indicator because Historical Insights
+        // already tracks refresh separately from initial loading.
         if (_isRefreshing)
           const Positioned(
             top: 0,
@@ -1959,113 +2009,6 @@ class _HistoricalInsightsScreenState extends State<HistoricalInsightsScreen> {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // ERROR STATES
-  // ---------------------------------------------------------------------------
-
-  Widget _buildErrorState(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: _card(
-            context: context,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 68,
-                  height: 68,
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.cloud_off_rounded,
-                    color: Colors.red,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Unable to load insights',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _errorMessage ??
-                      'Something went wrong while loading your historical spending data.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: _isLoading
-                      ? null
-                      : () => _loadHistoricalInsights(),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Try again'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _analyticsTeal,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 13,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInlineError(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.red.withOpacity(0.12)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _errorMessage!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.red,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () => _loadHistoricalInsights(refresh: true),
-            icon: const Icon(Icons.refresh_rounded, size: 20),
-            color: Colors.red,
-            tooltip: 'Retry',
           ),
         ],
       ),
