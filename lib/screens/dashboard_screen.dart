@@ -962,18 +962,32 @@ class _DashboardScreenState extends State<DashboardScreen>
                     children: [
                       CircularProgressIndicator(
                         value: safeScore / 100,
-                        strokeWidth: compact ? 8 : 10,
+                        strokeWidth: compact ? 7 : 8,
                         strokeCap: StrokeCap.round,
                         backgroundColor: colorScheme.surfaceContainerHighest,
                         color: healthColor,
                       ),
 
-                      Text(
-                        safeScore.toStringAsFixed(0),
-                        style: TextStyle(
-                          color: healthColor,
-                          fontSize: compact ? 23 : 29,
-                          fontWeight: FontWeight.w900,
+                      Container(
+                        width: compact ? 48 : 58,
+                        height: compact ? 48 : 58,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.cardColor,
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            safeScore.toStringAsFixed(0),
+                            maxLines: 1,
+                            style: TextStyle(
+                              color: healthColor,
+                              fontSize: compact ? 22 : 27,
+                              fontWeight: FontWeight.w900,
+                              height: 1,
+                            ),
+                          ),
                         ),
                       ),
                     ],
