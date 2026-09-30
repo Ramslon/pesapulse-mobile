@@ -770,7 +770,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     if (landscape && !compact) {
       return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (int index = 0; index < cards.length; index++) ...[
             if (index > 0) SizedBox(width: spacing),
@@ -781,7 +781,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
       );
     }
-
     final rowSpacing = compact ? 10.0 : 14.0;
 
     return Column(

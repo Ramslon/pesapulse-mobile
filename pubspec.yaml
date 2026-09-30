@@ -53,6 +53,12 @@ dependencies:
   path_provider: ^2.1.4
 
   sqflite: ^2.4.2
+   # Desktop (Windows/Linux/macOS)
+  sqflite_common_ffi: ^2.3.0
+
+  # Web
+  sqflite_common_ffi_web: 1.0.2
+
   path: ^1.9.1
   connectivity_plus: ^6.1.5
   permission_handler: ^12.0.1
@@ -65,10 +71,8 @@ dependencies:
   flutter_animate: ^4.5.0
 
   uuid: ^4.5.1
+
   
-
-
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
