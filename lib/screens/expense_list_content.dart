@@ -53,6 +53,39 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
   String selectedCategory = 'All';
 
+  DateTime _selectedPeriod = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+  );
+
+  bool _isLoadingHistoricalPeriod = false;
+
+  bool get _isCurrentPeriod {
+    final now = DateTime.now();
+
+    return _selectedPeriod.year == now.year &&
+        _selectedPeriod.month == now.month;
+  }
+
+  String get _selectedPeriodLabel {
+    final months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    return '${months[_selectedPeriod.month - 1]} ${_selectedPeriod.year}';
+  }
+
   bool filtersExpanded = false;
 
   bool get hasNoExpenses => expenses.isEmpty;
@@ -207,7 +240,119 @@ class ExpenseListContentState extends State<ExpenseListContent>
   void _handleExpensesRefresh() {
     if (!mounted) return;
 
-    _reloadExpensesFromLocal();
+    if (_isCurrentPeriod) {
+      _reloadExpensesFromLocal();
+    } else {
+      _loadSelectedPeriod();
+    }
+  }
+
+  Future<void> _loadSelectedPeriod({bool showSuccessMessage = false}) async {
+    if (_isLoadingHistoricalPeriod) return;
+
+    setState(() {
+      _isLoadingHistoricalPeriod = true;
+      isLoading = true;
+      expenses.clear();
+      filteredExpenses.clear();
+    });
+
+    try {
+      final loadedExpenses = <Map<String, dynamic>>[];
+
+      int page = 1;
+      bool hasMore = true;
+
+      while (hasMore) {
+        final response = await expenseRepository.getExpenses(
+          page: page,
+          month: _selectedPeriod.month,
+          year: _selectedPeriod.year,
+        );
+
+        final pageExpenses = (response["data"] as List? ?? [])
+            .map((expense) => Map<String, dynamic>.from(expense))
+            .toList();
+
+        loadedExpenses.addAll(pageExpenses);
+
+        final nextPageUrl = response["next_page_url"];
+
+        hasMore = nextPageUrl != null && nextPageUrl.toString().isNotEmpty;
+
+        if (hasMore) {
+          page++;
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        expenses = loadedExpenses;
+
+        filterExpenses();
+
+        isLoading = false;
+        _isLoadingHistoricalPeriod = false;
+      });
+
+      if (showSuccessMessage) {
+        SnackbarHelper.showSuccess(
+          context,
+          '$_selectedPeriodLabel expenses updated',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+        _isLoadingHistoricalPeriod = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to load $_selectedPeriodLabel expenses: $e'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showPeriodPicker() async {
+    final now = DateTime.now();
+
+    final selected = await showModalBottomSheet<DateTime>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return _ExpensePeriodPicker(
+          selectedPeriod: _selectedPeriod,
+          currentPeriod: DateTime(now.year, now.month),
+        );
+      },
+    );
+
+    if (selected == null || !mounted) return;
+
+    if (selected.year == _selectedPeriod.year &&
+        selected.month == _selectedPeriod.month) {
+      return;
+    }
+
+    setState(() {
+      _selectedPeriod = DateTime(selected.year, selected.month);
+
+      selectedDateFilter = 'All';
+      selectedCategory = 'All';
+      selectedSort = 'Newest';
+      searchController.clear();
+    });
+
+    await _loadSelectedPeriod();
   }
 
   Future<void> _loadMoreExpenses() async {
@@ -231,7 +376,10 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
   Future<void> _reloadExpensesFromLocal() async {
     try {
-      final localExpenses = await expenseRepository.getExpensesFromLocal();
+      final localExpenses = await expenseRepository.getExpensesFromLocal(
+        month: _selectedPeriod.month,
+        year: _selectedPeriod.year,
+      );
 
       if (!mounted) return;
 
@@ -242,7 +390,9 @@ class ExpenseListContentState extends State<ExpenseListContent>
       });
 
       debugPrint(
-        'ExpenseListContent: reloaded ${localExpenses.length} expenses from local cache.',
+        'ExpenseListContent: reloaded '
+        '${localExpenses.length} '
+        '$_selectedPeriodLabel expenses from local cache.',
       );
     } catch (e) {
       debugPrint('ExpenseListContent: failed to reload local expenses: $e');
@@ -251,14 +401,14 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
   Future<void> _initialFetchExpenses() async {
     try {
-      debugPrint('ExpenseController: requesting initial expenses...');
+      debugPrint('ExpenseListContent: requesting current month expenses...');
 
       final newExpenses = await expenseController.fetchExpenses();
 
       if (!mounted) return;
 
       setState(() {
-        expenses.addAll(newExpenses);
+        expenses = newExpenses;
 
         filterExpenses();
 
@@ -307,6 +457,14 @@ class ExpenseListContentState extends State<ExpenseListContent>
   }
 
   Future<void> refreshExpenses() async {
+    if (_isLoadingHistoricalPeriod) return;
+
+    if (!_isCurrentPeriod) {
+      await _loadSelectedPeriod(showSuccessMessage: true);
+
+      return;
+    }
+
     setState(() {
       isLoading = true;
       expenses.clear();
@@ -474,6 +632,8 @@ class ExpenseListContentState extends State<ExpenseListContent>
               child: ExpenseListHeader(horizontalPadding: horizontalPadding),
             ),
 
+            SliverToBoxAdapter(child: _buildPeriodSelector(context)),
+
             SliverToBoxAdapter(
               child: ExpenseSummarySection(
                 totalAmount: filteredTotalAmount,
@@ -595,7 +755,7 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
             _buildExpenseList(),
 
-            if (expenseController.hasMore)
+            if (_isCurrentPeriod && expenseController.hasMore)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.all(compact ? 14 : 20),
@@ -732,6 +892,226 @@ class ExpenseListContentState extends State<ExpenseListContent>
           await refreshExpenses();
         }
       },
+    );
+  }
+
+  Widget _buildPeriodSelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final compact = ResponsiveHelper.useCompactLayout(context);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 14 : 20,
+        vertical: compact ? 8 : 10,
+      ),
+      child: Container(
+        padding: EdgeInsets.all(compact ? 12 : 14),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(compact ? 16 : 18),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withOpacity(0.6),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: compact ? 40 : 44,
+              height: compact ? 40 : 44,
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                _isCurrentPeriod
+                    ? Icons.calendar_month_rounded
+                    : Icons.history_rounded,
+                color: colorScheme.primary,
+                size: compact ? 20 : 22,
+              ),
+            ),
+
+            SizedBox(width: compact ? 10 : 12),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isCurrentPeriod ? 'Current Month' : 'Expense History',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 2),
+
+                  Text(
+                    _selectedPeriodLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            OutlinedButton.icon(
+              onPressed: _showPeriodPicker,
+              icon: Icon(Icons.swap_horiz_rounded, size: compact ? 17 : 18),
+              label: Text(compact ? 'Change' : 'Change Period'),
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 10 : 12,
+                  vertical: compact ? 9 : 10,
+                ),
+                visualDensity: compact
+                    ? VisualDensity.compact
+                    : VisualDensity.standard,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpensePeriodPicker extends StatelessWidget {
+  final DateTime selectedPeriod;
+  final DateTime currentPeriod;
+
+  const _ExpensePeriodPicker({
+    required this.selectedPeriod,
+    required this.currentPeriod,
+  });
+
+  static const List<String> _months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final periods = <DateTime>[];
+
+    // Show the current month plus the previous 11 months.
+    for (int i = 0; i < 12; i++) {
+      periods.add(DateTime(currentPeriod.year, currentPeriod.month - i));
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Expense Period',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              'Choose a month to view its expenses.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 420),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: periods.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                itemBuilder: (context, index) {
+                  final period = periods[index];
+
+                  final isSelected =
+                      period.year == selectedPeriod.year &&
+                      period.month == selectedPeriod.month;
+
+                  final isCurrent =
+                      period.year == currentPeriod.year &&
+                      period.month == currentPeriod.month;
+
+                  return ListTile(
+                    selected: isSelected,
+                    selectedTileColor: colorScheme.primary.withOpacity(0.08),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    leading: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? colorScheme.primary.withOpacity(0.12)
+                            : colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        isCurrent
+                            ? Icons.calendar_today_rounded
+                            : Icons.history_rounded,
+                        size: 19,
+                        color: isSelected
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    title: Text(
+                      '${_months[period.month - 1]} ${period.year}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: isCurrent
+                        ? const Text('Current month')
+                        : const Text('Expense history'),
+                    trailing: isSelected
+                        ? Icon(
+                            Icons.check_circle_rounded,
+                            color: colorScheme.primary,
+                          )
+                        : null,
+                    onTap: () {
+                      Navigator.pop(context, period);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

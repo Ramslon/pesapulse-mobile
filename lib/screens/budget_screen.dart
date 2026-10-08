@@ -48,6 +48,10 @@ class BudgetScreen extends StatefulWidget {
 
 class BudgetScreenState extends State<BudgetScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+  // ---------------------------------------------------------------------------
+  // CONTROLLERS / REPOSITORIES
+  // ---------------------------------------------------------------------------
+
   final BudgetController controller = BudgetController(
     budgetRepository: BudgetRepository(),
     insightsRepository: FinancialInsightsRepository(),
@@ -60,19 +64,47 @@ class BudgetScreenState extends State<BudgetScreen>
   final SubscriptionController subscriptionController =
       SubscriptionController();
 
+  // ---------------------------------------------------------------------------
+  // PREMIUM STATE
+  // ---------------------------------------------------------------------------
+
   bool _subscriptionLoading = false;
   bool _premiumCheckoutInProgress = false;
   bool _checkingPayment = false;
 
+  bool _premiumPaymentVerificationPending = false;
+
+  // ---------------------------------------------------------------------------
+  // CONNECTIVITY
+  // ---------------------------------------------------------------------------
+
   late ConnectivityProvider _network;
 
   bool? _wasOnline;
-  bool _premiumPaymentVerificationPending = false;
 
-  bool get _premiumCardLoading =>
-      _premiumCheckoutInProgress ||
-      _checkingPayment ||
-      (_subscriptionLoading && !subscriptionController.hasPremiumAccess);
+  // ---------------------------------------------------------------------------
+  // SELECTED BUDGET PERIOD
+  // ---------------------------------------------------------------------------
+
+  DateTime _selectedBudgetPeriod = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+  );
+
+  bool get _isCurrentBudgetPeriod {
+    final now = DateTime.now();
+
+    return _selectedBudgetPeriod.year == now.year &&
+        _selectedBudgetPeriod.month == now.month;
+  }
+
+  String get _selectedBudgetPeriodLabel {
+    return _formatBudgetPeriod(_selectedBudgetPeriod);
+  }
+
+  // ---------------------------------------------------------------------------
+  // BUDGET CALCULATIONS
+  // ---------------------------------------------------------------------------
 
   double get percentageUsed =>
       BudgetCalculator.percentageUsed(budget: state.budget, spent: state.spent);
@@ -80,12 +112,35 @@ class BudgetScreenState extends State<BudgetScreen>
   double get remainingAmount =>
       BudgetCalculator.remaining(budget: state.budget, spent: state.spent);
 
-  int get daysRemaining => BudgetCalculator.daysRemaining();
+  int get daysRemaining {
+    // Historical periods are already completed.
+    //
+    // Returning zero is more meaningful than showing the number
+    // of days remaining in the current month.
+    if (!_isCurrentBudgetPeriod) {
+      return 0;
+    }
+
+    return BudgetCalculator.daysRemaining();
+  }
 
   Color get statusColor =>
       BudgetCalculator.statusColor(context, state.budgetStatus);
 
   String get statusText => BudgetCalculator.statusText(state.budgetStatus);
+
+  // ---------------------------------------------------------------------------
+  // PREMIUM CARD LOADING
+  // ---------------------------------------------------------------------------
+
+  bool get _premiumCardLoading =>
+      _premiumCheckoutInProgress ||
+      _checkingPayment ||
+      (_subscriptionLoading && !subscriptionController.hasPremiumAccess);
+
+  // ---------------------------------------------------------------------------
+  // INIT
+  // ---------------------------------------------------------------------------
 
   @override
   void initState() {
@@ -103,10 +158,13 @@ class BudgetScreenState extends State<BudgetScreen>
     loadBudget();
   }
 
-  // Lifecycle callback
+  // ---------------------------------------------------------------------------
+  // APP LIFECYCLE
+  // ---------------------------------------------------------------------------
+
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) {
+  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
+    if (lifecycleState != AppLifecycleState.resumed) {
       return;
     }
 
@@ -137,11 +195,19 @@ class BudgetScreenState extends State<BudgetScreen>
     _verifyPremiumAfterPayment();
   }
 
+  // ---------------------------------------------------------------------------
+  // SUBSCRIPTION
+  // ---------------------------------------------------------------------------
+
   void _onSubscriptionChanged() {
     if (!mounted) return;
 
     setState(() {});
   }
+
+  // ---------------------------------------------------------------------------
+  // CONNECTIVITY
+  // ---------------------------------------------------------------------------
 
   void _onConnectivityChanged() {
     final isOnline = _network.isOnline;
@@ -163,9 +229,6 @@ class BudgetScreenState extends State<BudgetScreen>
         return;
       }
 
-      // A pending payment verification already refreshes the
-      // subscription when payment is confirmed, so avoid starting
-      // a second subscription refresh at the same time.
       if (_premiumPaymentVerificationPending) {
         _verifyPremiumAfterPayment();
       } else {
@@ -174,24 +237,40 @@ class BudgetScreenState extends State<BudgetScreen>
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // LOAD SELECTED BUDGET PERIOD
+  // ---------------------------------------------------------------------------
+
   Future<void> refreshBudget() async {
     await loadBudget();
   }
 
   Future<void> loadBudget() async {
+    final month = _selectedBudgetPeriod.month;
+    final year = _selectedBudgetPeriod.year;
+
+    debugPrint(
+      'BudgetScreen: loading budget '
+      '$year-${month.toString().padLeft(2, '0')}',
+    );
+
     try {
-      final newState = await controller.loadAll();
+      final newState = await controller.loadAll(month: month, year: year);
 
       if (!mounted) return;
 
       setState(() {
         state = newState;
 
-        budgetController.text = state.budget.toStringAsFixed(0);
+        budgetController.text = state.budget > 0
+            ? state.budget.toStringAsFixed(0)
+            : '';
       });
 
       await _loadSubscription();
-    } catch (_) {
+    } catch (error) {
+      debugPrint('BudgetScreen: failed to load budget: $error');
+
       if (!mounted) return;
 
       setState(() {
@@ -201,6 +280,10 @@ class BudgetScreenState extends State<BudgetScreen>
       await _loadSubscription();
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // SUBSCRIPTION LOADING
+  // ---------------------------------------------------------------------------
 
   Future<void> _loadSubscription({bool forceRefresh = false}) async {
     if (state.isGuest) {
@@ -213,8 +296,6 @@ class BudgetScreenState extends State<BudgetScreen>
       return;
     }
 
-    // Do not show "Checking access" when the subscription
-    // has already been loaded and no explicit refresh was requested.
     if (!forceRefresh && subscriptionController.state.hasLoaded) {
       debugPrint(
         'BudgetScreen: subscription already loaded. '
@@ -224,13 +305,13 @@ class BudgetScreenState extends State<BudgetScreen>
       return;
     }
 
-    // Offline: restore the last server-confirmed entitlement.
     if (!_network.isOnline) {
       await subscriptionController.restoreOfflinePremiumAccess();
 
       debugPrint(
         'BudgetScreen: offline subscription restored. '
-        'hasPremiumAccess=${subscriptionController.hasPremiumAccess}',
+        'hasPremiumAccess='
+        '${subscriptionController.hasPremiumAccess}',
       );
 
       if (!mounted) return;
@@ -253,13 +334,12 @@ class BudgetScreenState extends State<BudgetScreen>
 
       debugPrint(
         'BudgetScreen: subscription refreshed. '
-        'isPremium=${subscriptionController.isPremium}',
+        'isPremium='
+        '${subscriptionController.isPremium}',
       );
-    } catch (e) {
-      debugPrint('BudgetScreen: failed to load subscription: $e');
+    } catch (error) {
+      debugPrint('BudgetScreen: failed to load subscription: $error');
 
-      // If connectivity disappeared while the request
-      // was running, restore the cached entitlement.
       if (!_network.isOnline) {
         await subscriptionController.restoreOfflinePremiumAccess();
       }
@@ -271,6 +351,10 @@ class BudgetScreenState extends State<BudgetScreen>
       }
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // PREMIUM CHECKOUT
+  // ---------------------------------------------------------------------------
 
   Future<void> _openPremiumCheckout() async {
     if (_premiumCheckoutInProgress) return;
@@ -306,7 +390,7 @@ class BudgetScreenState extends State<BudgetScreen>
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
 
       setState(() {
@@ -316,10 +400,14 @@ class BudgetScreenState extends State<BudgetScreen>
 
       SnackbarHelper.showError(
         context,
-        e.toString().replaceFirst('Exception: ', ''),
+        error.toString().replaceFirst('Exception: ', ''),
       );
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // PREMIUM PAYMENT VERIFICATION
+  // ---------------------------------------------------------------------------
 
   Future<void> _verifyPremiumAfterPayment() async {
     if (!mounted || _checkingPayment) return;
@@ -366,12 +454,14 @@ class BudgetScreenState extends State<BudgetScreen>
               behavior: SnackBarBehavior.floating,
             ),
           );
+
           break;
 
         case PremiumPaymentStatus.failed:
           _premiumPaymentVerificationPending = false;
 
           SnackbarHelper.showError(context, result.message);
+
           break;
 
         case PremiumPaymentStatus.pending:
@@ -379,16 +469,18 @@ class BudgetScreenState extends State<BudgetScreen>
           _premiumPaymentVerificationPending = true;
 
           SnackbarHelper.showInfo(context, result.message);
+
           break;
 
         case PremiumPaymentStatus.unknown:
           _premiumPaymentVerificationPending = true;
 
           SnackbarHelper.showError(context, result.message);
+
           break;
       }
-    } catch (e) {
-      debugPrint('BudgetScreen: Premium payment verification failed: $e');
+    } catch (error) {
+      debugPrint('BudgetScreen: Premium payment verification failed: $error');
 
       _premiumPaymentVerificationPending = true;
 
@@ -407,6 +499,10 @@ class BudgetScreenState extends State<BudgetScreen>
       }
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // PREMIUM FEATURE ACCESS
+  // ---------------------------------------------------------------------------
 
   Future<bool> _checkPremiumFeatureAccess(PremiumFeature feature) async {
     if (!_network.isOnline) {
@@ -434,28 +530,33 @@ class BudgetScreenState extends State<BudgetScreen>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // ADVANCED BUDGET INSIGHTS
+  // ---------------------------------------------------------------------------
+
   Future<void> _openAdvancedBudgetInsights() async {
     final allowed = await _checkPremiumFeatureAccess(
       PremiumFeature.advancedBudgetInsights,
     );
 
     if (!allowed || !mounted) return;
+
     try {
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const AdvancedBudgetInsightsScreen()),
       );
-    } on RateLimitException catch (e) {
+    } on RateLimitException catch (error) {
       if (!mounted) return;
 
       SnackbarHelper.showRateLimited(
         context,
-        message: e.message,
-        remaining: e.remaining,
-        retryAfter: e.retryAfter,
+        message: error.message,
+        remaining: error.remaining,
+        retryAfter: error.retryAfter,
       );
-    } catch (e) {
-      debugPrint('Advanced Budget Insights failed: $e');
+    } catch (error) {
+      debugPrint('Advanced Budget Insights failed: $error');
 
       if (!mounted) return;
 
@@ -466,28 +567,33 @@ class BudgetScreenState extends State<BudgetScreen>
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // BUDGET SIMULATION
+  // ---------------------------------------------------------------------------
+
   Future<void> _openBudgetSimulation() async {
     final allowed = await _checkPremiumFeatureAccess(
       PremiumFeature.budgetSimulation,
     );
 
     if (!allowed || !mounted) return;
+
     try {
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const BudgetSimulationScreen()),
       );
-    } on RateLimitException catch (e) {
+    } on RateLimitException catch (error) {
       if (!mounted) return;
 
       SnackbarHelper.showRateLimited(
         context,
-        message: e.message,
-        remaining: e.remaining,
-        retryAfter: e.retryAfter,
+        message: error.message,
+        remaining: error.remaining,
+        retryAfter: error.retryAfter,
       );
-    } catch (e) {
-      debugPrint('Budget Simulation failed: $e');
+    } catch (error) {
+      debugPrint('Budget Simulation failed: $error');
 
       if (!mounted) return;
 
@@ -518,18 +624,22 @@ class BudgetScreenState extends State<BudgetScreen>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // SAVE BUDGET
+  // ---------------------------------------------------------------------------
+
   Future<void> saveBudget() async {
     final network = context.read<ConnectivityProvider>();
 
     if (budgetController.text.trim().isEmpty) {
-      SnackbarHelper.showError(context, "Please enter a budget amount");
+      SnackbarHelper.showError(context, 'Please enter a budget amount');
       return;
     }
 
     final amount = double.tryParse(budgetController.text.trim());
 
     if (amount == null || amount <= 0) {
-      SnackbarHelper.showError(context, "Budget must be greater than zero");
+      SnackbarHelper.showError(context, 'Budget must be greater than zero');
       return;
     }
 
@@ -538,40 +648,49 @@ class BudgetScreenState extends State<BudgetScreen>
     try {
       final isUpdate = state.budget > 0;
 
-      final newState = await controller.saveBudget(amount: amount);
+      final newState = await controller.saveBudget(
+        amount: amount,
+        month: _selectedBudgetPeriod.month,
+        year: _selectedBudgetPeriod.year,
+      );
 
       if (!mounted) return;
 
       setState(() {
         state = newState;
+
         budgetController.text = state.budget.toStringAsFixed(0);
       });
 
       SnackbarHelper.showSuccess(
         context,
         isUpdate
-            ? "Budget updated successfully"
-            : "Budget created successfully",
+            ? 'Budget updated successfully'
+            : 'Budget created successfully',
       );
-    } on RateLimitException catch (e) {
+    } on RateLimitException catch (error) {
       if (!mounted) return;
 
       SnackbarHelper.showRateLimited(
         context,
-        message: e.message,
-        remaining: e.remaining,
-        retryAfter: e.retryAfter,
+        message: error.message,
+        remaining: error.remaining,
+        retryAfter: error.retryAfter,
       );
-    } catch (e) {
-      debugPrint('Save budget failed: $e');
+    } catch (error) {
+      debugPrint('Save budget failed: $error');
 
       if (!mounted) return;
 
-      SnackbarHelper.showError(context, "Failed to save budget.");
+      SnackbarHelper.showError(context, 'Failed to save budget.');
     } finally {
       network.setSyncing(false);
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // REFRESH
+  // ---------------------------------------------------------------------------
 
   Future<void> refreshBudgetData() async {
     final network = context.read<ConnectivityProvider>();
@@ -583,7 +702,7 @@ class BudgetScreenState extends State<BudgetScreen>
 
       SnackbarHelper.showInfo(
         context,
-        "Offline mode • Showing cached budget data.",
+        'Offline mode • Showing cached budget data.',
       );
 
       return;
@@ -592,33 +711,45 @@ class BudgetScreenState extends State<BudgetScreen>
     await loadBudget();
   }
 
+  // ---------------------------------------------------------------------------
+  // DELETE BUDGET
+  // ---------------------------------------------------------------------------
+
   Future<void> deleteBudget() async {
     try {
-      final newState = await controller.deleteBudget();
+      final newState = await controller.deleteBudget(
+        month: _selectedBudgetPeriod.month,
+        year: _selectedBudgetPeriod.year,
+      );
 
       if (!mounted) return;
 
       setState(() {
         state = newState;
+
         budgetController.clear();
       });
 
-      SnackbarHelper.showSuccess(context, "Budget deleted successfully");
-    } on RateLimitException catch (e) {
+      SnackbarHelper.showSuccess(context, 'Budget deleted successfully');
+    } on RateLimitException catch (error) {
       if (!mounted) return;
 
       SnackbarHelper.showRateLimited(
         context,
-        message: e.message,
-        remaining: e.remaining,
-        retryAfter: e.retryAfter,
+        message: error.message,
+        remaining: error.remaining,
+        retryAfter: error.retryAfter,
       );
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
 
-      SnackbarHelper.showError(context, "Error deleting budget: $e");
+      SnackbarHelper.showError(context, 'Error deleting budget: $error');
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // DELETE CONFIRMATION
+  // ---------------------------------------------------------------------------
 
   Future<void> confirmDeleteBudget() async {
     final shouldDelete = await showDialog<bool>(
@@ -630,6 +761,10 @@ class BudgetScreenState extends State<BudgetScreen>
       await deleteBudget();
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // CREATE / EDIT BUDGET DIALOG
+  // ---------------------------------------------------------------------------
 
   Future<void> showCreateBudgetDialog() async {
     budgetController.text = state.budget > 0
@@ -648,6 +783,204 @@ class BudgetScreenState extends State<BudgetScreen>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // PERIOD PICKER
+  // ---------------------------------------------------------------------------
+
+  Future<void> _showBudgetPeriodPicker() async {
+    final now = DateTime.now();
+
+    final selected = await showModalBottomSheet<DateTime>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final recentMonths = List.generate(
+          18,
+          (index) => DateTime(now.year, now.month - index, 1),
+        );
+
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.75,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Select Budget Period',
+                          style: Theme.of(sheetContext).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                    itemCount: recentMonths.length + 1,
+                    separatorBuilder: (_, __) => const SizedBox(height: 4),
+                    itemBuilder: (_, index) {
+                      // -------------------------------------------------------
+                      // CUSTOM MONTH
+                      // -------------------------------------------------------
+
+                      if (index == recentMonths.length) {
+                        return ListTile(
+                          leading: const Icon(Icons.date_range_rounded),
+                          title: const Text('Choose another month'),
+                          subtitle: const Text(
+                            'Open the calendar to select an older period',
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () async {
+                            final lastDate = DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                            );
+
+                            var initialDate = _selectedBudgetPeriod;
+
+                            if (initialDate.isAfter(lastDate)) {
+                              initialDate = lastDate;
+                            }
+
+                            final picked = await showDatePicker(
+                              context: sheetContext,
+                              initialDate: initialDate,
+                              firstDate: DateTime(2000),
+                              lastDate: lastDate,
+                              helpText: 'Select budget month',
+                            );
+
+                            if (picked != null && sheetContext.mounted) {
+                              Navigator.pop(
+                                sheetContext,
+                                DateTime(picked.year, picked.month, 1),
+                              );
+                            }
+                          },
+                        );
+                      }
+
+                      // -------------------------------------------------------
+                      // RECENT MONTH
+                      // -------------------------------------------------------
+
+                      final period = recentMonths[index];
+
+                      final isSelected =
+                          period.year == _selectedBudgetPeriod.year &&
+                          period.month == _selectedBudgetPeriod.month;
+
+                      final isCurrent =
+                          period.year == now.year && period.month == now.month;
+
+                      return ListTile(
+                        selected: isSelected,
+                        selectedTileColor: Theme.of(
+                          sheetContext,
+                        ).colorScheme.primary.withOpacity(0.08),
+                        leading: Icon(
+                          isCurrent
+                              ? Icons.today_rounded
+                              : Icons.calendar_month_rounded,
+                          color: isSelected
+                              ? Theme.of(sheetContext).colorScheme.primary
+                              : null,
+                        ),
+                        title: Text(_formatBudgetPeriod(period)),
+                        subtitle: Text(isCurrent ? 'Current' : 'Historical'),
+                        trailing: isSelected
+                            ? Icon(
+                                Icons.check_circle_rounded,
+                                color: Theme.of(
+                                  sheetContext,
+                                ).colorScheme.primary,
+                              )
+                            : null,
+                        onTap: () {
+                          Navigator.pop(sheetContext, period);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selected == null || !mounted) {
+      return;
+    }
+
+    await _changeBudgetPeriod(selected);
+  }
+
+  // ---------------------------------------------------------------------------
+  // CHANGE PERIOD
+  // ---------------------------------------------------------------------------
+
+  Future<void> _changeBudgetPeriod(DateTime period) async {
+    final normalized = DateTime(period.year, period.month, 1);
+
+    if (normalized.year == _selectedBudgetPeriod.year &&
+        normalized.month == _selectedBudgetPeriod.month) {
+      return;
+    }
+
+    setState(() {
+      _selectedBudgetPeriod = normalized;
+
+      // Prevent old period data from appearing while
+      // the newly selected period is loading.
+      state = const BudgetState(isLoading: true);
+
+      budgetController.clear();
+    });
+
+    await loadBudget();
+  }
+
+  // ---------------------------------------------------------------------------
+  // PERIOD FORMAT
+  // ---------------------------------------------------------------------------
+
+  String _formatBudgetPeriod(DateTime date) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
+  // ---------------------------------------------------------------------------
+  // DISPOSE
+  // ---------------------------------------------------------------------------
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -655,6 +988,7 @@ class BudgetScreenState extends State<BudgetScreen>
     _network.removeListener(_onConnectivityChanged);
 
     subscriptionController.removeListener(_onSubscriptionChanged);
+
     subscriptionController.dispose();
 
     budgetController.dispose();
@@ -664,6 +998,10 @@ class BudgetScreenState extends State<BudgetScreen>
 
   @override
   bool get wantKeepAlive => true;
+
+  // ---------------------------------------------------------------------------
+  // BUILD
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -708,6 +1046,10 @@ class BudgetScreenState extends State<BudgetScreen>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // BODY
+  // ---------------------------------------------------------------------------
+
   Widget _buildBody(
     BuildContext context, {
     required bool compact,
@@ -722,29 +1064,12 @@ class BudgetScreenState extends State<BudgetScreen>
       return const BudgetLoadingSkeleton();
     }
 
-    if (state.budget <= 0) {
-      return Center(
-        child: buildEmptyState(
-          context,
-          EmptyStateType.budget,
-          isOnline: network.isOnline,
-          isGuest: state.isGuest,
-          refreshBudgetData: refreshBudgetData,
-          showCreateBudgetDialog: showCreateBudgetDialog,
-        ),
-      );
-    }
-
     final horizontalPadding = ResponsiveHelper.horizontalPadding(context);
 
     final mediaQuery = MediaQuery.of(context);
 
     final bottomSafeArea = mediaQuery.padding.bottom;
 
-    /*
-     * Give the final content enough clearance to scroll
-     * completely above the floating action button.
-     */
     final fabClearance = landscape && !desktop
         ? 120.0
         : compact
@@ -753,10 +1078,22 @@ class BudgetScreenState extends State<BudgetScreen>
 
     final bottomContentPadding = fabClearance + bottomSafeArea;
 
+    /*
+     * IMPORTANT:
+     *
+     * The period selector is now part of the main
+     * scrollable body even when no budget exists.
+     *
+     * This means a user can select September 2026,
+     * discover that there is no budget, then switch
+     * to August 2026 without being trapped inside
+     * the empty state.
+     */
+
     return RefreshIndicator(
       onRefresh: refreshBudgetData,
       child: SingleChildScrollView(
-        key: const PageStorageKey("budget"),
+        key: const PageStorageKey('budget'),
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
@@ -779,58 +1116,81 @@ class BudgetScreenState extends State<BudgetScreen>
 
                 SizedBox(height: compact ? 10 : 14),
 
-                BudgetStatsGrid(
-                  spent: state.spent,
-                  remaining: remainingAmount,
-                  percentageUsed: percentageUsed,
-                  daysRemaining: daysRemaining,
-                  statusColor: statusColor,
-                ),
+                _buildBudgetPeriodSelector(context),
 
-                SizedBox(height: sectionSpacing),
+                if (!_isCurrentBudgetPeriod) ...[
+                  const SizedBox(height: 10),
 
-                BudgetStatusBar(
-                  statusText: statusText,
-                  statusColor: statusColor,
-                ),
+                  _buildHistoricalBudgetNotice(context),
+                ],
 
-                SizedBox(height: sectionSpacing),
+                SizedBox(height: compact ? 14 : 20),
 
-                const BudgetSectionHeader(
-                  title: "Monthly Budget Overview",
-                  subtitle:
-                      "Track your monthly spending and stay within budget",
-                ),
-
-                SizedBox(height: compact ? 10 : spacing),
-
-                _buildOverviewSection(
-                  context,
-                  compact: compact,
-                  landscape: landscape,
-                  sectionSpacing: sectionSpacing,
-                ),
-
-                SizedBox(height: sectionSpacing),
-
-                _buildAnalyticsSection(
-                  context,
-                  compact: compact,
-                  landscape: landscape,
-                  sectionSpacing: sectionSpacing,
-                  cardPadding: cardPadding,
-                ),
-
-                // Premium Budget Intelligence
-                // Only authenticated users see this feature.
-                if (!state.isGuest) ...[
-                  SizedBox(height: sectionSpacing),
-
-                  _buildAdvancedBudgetFeature(),
+                // -------------------------------------------------------------
+                // NO BUDGET FOR SELECTED PERIOD
+                // -------------------------------------------------------------
+                if (state.budget <= 0)
+                  _buildNoBudgetForPeriod(context, network)
+                // -------------------------------------------------------------
+                // BUDGET EXISTS
+                // -------------------------------------------------------------
+                else ...[
+                  BudgetStatsGrid(
+                    spent: state.spent,
+                    remaining: remainingAmount,
+                    percentageUsed: percentageUsed,
+                    daysRemaining: daysRemaining,
+                    statusColor: statusColor,
+                  ),
 
                   SizedBox(height: sectionSpacing),
 
-                  _buildAdvancedBudgetSimulation(),
+                  BudgetStatusBar(
+                    statusText: statusText,
+                    statusColor: statusColor,
+                  ),
+
+                  SizedBox(height: sectionSpacing),
+
+                  BudgetSectionHeader(
+                    title: '${_selectedBudgetPeriodLabel} Budget Overview',
+                    subtitle: 'Track spending and stay within your budget',
+                  ),
+
+                  SizedBox(height: compact ? 10 : spacing),
+
+                  _buildOverviewSection(
+                    context,
+                    compact: compact,
+                    landscape: landscape,
+                    sectionSpacing: sectionSpacing,
+                  ),
+
+                  SizedBox(height: sectionSpacing),
+
+                  _buildAnalyticsSection(
+                    context,
+                    compact: compact,
+                    landscape: landscape,
+                    sectionSpacing: sectionSpacing,
+                    cardPadding: cardPadding,
+                  ),
+
+                  // -----------------------------------------------------------
+                  // PREMIUM
+                  //
+                  // These features remain current-period only for now.
+                  // Their APIs/screens have not been made period-aware.
+                  // -----------------------------------------------------------
+                  if (!state.isGuest && _isCurrentBudgetPeriod) ...[
+                    SizedBox(height: sectionSpacing),
+
+                    _buildAdvancedBudgetFeature(),
+
+                    SizedBox(height: sectionSpacing),
+
+                    _buildAdvancedBudgetSimulation(),
+                  ],
                 ],
               ],
             ),
@@ -839,6 +1199,225 @@ class BudgetScreenState extends State<BudgetScreen>
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // NO BUDGET FOR SELECTED PERIOD
+  // ---------------------------------------------------------------------------
+
+  Widget _buildNoBudgetForPeriod(
+    BuildContext context,
+    ConnectivityProvider network,
+  ) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.65)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(
+              Icons.account_balance_wallet_rounded,
+              size: 32,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Text(
+            _isCurrentBudgetPeriod
+                ? 'No Budget Set'
+                : 'No Budget for $_selectedBudgetPeriodLabel',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            _isCurrentBudgetPeriod
+                ? 'Set a monthly budget to start tracking your spending and financial health.'
+                : 'No budget was recorded for this historical period. '
+                      'You can create one to keep the budget record complete.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.45,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          FilledButton.icon(
+            onPressed: showCreateBudgetDialog,
+            icon: const Icon(Icons.add_rounded),
+            label: Text(
+              _isCurrentBudgetPeriod
+                  ? 'Create Budget'
+                  : 'Create $_selectedBudgetPeriodLabel Budget',
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Text(
+            network.isOnline
+                ? 'Budget changes will sync with your account.'
+                : 'Offline mode • Your budget will sync when connection is restored.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // PERIOD SELECTOR
+  // ---------------------------------------------------------------------------
+
+  Widget _buildBudgetPeriodSelector(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final isCurrent = _isCurrentBudgetPeriod;
+
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: _showBudgetPeriodPicker,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: theme.dividerColor.withOpacity(0.6)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.calendar_month_rounded,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _selectedBudgetPeriodLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      isCurrent
+                          ? 'Current budget period'
+                          : 'Historical budget period',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isCurrent
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // HISTORICAL NOTICE
+  // ---------------------------------------------------------------------------
+
+  Widget _buildHistoricalBudgetNotice(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.12)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.history_rounded,
+            size: 19,
+            color: theme.colorScheme.primary,
+          ),
+
+          const SizedBox(width: 10),
+
+          Expanded(
+            child: Text(
+              'You are viewing a historical budget. '
+              'Its expenses and calculations do not affect your current-month budget.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // OVERVIEW
+  // ---------------------------------------------------------------------------
 
   Widget _buildOverviewSection(
     BuildContext context, {
@@ -859,12 +1438,6 @@ class BudgetScreenState extends State<BudgetScreen>
       totalSpent: state.spent,
     );
 
-    /*
-     * ResponsiveHelper controls the overall breakpoint logic.
-     *
-     * On landscape layouts, the overview and breakdown
-     * cards are placed side-by-side.
-     */
     if (landscape) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -888,6 +1461,10 @@ class BudgetScreenState extends State<BudgetScreen>
       ],
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // ANALYTICS
+  // ---------------------------------------------------------------------------
 
   Widget _buildAnalyticsSection(
     BuildContext context, {
@@ -921,12 +1498,6 @@ class BudgetScreenState extends State<BudgetScreen>
       categoryAdvice: state.categoryAdvice,
     );
 
-    /*
-     * Landscape:
-     * Analytics gets slightly more width than
-     * Financial Health because the analytics content
-     * is usually more data-dense.
-     */
     if (landscape) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,

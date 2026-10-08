@@ -390,8 +390,32 @@ class ApiService {
     throw Exception(body['message']?.toString() ?? 'Failed to add expense.');
   }
 
-  static Future<Map<String, dynamic>> getExpenses({int page = 1}) async {
-    final response = await _request(method: 'GET', endpoint: '/expenses');
+  static Future<Map<String, dynamic>> getExpenses({
+    int page = 1,
+    int? month,
+    int? year,
+  }) async {
+    final queryParameters = <String, String>{'page': page.toString()};
+
+    if (month != null) {
+      queryParameters['month'] = month.toString();
+    }
+
+    if (year != null) {
+      queryParameters['year'] = year.toString();
+    }
+
+    final queryString = queryParameters.entries
+        .map(
+          (entry) =>
+              '${Uri.encodeQueryComponent(entry.key)}='
+              '${Uri.encodeQueryComponent(entry.value)}',
+        )
+        .join('&');
+
+    final endpoint = '/expenses?$queryString';
+
+    final response = await _request(method: 'GET', endpoint: endpoint);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -541,8 +565,28 @@ class ApiService {
     return UserPreferences.fromJson(data);
   }
 
-  static Future<Map<String, dynamic>> getBudgetSummary() async {
-    final response = await _request(method: 'GET', endpoint: '/budget-summary');
+  static Future<Map<String, dynamic>> getBudgetSummary({
+    int? month,
+    int? year,
+  }) async {
+    final params = <String, String>{};
+
+    if (month != null) {
+      params['month'] = month.toString();
+    }
+
+    if (year != null) {
+      params['year'] = year.toString();
+    }
+
+    final query = params.isEmpty
+        ? ''
+        : '?${Uri(queryParameters: params).query}';
+
+    final response = await _request(
+      method: 'GET',
+      endpoint: '/budget-summary$query',
+    );
 
     final body = _decodeResponseBody(response);
 
@@ -558,25 +602,63 @@ class ApiService {
 
   static Future<Map<String, dynamic>> setBudget(
     double amount,
-    String clientId,
-  ) async {
+    String clientId, {
+    int? month,
+    int? year,
+  }) async {
+    final body = <String, dynamic>{'amount': amount, 'client_id': clientId};
+
+    if (month != null) {
+      body['month'] = month;
+    }
+
+    if (year != null) {
+      body['year'] = year;
+    }
+
+    debugPrint('API SET BUDGET REQUEST: ${jsonEncode(body)}');
+
     final response = await _request(
       method: 'POST',
       endpoint: '/budget',
-      body: jsonEncode({'amount': amount, 'client_id': clientId}),
+      body: jsonEncode(body),
     );
 
-    final body = _decodeResponseBody(response);
+    debugPrint(
+      'API SET BUDGET RESPONSE: '
+      'status=${response.statusCode} '
+      'body=${response.body}',
+    );
+
+    final responseBody = _decodeResponseBody(response);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return body;
+      return responseBody;
     }
 
-    throw Exception(body['message']?.toString() ?? 'Failed to set budget.');
+    throw Exception(
+      responseBody['message']?.toString() ??
+          'Failed to set budget '
+              '(HTTP ${response.statusCode}).',
+    );
   }
 
-  static Future<void> deleteBudget() async {
-    final response = await _request(method: 'DELETE', endpoint: '/budget');
+  static Future<void> deleteBudget({int? month, int? year}) async {
+    final params = <String, String>{};
+    if (month != null) {
+      params['month'] = month.toString();
+    }
+
+    if (year != null) {
+      params['year'] = year.toString();
+    }
+    final query = params.isEmpty
+        ? ''
+        : '?${Uri(queryParameters: params).query}';
+    final response = await _request(
+      method: 'DELETE',
+      endpoint: '/budget$query',
+    );
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
@@ -590,10 +672,27 @@ class ApiService {
     );
   }
 
-  static Future<Map<String, dynamic>> getFinancialInsights() async {
+  static Future<Map<String, dynamic>> getFinancialInsights({
+    int? month,
+    int? year,
+  }) async {
+    final params = <String, String>{};
+
+    if (month != null) {
+      params['month'] = month.toString();
+    }
+
+    if (year != null) {
+      params['year'] = year.toString();
+    }
+
+    final query = params.isEmpty
+        ? ''
+        : '?${Uri(queryParameters: params).query}';
+
     final response = await _request(
       method: 'GET',
-      endpoint: '/financial-insights',
+      endpoint: '/financial-insights$query',
     );
 
     if (response.statusCode == 200) {

@@ -23,19 +23,26 @@ class BudgetState {
   final String categoryAdvice;
   final String budgetStatus;
 
-  factory BudgetState.fromBudgetSummary(Map<String, dynamic> data) {
-    final budget = double.tryParse(data["budget"].toString()) ?? 0;
+  factory BudgetState.fromBudgetSummary(
+    Map<String, dynamic> data, {
+    bool isGuest = false,
+  }) {
+    final budget = double.tryParse(data["budget"]?.toString() ?? '') ?? 0;
 
-    final spent = double.tryParse(data["spent"].toString()) ?? 0;
+    final spent = double.tryParse(data["spent"]?.toString() ?? '') ?? 0;
 
-    final remaining = double.tryParse(data["remaining"].toString()) ?? 0;
+    final remaining = double.tryParse(data["remaining"]?.toString() ?? '') ?? 0;
+
+    final budgetCount =
+        int.tryParse(data["budget_count"]?.toString() ?? '') ?? 0;
 
     return BudgetState(
       budget: budget,
       spent: spent,
       remaining: remaining,
       isLoading: false,
-      hasCachedBudget: true,
+      hasCachedBudget: budgetCount > 0 || budget > 0,
+      isGuest: isGuest,
     );
   }
 
@@ -43,42 +50,80 @@ class BudgetState {
     final Map<String, double> categories = {};
     final Map<String, double> daily = {};
 
-    if (insights["daily_spending"] != null) {
-      insights["daily_spending"].forEach((day, value) {
-        daily[day] = (value as num).toDouble();
+    final dailyData = insights["daily_spending"];
+
+    if (dailyData is Map) {
+      dailyData.forEach((day, value) {
+        final parsed = double.tryParse(value?.toString() ?? '');
+
+        if (parsed != null) {
+          daily[day.toString()] = parsed;
+        }
       });
     }
 
-    if (insights["category_breakdown"] != null) {
-      for (final item in insights["category_breakdown"]) {
-        categories[item["category"]] = (item["total"] as num).toDouble();
+    final categoryData = insights["category_breakdown"];
+
+    if (categoryData is List) {
+      for (final item in categoryData) {
+        if (item is! Map) continue;
+
+        final category = item["category"]?.toString() ?? "Other";
+
+        final total = double.tryParse(item["total"]?.toString() ?? '');
+
+        if (total != null) {
+          categories[category] = total;
+        }
       }
     }
 
+    final highestDayData = insights["highest_spending_day"];
+
+    final highestDay = highestDayData is Map
+        ? highestDayData["day"]?.toString() ?? ""
+        : "";
+
+    final highestDayAmount = highestDayData is Map
+        ? double.tryParse(highestDayData["amount"]?.toString() ?? '') ?? 0.0
+        : 0.0;
+
+    final averageDaily =
+        double.tryParse(insights["average_daily_spending"]?.toString() ?? '') ??
+        0;
+
+    final estimatedMonthEnd =
+        double.tryParse(
+          insights["estimated_month_end_spending"]?.toString() ?? '',
+        ) ??
+        0;
+
+    final financialScore =
+        int.tryParse(insights["financial_health_score"]?.toString() ?? '') ?? 0;
+
     return copyWith(
-      budgetStatus: insights["budget_status"] ?? "healthy",
+      budgetStatus: insights["budget_status"]?.toString() ?? "healthy",
 
-      recommendation: insights["recommendation"] ?? "",
+      recommendation: insights["recommendation"]?.toString() ?? "",
 
-      categoryAdvice: insights["category_advice"] ?? "",
+      categoryAdvice: insights["category_advice"]?.toString() ?? "",
 
       categoryTotals: categories,
 
       dailySpending: daily,
 
-      highestDay: insights["highest_spending_day"]["day"] ?? "",
+      highestDay: highestDay,
 
-      highestDayAmount: (insights["highest_spending_day"]["amount"] as num)
-          .toDouble(),
+      highestDayAmount: highestDayAmount,
 
-      averageDaily: (insights["average_daily_spending"] as num).toDouble(),
+      averageDaily: averageDaily,
 
-      estimatedMonthEnd: (insights["estimated_month_end_spending"] as num)
-          .toDouble(),
+      estimatedMonthEnd: estimatedMonthEnd,
 
-      financialScore: insights["financial_health_score"],
+      financialScore: financialScore,
 
-      financialLabel: insights["financial_health_label"],
+      financialLabel:
+          insights["financial_health_label"]?.toString() ?? "No Data",
     );
   }
 
@@ -95,7 +140,7 @@ class BudgetState {
     this.dailySpending = const {},
 
     this.highestDay = '',
-    this.highestDayAmount = 0,
+    this.highestDayAmount = 0.0,
 
     this.averageDaily = 0,
     this.estimatedMonthEnd = 0,

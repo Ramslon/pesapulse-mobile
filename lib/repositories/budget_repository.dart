@@ -15,20 +15,36 @@ class BudgetRepository extends BaseRepository {
   static const Uuid _uuid = Uuid();
 
   // ---------------------------------------------------------------------------
+  // PERIOD HELPERS
+  // ---------------------------------------------------------------------------
+
+  int _periodRecordId(int month, int year) {
+    return year * 100 + month;
+  }
+
+  DateTime _normalizePeriod(int month, int year) {
+    return DateTime(year, month);
+  }
+
+  // ---------------------------------------------------------------------------
   // LOCAL SERIALIZATION
   // ---------------------------------------------------------------------------
 
   Map<String, dynamic> _toLocal({
     required Map<String, dynamic> summary,
     required String ownerId,
+    required int month,
+    required int year,
     String? clientId,
   }) {
     final now = DateTime.now();
 
+    final resolvedClientId = clientId ?? summary["client_id"]?.toString();
+
     return {
       "owner_id": ownerId,
 
-      "client_id": clientId,
+      "client_id": resolvedClientId,
 
       "budget": double.tryParse(summary["budget"]?.toString() ?? '0') ?? 0,
 
@@ -40,9 +56,9 @@ class BudgetRepository extends BaseRepository {
       "budget_count":
           int.tryParse(summary["budget_count"]?.toString() ?? '0') ?? 0,
 
-      "month": int.tryParse(summary["month"]?.toString() ?? '') ?? now.month,
-
-      "year": int.tryParse(summary["year"]?.toString() ?? '') ?? now.year,
+      // Always use the selected period.
+      "month": month,
+      "year": year,
 
       "payload": jsonEncode(summary),
 
@@ -60,13 +76,10 @@ class BudgetRepository extends BaseRepository {
         if (decoded is Map) {
           final result = Map<String, dynamic>.from(decoded);
 
-          // Make sure the local client ID is also available.
-          if (!result.containsKey("client_id") || result["client_id"] == null) {
-            result["client_id"] = row["client_id"];
-          }
+          result["client_id"] ??= row["client_id"];
 
-          // Make sure month/year are available.
           result["month"] ??= row["month"] ?? DateTime.now().month;
+
           result["year"] ??= row["year"] ?? DateTime.now().year;
 
           return result;
@@ -94,12 +107,18 @@ class BudgetRepository extends BaseRepository {
   Future<String?> _getExistingClientId(
     Database database,
     String ownerId,
+    int month,
+    int year,
   ) async {
     final rows = await database.query(
-      "budget_summary_cache",
-      columns: ["client_id"],
-      where: "owner_id=?",
-      whereArgs: [ownerId],
+      'budget_summary_cache',
+      columns: ['client_id'],
+      where: '''
+        owner_id = ?
+        AND month = ?
+        AND year = ?
+      ''',
+      whereArgs: [ownerId, month, year],
       limit: 1,
     );
 
@@ -107,17 +126,24 @@ class BudgetRepository extends BaseRepository {
       return null;
     }
 
-    final value = rows.first["client_id"]?.toString();
+    final value = rows.first['client_id'];
 
-    if (value == null || value.trim().isEmpty) {
+    if (value == null) {
       return null;
     }
 
-    return value;
+    final clientId = value.toString().trim();
+
+    return clientId.isEmpty ? null : clientId;
   }
 
-  Future<String> _getOrCreateClientId(Database database, String ownerId) async {
-    final existing = await _getExistingClientId(database, ownerId);
+  Future<String> _getOrCreateClientId(
+    Database database,
+    String ownerId,
+    int month,
+    int year,
+  ) async {
+    final existing = await _getExistingClientId(database, ownerId, month, year);
 
     if (existing != null) {
       return existing;
@@ -127,10 +153,87 @@ class BudgetRepository extends BaseRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // LOCAL CACHE HELPERS
+  // ---------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>?> _getCachedSummary(
+    Database database,
+    String ownerId,
+    int month,
+    int year,
+  ) async {
+    final rows = await database.query(
+      "budget_summary_cache",
+      where: '''
+        owner_id = ?
+        AND month = ?
+        AND year = ?
+      ''',
+      whereArgs: [ownerId, month, year],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    return _fromLocal(rows.first);
+  }
+
+  Future<void> _saveBudgetSummaryCache(
+    Database database,
+    Map<String, dynamic> data,
+    String ownerId,
+    String clientId,
+    int month,
+    int year,
+  ) async {
+    await database.insert(
+      'budget_summary_cache',
+      _toLocal(
+        summary: data,
+        ownerId: ownerId,
+        clientId: clientId,
+        month: month,
+        year: year,
+      ),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> _deleteCachedSummary(
+    Database database,
+    String ownerId,
+    int month,
+    int year,
+  ) async {
+    await database.delete(
+      "budget_summary_cache",
+      where: '''
+        owner_id = ?
+        AND month = ?
+        AND year = ?
+      ''',
+      whereArgs: [ownerId, month, year],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // LOAD BUDGET SUMMARY
   // ---------------------------------------------------------------------------
 
-  Future<Map<String, dynamic>> getBudgetSummary({bool useCache = false}) async {
+  Future<Map<String, dynamic>> getBudgetSummary({
+    bool useCache = false,
+    int? month,
+    int? year,
+  }) async {
+    final now = DateTime.now();
+
+    final selectedMonth = month ?? now.month;
+    final selectedYear = year ?? now.year;
+
+    _normalizePeriod(selectedMonth, selectedYear);
+
     final ownerId = await this.ownerId;
     final database = await db.database;
 
@@ -139,30 +242,27 @@ class BudgetRepository extends BaseRepository {
     // -------------------------------------------------------------------------
     // GUEST MODE
     // -------------------------------------------------------------------------
-    //
-    // Guest budgets are local only.
-    // Never call the authenticated API.
-    //
+
     if (isGuest) {
-      final cached = await database.query(
-        "budget_summary_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-        limit: 1,
+      final cached = await _getCachedSummary(
+        database,
+        ownerId,
+        selectedMonth,
+        selectedYear,
       );
 
-      if (cached.isEmpty) {
+      if (cached == null) {
         return {
           "budget": 0,
           "spent": 0,
           "remaining": 0,
           "budget_count": 0,
-          "month": DateTime.now().month,
-          "year": DateTime.now().year,
+          "month": selectedMonth,
+          "year": selectedYear,
         };
       }
 
-      return _fromLocal(cached.first);
+      return cached;
     }
 
     // -------------------------------------------------------------------------
@@ -170,18 +270,18 @@ class BudgetRepository extends BaseRepository {
     // -------------------------------------------------------------------------
 
     if (useCache) {
-      final cached = await database.query(
-        "budget_summary_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-        limit: 1,
+      final cached = await _getCachedSummary(
+        database,
+        ownerId,
+        selectedMonth,
+        selectedYear,
       );
 
-      if (cached.isEmpty) {
+      if (cached == null) {
         throw Exception("No cached budget available");
       }
 
-      return _fromLocal(cached.first);
+      return cached;
     }
 
     // -------------------------------------------------------------------------
@@ -190,9 +290,17 @@ class BudgetRepository extends BaseRepository {
     // -------------------------------------------------------------------------
 
     try {
-      final summary = await ApiService.getBudgetSummary();
+      final summary = await ApiService.getBudgetSummary(
+        month: selectedMonth,
+        year: selectedYear,
+      );
 
-      final existingClientId = await _getExistingClientId(database, ownerId);
+      final existingClientId = await _getExistingClientId(
+        database,
+        ownerId,
+        selectedMonth,
+        selectedYear,
+      );
 
       final serverClientId = summary["client_id"]?.toString();
 
@@ -201,33 +309,58 @@ class BudgetRepository extends BaseRepository {
           ? serverClientId
           : existingClientId;
 
-      await database.insert(
-        "budget_summary_cache",
-        _toLocal(summary: summary, ownerId: ownerId, clientId: clientId),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      if (clientId != null) {
+        await _saveBudgetSummaryCache(
+          database,
+          summary,
+          ownerId,
+          clientId,
+          selectedMonth,
+          selectedYear,
+        );
+      } else {
+        // No client ID returned means there may be
+        // no budget for this period.
+        //
+        // Still cache the period summary using an
+        // empty client ID so historical no-budget
+        // periods can be remembered.
+        await _saveBudgetSummaryCache(
+          database,
+          summary,
+          ownerId,
+          '',
+          selectedMonth,
+          selectedYear,
+        );
+      }
 
-      return {...summary, if (clientId != null) "client_id": clientId};
+      return {
+        ...summary,
+        if (clientId != null) "client_id": clientId,
+        "month": summary["month"] ?? selectedMonth,
+        "year": summary["year"] ?? selectedYear,
+      };
     } on RateLimitException {
       rethrow;
     } catch (_) {
       // -----------------------------------------------------------------------
       // API unavailable.
-      // Fall back to local cache.
+      // Fall back to selected-period local cache.
       // -----------------------------------------------------------------------
 
-      final cached = await database.query(
-        "budget_summary_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-        limit: 1,
+      final cached = await _getCachedSummary(
+        database,
+        ownerId,
+        selectedMonth,
+        selectedYear,
       );
 
-      if (cached.isEmpty) {
+      if (cached == null) {
         throw Exception("No cached budget available");
       }
 
-      return _fromLocal(cached.first);
+      return cached;
     }
   }
 
@@ -235,101 +368,85 @@ class BudgetRepository extends BaseRepository {
   // SAVE / UPDATE BUDGET
   // ---------------------------------------------------------------------------
 
-  Future<void> saveBudget({required double amount}) async {
+  Future<void> saveBudget({
+    required double amount,
+    required int month,
+    required int year,
+  }) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
-    final now = DateTime.now();
-
-    final budgetMonth = now.month;
-    final budgetYear = now.year;
+    _normalizePeriod(month, year);
 
     // -------------------------------------------------------------------------
     // GUEST MODE
     // -------------------------------------------------------------------------
-    //
-    // Guest budget remains entirely local.
-    //
+
     if (ownerId == 'guest') {
-      final existingClientId = await _getExistingClientId(database, ownerId);
+      final existingClientId = await _getExistingClientId(
+        database,
+        ownerId,
+        month,
+        year,
+      );
 
       final clientId = existingClientId ?? _uuid.v4();
 
-      Map<String, dynamic> summary = {
+      final cached = await _getCachedSummary(database, ownerId, month, year);
+
+      double spent = 0;
+
+      if (cached != null) {
+        spent = double.tryParse(cached["spent"]?.toString() ?? '0') ?? 0;
+      }
+
+      final summary = {
         "budget": amount,
-        "spent": 0,
-        "remaining": amount,
+        "spent": spent,
+        "remaining": amount - spent,
         "budget_count": 1,
-        "month": budgetMonth,
-        "year": budgetYear,
+        "month": month,
+        "year": year,
         "client_id": clientId,
       };
 
-      final cached = await database.query(
-        "budget_summary_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-        limit: 1,
-      );
-
-      if (cached.isNotEmpty) {
-        final existing = _fromLocal(cached.first);
-
-        final spent =
-            double.tryParse(existing["spent"]?.toString() ?? '0') ?? 0;
-
-        summary = {
-          ...existing,
-          "budget": amount,
-          "spent": spent,
-          "remaining": amount - spent,
-          "budget_count": 1,
-          "month": budgetMonth,
-          "year": budgetYear,
-          "client_id": clientId,
-        };
-      }
-
-      await database.insert(
-        "budget_summary_cache",
-        _toLocal(summary: summary, ownerId: ownerId, clientId: clientId),
-        conflictAlgorithm: ConflictAlgorithm.replace,
+      await _saveBudgetSummaryCache(
+        database,
+        summary,
+        ownerId,
+        clientId,
+        month,
+        year,
       );
 
       debugPrint(
-        'Budget saved locally and queued for sync. '
+        'Guest budget saved locally. '
+        'period=$year-$month '
         'client_id=$clientId',
       );
 
-      await SyncService.instance.getPendingChanges();
-
       SyncEvents.instance.notifyFinancialDataUpdated();
-
-      if (ownerId != "guest") {
-        await SyncService.instance.requestSync();
-      }
 
       return;
     }
 
     // -------------------------------------------------------------------------
     // AUTHENTICATED USER
-    //
-    // Preserve the same client ID for updates.
     // -------------------------------------------------------------------------
 
-    final clientId = await _getOrCreateClientId(database, ownerId);
+    final clientId = await _getOrCreateClientId(database, ownerId, month, year);
 
     try {
       // -----------------------------------------------------------------------
       // ONLINE
-      //
-      // Important:
-      // ApiService will send amount + clientId.
-      // Laravel determines month/year.
       // -----------------------------------------------------------------------
 
-      final summary = await ApiService.setBudget(amount, clientId);
+      final summary = await ApiService.setBudget(
+        amount,
+        clientId,
+        month: month,
+        year: year,
+      );
 
       final returnedClientId = summary["client_id"]?.toString();
 
@@ -338,90 +455,89 @@ class BudgetRepository extends BaseRepository {
           ? returnedClientId
           : clientId;
 
-      await database.insert(
-        "budget_summary_cache",
-        _toLocal(summary: summary, ownerId: ownerId, clientId: finalClientId),
-        conflictAlgorithm: ConflictAlgorithm.replace,
+      await _saveBudgetSummaryCache(
+        database,
+        summary,
+        ownerId,
+        finalClientId,
+        month,
+        year,
       );
 
-      debugPrint('Budget saved online. client_id=$finalClientId');
+      debugPrint(
+        'Budget saved online. '
+        'period=$year-$month '
+        'client_id=$finalClientId',
+      );
 
       SyncEvents.instance.notifyFinancialDataUpdated();
     } on RateLimitException {
-      // -----------------------------------------------------------------------
-      // Rate limiting is NOT an offline condition.
-      // -----------------------------------------------------------------------
       rethrow;
     } on http.ClientException {
       // -----------------------------------------------------------------------
-      // ACTUAL NETWORK FAILURE
-      //
-      // Save locally and queue for synchronization.
+      // NETWORK FAILURE
+      // Save selected period locally and queue it.
       // -----------------------------------------------------------------------
 
-      final cached = await database.query(
-        "budget_summary_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-        limit: 1,
-      );
+      final cached = await _getCachedSummary(database, ownerId, month, year);
 
-      Map<String, dynamic> summary;
+      double spent = 0;
 
-      if (cached.isNotEmpty) {
-        summary = _fromLocal(cached.first);
-      } else {
-        summary = {
-          "budget": amount,
-          "spent": 0,
-          "remaining": amount,
-          "budget_count": 1,
-          "month": budgetMonth,
-          "year": budgetYear,
-          "client_id": clientId,
-        };
+      if (cached != null) {
+        spent = double.tryParse(cached["spent"]?.toString() ?? '0') ?? 0;
       }
 
-      final spent = double.tryParse(summary["spent"]?.toString() ?? '0') ?? 0;
+      final summary = {
+        "budget": amount,
+        "spent": spent,
+        "remaining": amount - spent,
+        "budget_count": 1,
+        "month": month,
+        "year": year,
+        "client_id": clientId,
+      };
 
-      summary["budget"] = amount;
-      summary["spent"] = spent;
-      summary["remaining"] = amount - spent;
-      summary["budget_count"] = 1;
-      summary["month"] = budgetMonth;
-      summary["year"] = budgetYear;
-      summary["client_id"] = clientId;
-
-      await database.insert(
-        "budget_summary_cache",
-        _toLocal(summary: summary, ownerId: ownerId, clientId: clientId),
-        conflictAlgorithm: ConflictAlgorithm.replace,
+      await _saveBudgetSummaryCache(
+        database,
+        summary,
+        ownerId,
+        clientId,
+        month,
+        year,
       );
 
-      // -----------------------------------------------------------------------
-      // Remove an older pending budget upsert for this owner.
-      //
-      // This prevents multiple offline edits from creating unnecessary
-      // synchronization operations.
-      // -----------------------------------------------------------------------
+      final periodRecordId = _periodRecordId(month, year);
 
+      // Only replace the pending operation for
+      // THIS period.
       await database.delete(
         "sync_queue",
-        where: "owner_id=? AND table_name=? AND operation=?",
-        whereArgs: [ownerId, "budget", "upsert"],
+        where: '''
+          owner_id = ?
+          AND table_name = ?
+          AND operation = ?
+          AND record_id = ?
+        ''',
+        whereArgs: [ownerId, "budget", "upsert", periodRecordId],
       );
 
       await database.insert("sync_queue", {
         "owner_id": ownerId,
         "table_name": "budget",
         "operation": "upsert",
-        "record_id": 1,
-        "payload": jsonEncode({"amount": amount, "client_id": clientId}),
+        "record_id": periodRecordId,
+        "payload": jsonEncode({
+          "amount": amount,
+          "client_id": clientId,
+          "month": month,
+          "year": year,
+        }),
         "created_at": DateTime.now().toIso8601String(),
       });
 
       debugPrint(
-        'Budget saved locally and queued for sync. '
+        'Budget saved locally and queued. '
+        'period=$year-$month '
         'client_id=$clientId',
       );
 
@@ -436,11 +552,18 @@ class BudgetRepository extends BaseRepository {
   Future<void> syncOfflineBudgetUpsert({
     required double amount,
     required String clientId,
+    required int month,
+    required int year,
   }) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
-    final summary = await ApiService.setBudget(amount, clientId);
+    final summary = await ApiService.setBudget(
+      amount,
+      clientId,
+      month: month,
+      year: year,
+    );
 
     final returnedClientId = summary["client_id"]?.toString();
 
@@ -449,14 +572,18 @@ class BudgetRepository extends BaseRepository {
         ? returnedClientId
         : clientId;
 
-    await database.insert(
-      "budget_summary_cache",
-      _toLocal(summary: summary, ownerId: ownerId, clientId: finalClientId),
-      conflictAlgorithm: ConflictAlgorithm.replace,
+    await _saveBudgetSummaryCache(
+      database,
+      summary,
+      ownerId,
+      finalClientId,
+      month,
+      year,
     );
 
     debugPrint(
-      'Offline budget synchronized successfully. '
+      'Offline budget synchronized. '
+      'period=$year-$month '
       'client_id=$finalClientId',
     );
   }
@@ -465,37 +592,38 @@ class BudgetRepository extends BaseRepository {
   // DELETE BUDGET
   // ---------------------------------------------------------------------------
 
-  Future<void> deleteBudget() async {
+  Future<void> deleteBudget({required int month, required int year}) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
+
+    _normalizePeriod(month, year);
+
+    final periodRecordId = _periodRecordId(month, year);
 
     // -------------------------------------------------------------------------
     // GUEST MODE
     // -------------------------------------------------------------------------
 
     if (ownerId == 'guest') {
-      await database.delete(
-        "budget_summary_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-      );
+      await _deleteCachedSummary(database, ownerId, month, year);
 
-      // Remove any guest budget synchronization operations.
+      // Remove only this period's pending operations.
       await database.delete(
         "sync_queue",
-        where: "owner_id=? AND table_name=?",
-        whereArgs: [ownerId, "budget"],
+        where: '''
+          owner_id = ?
+          AND table_name = ?
+          AND record_id = ?
+        ''',
+        whereArgs: [ownerId, "budget", periodRecordId],
       );
 
-      debugPrint('Budget deleted locally and deletion queued.');
-
-      await SyncService.instance.getPendingChanges();
+      debugPrint(
+        'Guest budget deleted locally. '
+        'period=$year-$month',
+      );
 
       SyncEvents.instance.notifyFinancialDataUpdated();
-
-      if (ownerId != "guest") {
-        await SyncService.instance.requestSync();
-      }
 
       return;
     }
@@ -505,48 +633,51 @@ class BudgetRepository extends BaseRepository {
     // -------------------------------------------------------------------------
 
     try {
-      await ApiService.deleteBudget();
+      await ApiService.deleteBudget(month: month, year: year);
 
-      await database.delete(
-        "budget_summary_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
+      await _deleteCachedSummary(database, ownerId, month, year);
+
+      debugPrint(
+        'Budget deleted online. '
+        'period=$year-$month',
       );
-
-      debugPrint('Budget deleted online.');
 
       SyncEvents.instance.notifyFinancialDataUpdated();
     } on RateLimitException {
       rethrow;
     } on http.ClientException {
       // -----------------------------------------------------------------------
-      // Network unavailable.
-      // Delete locally and queue deletion.
+      // NETWORK UNAVAILABLE
+      // Delete only this period locally.
       // -----------------------------------------------------------------------
 
-      await database.delete(
-        "budget_summary_cache",
-        where: "owner_id=?",
-        whereArgs: [ownerId],
-      );
+      await _deleteCachedSummary(database, ownerId, month, year);
 
-      // Remove previous pending budget operations.
+      // Remove previous pending operations ONLY
+      // for this period.
       await database.delete(
         "sync_queue",
-        where: "owner_id=? AND table_name=?",
-        whereArgs: [ownerId, "budget"],
+        where: '''
+          owner_id = ?
+          AND table_name = ?
+          AND record_id = ?
+        ''',
+        whereArgs: [ownerId, "budget", periodRecordId],
       );
 
       await database.insert("sync_queue", {
         "owner_id": ownerId,
         "table_name": "budget",
         "operation": "delete",
-        "record_id": 1,
-        "payload": "{}",
+        "record_id": periodRecordId,
+        "payload": jsonEncode({"month": month, "year": year}),
         "created_at": DateTime.now().toIso8601String(),
       });
 
-      debugPrint('Budget deleted locally and deletion queued.');
+      debugPrint(
+        'Budget deleted locally and deletion queued. '
+        'period=$year-$month',
+      );
 
       await SyncService.instance.getPendingChanges();
     }
@@ -556,18 +687,20 @@ class BudgetRepository extends BaseRepository {
   // SYNC OFFLINE BUDGET DELETE
   // ---------------------------------------------------------------------------
 
-  Future<void> syncOfflineBudgetDelete() async {
+  Future<void> syncOfflineBudgetDelete({
+    required int month,
+    required int year,
+  }) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
-    await ApiService.deleteBudget();
+    await ApiService.deleteBudget(month: month, year: year);
 
-    await database.delete(
-      "budget_summary_cache",
-      where: "owner_id=?",
-      whereArgs: [ownerId],
+    await _deleteCachedSummary(database, ownerId, month, year);
+
+    debugPrint(
+      'Offline budget deletion synchronized. '
+      'period=$year-$month',
     );
-
-    debugPrint('Offline budget deletion synchronized.');
   }
 }

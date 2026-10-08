@@ -47,7 +47,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 22,
+      version: 23,
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -169,20 +169,23 @@ updated_at TEXT
 
     await db.execute('''
 CREATE TABLE financial_insights_cache(
-owner_id TEXT PRIMARY KEY,
+owner_id TEXT,
+month INTEGER,
+year INTEGER,
 
 budget_status TEXT,
 
 payload TEXT,
 
-updated_at TEXT
+updated_at TEXT,
+
+PRIMARY KEY(owner_id, month, year)
 )
 ''');
 
     await db.execute('''
 CREATE TABLE budget_summary_cache(
-owner_id TEXT PRIMARY KEY,
-
+owner_id TEXT,
 client_id TEXT,
 
 budget REAL,
@@ -195,10 +198,11 @@ year INTEGER,
 
 payload TEXT,
 
-updated_at TEXT
+updated_at TEXT,
+
+PRIMARY KEY(owner_id, month, year)
 )
 ''');
-
     await db.execute('''
 CREATE TABLE analytics_cache(
 owner_id TEXT PRIMARY KEY,
@@ -210,6 +214,7 @@ goal_analytics TEXT,
 financial_insights TEXT,
 
 updated_at TEXT
+
 )
 ''');
 
@@ -505,6 +510,123 @@ CREATE TABLE settings(
     CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_server_id
     ON expenses(server_id);
   """);
+    }
+
+    if (oldVersion < 23) {
+      // Rebuild budget summary cache so multiple budget periods
+      // can coexist for the same owner.
+      await db.execute('''
+    CREATE TABLE budget_summary_cache_v23(
+      owner_id TEXT,
+      client_id TEXT,
+
+      budget REAL,
+      budget_count INTEGER DEFAULT 0,
+      spent REAL,
+      remaining REAL,
+
+      month INTEGER,
+      year INTEGER,
+
+      payload TEXT,
+
+      updated_at TEXT,
+
+      PRIMARY KEY(owner_id, month, year)
+    )
+  ''');
+
+      await db.execute('''
+    INSERT INTO budget_summary_cache_v23 (
+      owner_id,
+      client_id,
+      budget,
+      budget_count,
+      spent,
+      remaining,
+      month,
+      year,
+      payload,
+      updated_at
+    )
+    SELECT
+      owner_id,
+      client_id,
+      budget,
+      budget_count,
+      spent,
+      remaining,
+      month,
+      year,
+      payload,
+      updated_at
+    FROM budget_summary_cache
+    WHERE month IS NOT NULL
+      AND year IS NOT NULL
+  ''');
+
+      await db.execute('''
+    DROP TABLE budget_summary_cache
+  ''');
+
+      await db.execute('''
+    ALTER TABLE budget_summary_cache_v23
+    RENAME TO budget_summary_cache
+  ''');
+
+      // Rebuild financial insights cache so insights can also
+      // be stored separately for each budget period.
+      await db.execute('''
+    CREATE TABLE financial_insights_cache_v23(
+      owner_id TEXT,
+      month INTEGER,
+      year INTEGER,
+
+      budget_status TEXT,
+
+      payload TEXT,
+
+      updated_at TEXT,
+
+      PRIMARY KEY(owner_id, month, year)
+    )
+  ''');
+
+      // Existing financial-insights cache entries represent the
+      // current period because the previous implementation was
+      // current-month-only.
+      final now = DateTime.now();
+
+      await db.execute(
+        '''
+    INSERT INTO financial_insights_cache_v23 (
+      owner_id,
+      month,
+      year,
+      budget_status,
+      payload,
+      updated_at
+    )
+    SELECT
+      owner_id,
+      ?,
+      ?,
+      budget_status,
+      payload,
+      updated_at
+    FROM financial_insights_cache
+  ''',
+        [now.month, now.year],
+      );
+
+      await db.execute('''
+    DROP TABLE financial_insights_cache
+  ''');
+
+      await db.execute('''
+    ALTER TABLE financial_insights_cache_v23
+    RENAME TO financial_insights_cache
+  ''');
     }
   }
 }

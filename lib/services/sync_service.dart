@@ -669,6 +669,8 @@ class SyncService {
         await budgetRepository.syncOfflineBudgetUpsert(
           amount: amount,
           clientId: clientId,
+          month: payload["month"],
+          year: payload["year"],
         );
 
         return;
@@ -710,7 +712,10 @@ class SyncService {
         // --------------------------------------------------------
 
         if (tableName == "budget") {
-          await budgetRepository.syncOfflineBudgetDelete();
+          await budgetRepository.syncOfflineBudgetDelete(
+            month: payload["month"],
+            year: payload["year"],
+          );
 
           return;
         }

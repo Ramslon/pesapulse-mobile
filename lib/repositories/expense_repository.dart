@@ -1,17 +1,53 @@
-import 'package:pesapulse_mobile/exceptions/rate_limit_exception.dart';
-
-import '../services/api_services.dart';
 import 'dart:convert';
-import 'package:sqflite/sqflite.dart';
-import 'package:pesapulse_mobile/services/startup_refresh_coordinator.dart';
+
 import 'package:flutter/foundation.dart';
+import 'package:pesapulse_mobile/exceptions/rate_limit_exception.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
-import '../services/sync_service.dart';
+import '../services/api_services.dart';
+import '../services/startup_refresh_coordinator.dart';
 import '../services/sync_events.dart';
+import '../services/sync_service.dart';
 import 'base_repository.dart';
 
 class ExpenseRepository extends BaseRepository {
+  // ---------------------------------------------------------------------------
+  // DATE HELPERS
+  // ---------------------------------------------------------------------------
+
+  String _dateOnly(DateTime date) {
+    final year = date.year.toString().padLeft(4, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+
+    return '$year-$month-$day';
+  }
+
+  DateTime _currentMonthStartDate() {
+    final now = DateTime.now();
+
+    return DateTime(now.year, now.month, 1);
+  }
+
+  DateTime _nextMonthStartDate() {
+    final now = DateTime.now();
+
+    return DateTime(now.year, now.month + 1, 1);
+  }
+
+  String _monthStart({required int month, required int year}) {
+    return _dateOnly(DateTime(year, month, 1));
+  }
+
+  String _nextMonthStart({required int month, required int year}) {
+    return _dateOnly(DateTime(year, month + 1, 1));
+  }
+
+  // ---------------------------------------------------------------------------
+  // LOCAL EXPENSE MAPPING
+  // ---------------------------------------------------------------------------
+
   Map<String, dynamic> _expenseToLocal(
     Map<String, dynamic> expense,
     String ownerId,
@@ -21,47 +57,156 @@ class ExpenseRepository extends BaseRepository {
       "server_id": expense["id"],
       "client_id": expense["client_id"],
       "owner_id": ownerId,
-
       "title": expense["title"],
-
       "amount": double.tryParse(expense["amount"].toString()) ?? 0,
-
       "category": expense["category"],
-
       "expense_date": expense["expense_date"],
-
       "description": expense["description"] ?? "",
-
       "updated_at": expense["updated_at"],
-
       "is_synced": 1,
-
       "is_deleted": 0,
     };
   }
 
-  /// Get expenses
-  /// Get expenses from the API and update the local database.
-  Future<Map<String, dynamic>> getExpenses({int page = 1}) async {
+  // ---------------------------------------------------------------------------
+  // CURRENT MONTH LOCAL EXPENSES
+  // ---------------------------------------------------------------------------
+
+  Future<List<Map<String, dynamic>>> getCurrentMonthExpensesFromLocal() async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final start = _dateOnly(_currentMonthStartDate());
+
+    final end = _dateOnly(_nextMonthStartDate());
+
+    final rows = await database.query(
+      "expenses",
+      where: '''
+        owner_id = ?
+        AND is_deleted = 0
+        AND expense_date >= ?
+        AND expense_date < ?
+      ''',
+      whereArgs: [ownerId, start, end],
+      orderBy: "expense_date DESC, id DESC",
+    );
+
+    return rows.map((row) => Map<String, dynamic>.from(row)).toList();
+  }
+
+  // ---------------------------------------------------------------------------
+  // LOCAL EXPENSES FOR A SPECIFIC MONTH
+  // ---------------------------------------------------------------------------
+
+  Future<List<Map<String, dynamic>>> getExpensesFromLocal({
+    int? month,
+    int? year,
+  }) async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final now = DateTime.now();
+
+    final selectedMonth = month ?? now.month;
+    final selectedYear = year ?? now.year;
+
+    final start = _monthStart(month: selectedMonth, year: selectedYear);
+
+    final end = _nextMonthStart(month: selectedMonth, year: selectedYear);
+
+    final rows = await database.query(
+      "expenses",
+      where: '''
+        owner_id = ?
+        AND is_deleted = 0
+        AND expense_date >= ?
+        AND expense_date < ?
+      ''',
+      whereArgs: [ownerId, start, end],
+      orderBy: "expense_date DESC, id DESC",
+    );
+
+    return rows.map((row) => Map<String, dynamic>.from(row)).toList();
+  }
+
+  // ---------------------------------------------------------------------------
+  // ALL LOCAL EXPENSES
+  //
+  // Used when the application needs historical data.
+  // ---------------------------------------------------------------------------
+
+  Future<List<Map<String, dynamic>>> getAllExpensesFromLocal() async {
+    final ownerId = await this.ownerId;
+    final database = await db.database;
+
+    final rows = await database.query(
+      "expenses",
+      where: "owner_id = ? AND is_deleted = 0",
+      whereArgs: [ownerId],
+      orderBy: "expense_date DESC, id DESC",
+    );
+
+    return rows.map((row) => Map<String, dynamic>.from(row)).toList();
+  }
+
+  // ---------------------------------------------------------------------------
+  // API EXPENSES
+  //
+  // Defaults to the current month.
+  //
+  // Example:
+  //
+  // getExpenses()
+  //     -> current month
+  //
+  // getExpenses(month: 9, year: 2026)
+  //     -> September 2026
+  // ---------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> getExpenses({
+    int page = 1,
+    int? month,
+    int? year,
+  }) async {
     final ownerId = await this.ownerId;
 
     try {
-      final response = await ApiService.getExpenses(page: page);
+      final response = await ApiService.getExpenses(
+        page: page,
+        month: month,
+        year: year,
+      );
 
       final database = await db.database;
 
       if (page == 1) {
+        final selectedMonth = month ?? DateTime.now().month;
+        final selectedYear = year ?? DateTime.now().year;
+
+        final start = _monthStart(month: selectedMonth, year: selectedYear);
+
+        final end = _nextMonthStart(month: selectedMonth, year: selectedYear);
+
+        // Only replace synced records belonging to the requested month.
+        //
+        // Historical months remain untouched.
         await database.delete(
           "expenses",
-          where: "owner_id = ?",
-          whereArgs: [ownerId],
+          where: '''
+            owner_id = ?
+            AND is_synced = 1
+            AND expense_date >= ?
+            AND expense_date < ?
+          ''',
+          whereArgs: [ownerId, start, end],
         );
       }
 
-      for (final expense in response["data"]) {
+      for (final expense in response["data"] as List? ?? []) {
         await database.insert(
           "expenses",
-          _expenseToLocal(expense, ownerId),
+          _expenseToLocal(Map<String, dynamic>.from(expense), ownerId),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
@@ -71,24 +216,25 @@ class ExpenseRepository extends BaseRepository {
       return response;
     } on RateLimitException {
       rethrow;
-    } catch (_) {
-      final database = await db.database;
+    } catch (e) {
+      debugPrint('ExpenseRepository: API getExpenses failed: $e');
 
-      final cached = await database.query(
-        "expenses",
-        where: "owner_id = ?",
-        whereArgs: [ownerId],
-        orderBy: "expense_date DESC",
-      );
+      final cached = await getExpensesFromLocal(month: month, year: year);
 
       return {"data": cached, "next_page_url": null};
     }
   }
 
-  /// Shared initial expenses refresh.
-  ///
-  /// This method returns the same API response used by
-  /// Analytics and other startup consumers.
+  // ---------------------------------------------------------------------------
+  // SHARED INITIAL EXPENSE REFRESH
+  //
+  // IMPORTANT:
+  // This downloads all available server expenses/pages exposed by the API
+  // response and keeps historical data locally.
+  //
+  // We deliberately DO NOT filter this method to the current month.
+  // ---------------------------------------------------------------------------
+
   Future<Map<String, dynamic>> refreshExpenses() async {
     return await StartupRefreshCoordinator.instance.run('expenses', () async {
       final ownerId = await this.ownerId;
@@ -107,9 +253,8 @@ class ExpenseRepository extends BaseRepository {
         await database.transaction((txn) async {
           // Remove only records that were already synced.
           //
-          // IMPORTANT:
-          // is_synced = 0 records are local/offline changes and
-          // must never be deleted by a server refresh.
+          // Unsynced records are local/offline changes and must
+          // survive a server refresh.
           await txn.delete(
             "expenses",
             where: "owner_id = ? AND is_synced = 1",
@@ -126,10 +271,10 @@ class ExpenseRepository extends BaseRepository {
         });
 
         debugPrint(
-          'ExpenseRepository: cached ${expenses.length} server expenses.',
+          'ExpenseRepository: cached '
+          '${expenses.length} server expenses.',
         );
 
-        // Preserve the existing offline-sync behavior.
         await SyncService.instance.getPendingChanges();
 
         debugPrint('ExpenseRepository: expenses refresh completed.');
@@ -140,23 +285,21 @@ class ExpenseRepository extends BaseRepository {
       } catch (e) {
         debugPrint('ExpenseRepository: API refresh failed, using cache: $e');
 
-        final database = await db.database;
-
-        final cached = await database.query(
-          "expenses",
-          where: "owner_id = ?",
-          whereArgs: [ownerId],
-          orderBy: "expense_date DESC",
-        );
+        final cached = await getAllExpensesFromLocal();
 
         debugPrint(
-          'ExpenseRepository: returning ${cached.length} cached expenses.',
+          'ExpenseRepository: returning '
+          '${cached.length} cached expenses.',
         );
 
         return {"data": cached, "next_page_url": null};
       }
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // CREATE EXPENSE
+  // ---------------------------------------------------------------------------
 
   Future<void> createExpense({
     required String title,
@@ -168,14 +311,8 @@ class ExpenseRepository extends BaseRepository {
     final ownerId = await this.ownerId;
     final database = await db.database;
 
-    // One stable ID for the entire lifetime of this expense.
-    //
-    // The same client_id is used for:
-    // - online creation
-    // - local SQLite
-    // - sync_queue
-    // - retry after a failed/lost response
     const uuid = Uuid();
+
     final clientId = uuid.v4();
 
     final expense = <String, dynamic>{
@@ -189,10 +326,6 @@ class ExpenseRepository extends BaseRepository {
     };
 
     try {
-      // ------------------------------------------------------------
-      // ONLINE CREATION
-      // ------------------------------------------------------------
-
       final response = await ApiService.addExpense(
         clientId: clientId,
         title: title,
@@ -206,7 +339,8 @@ class ExpenseRepository extends BaseRepository {
 
       if (serverId == null) {
         throw Exception(
-          'Server returned a successful response without an expense id.',
+          'Server returned a successful response '
+          'without an expense id.',
         );
       }
 
@@ -232,6 +366,8 @@ class ExpenseRepository extends BaseRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
+      SyncEvents.instance.notifyFinancialDataUpdated();
+
       debugPrint(
         'ExpenseRepository: online expense creation complete. '
         'client_id=$clientId, '
@@ -239,15 +375,10 @@ class ExpenseRepository extends BaseRepository {
         'deduplicated=${response["deduplicated"] ?? false}',
       );
 
-      // No sync queue entry for a successful online creation.
       return;
     } on RateLimitException {
       rethrow;
     } catch (e) {
-      // ------------------------------------------------------------
-      // ONLINE FAILED → LOCAL + SYNC QUEUE
-      // ------------------------------------------------------------
-
       debugPrint('ExpenseRepository: online expense creation failed: $e');
 
       final localId = await database.insert("expenses", {
@@ -266,13 +397,20 @@ class ExpenseRepository extends BaseRepository {
 
       await SyncService.instance.getPendingChanges();
 
+      SyncEvents.instance.notifyFinancialDataUpdated();
+
       debugPrint(
-        'ExpenseRepository: expense saved locally for synchronization. '
+        'ExpenseRepository: expense saved locally '
+        'for synchronization. '
         'local_id=$localId, '
         'client_id=$clientId',
       );
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // SYNC OFFLINE CREATE
+  // ---------------------------------------------------------------------------
 
   Future<void> syncOfflineExpense({
     required int localId,
@@ -299,7 +437,8 @@ class ExpenseRepository extends BaseRepository {
 
     if (serverId == null) {
       throw Exception(
-        'Server returned a successful response without an expense id.',
+        'Server returned a successful response '
+        'without an expense id.',
       );
     }
 
@@ -333,6 +472,10 @@ class ExpenseRepository extends BaseRepository {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // UPDATE EXPENSE
+  // ---------------------------------------------------------------------------
+
   Future<void> updateExpense({
     required int id,
     required String title,
@@ -356,7 +499,6 @@ class ExpenseRepository extends BaseRepository {
     };
 
     try {
-      // If the record exists on the server, update the server record.
       if (serverId != null) {
         await ApiService.updateExpense(
           serverId,
@@ -367,7 +509,6 @@ class ExpenseRepository extends BaseRepository {
           description,
         );
       } else {
-        // No server record yet. Keep the change local and sync later.
         await database.update(
           "expenses",
           {...expense, "is_synced": 0},
@@ -391,15 +532,9 @@ class ExpenseRepository extends BaseRepository {
           await SyncService.instance.requestSync();
         }
 
-        debugPrint(
-          'ExpenseRepository: local expense update queued '
-          'because server_id is not available.',
-        );
-
         return;
       }
 
-      // Server update succeeded.
       await database.update(
         "expenses",
         {...expense, "server_id": serverId, "is_synced": 1, "is_deleted": 0},
@@ -416,7 +551,6 @@ class ExpenseRepository extends BaseRepository {
     } on RateLimitException {
       rethrow;
     } catch (e) {
-      // Keep the modification locally and queue it for retry.
       await database.update(
         "expenses",
         {...expense, "is_synced": 0},
@@ -446,6 +580,10 @@ class ExpenseRepository extends BaseRepository {
       );
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // SYNC OFFLINE UPDATE
+  // ---------------------------------------------------------------------------
 
   Future<void> syncOfflineExpenseUpdate({
     required int localId,
@@ -491,6 +629,10 @@ class ExpenseRepository extends BaseRepository {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // GET SERVER ID
+  // ---------------------------------------------------------------------------
+
   Future<int?> getServerExpenseId(int localId) async {
     final ownerId = await this.ownerId;
     final database = await db.database;
@@ -503,10 +645,16 @@ class ExpenseRepository extends BaseRepository {
       limit: 1,
     );
 
-    if (rows.isEmpty) return null;
+    if (rows.isEmpty) {
+      return null;
+    }
 
     return rows.first["server_id"] as int?;
   }
+
+  // ---------------------------------------------------------------------------
+  // DELETE EXPENSE
+  // ---------------------------------------------------------------------------
 
   Future<void> deleteExpense(int id) async {
     final ownerId = await this.ownerId;
@@ -515,12 +663,10 @@ class ExpenseRepository extends BaseRepository {
     final serverId = await getServerExpenseId(id);
 
     try {
-      // If the expense exists on the server, delete it there first.
       if (serverId != null) {
         await ApiService.deleteExpense(serverId);
       }
 
-      // Remove the local record after successful server deletion.
       await database.delete(
         "expenses",
         where: "id=? AND owner_id=?",
@@ -536,8 +682,6 @@ class ExpenseRepository extends BaseRepository {
     } on RateLimitException {
       rethrow;
     } catch (e) {
-      // If server deletion failed, remove it locally and queue the
-      // deletion for automatic synchronization.
       await database.delete(
         "expenses",
         where: "id=? AND owner_id=?",
@@ -567,6 +711,10 @@ class ExpenseRepository extends BaseRepository {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // SYNC OFFLINE DELETE
+  // ---------------------------------------------------------------------------
+
   Future<void> syncOfflineExpenseDelete({
     required int localId,
     required int serverId,
@@ -586,19 +734,5 @@ class ExpenseRepository extends BaseRepository {
       'ExpenseRepository: offline expense deletion synced '
       '(localId=$localId, serverId=$serverId).',
     );
-  }
-
-  Future<List<Map<String, dynamic>>> getExpensesFromLocal() async {
-    final ownerId = await this.ownerId;
-    final database = await db.database;
-
-    final rows = await database.query(
-      "expenses",
-      where: "owner_id = ? AND is_deleted = 0",
-      whereArgs: [ownerId],
-      orderBy: "expense_date DESC",
-    );
-
-    return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 }

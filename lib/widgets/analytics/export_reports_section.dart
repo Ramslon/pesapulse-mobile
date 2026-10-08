@@ -146,7 +146,7 @@ class ExportReportsSection extends StatelessWidget {
             )
           else
             Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: _ExportOption(
