@@ -89,6 +89,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   bool get _hasPremiumAccess => _subscriptionController.hasPremiumAccess;
 
   bool _subscriptionLoading = false;
+  bool _subscriptionRefreshQueued = false;
+  bool _cacheReloadPending = false;
   bool _premiumCheckoutInProgress = false;
   bool _checkingPayment = false;
 
@@ -107,9 +109,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     SyncEvents.instance.analyticsRefresh.addListener(_onAnalyticsDataChanged);
 
-    _initializeAnalytics();
-
     _subscriptionController.addListener(_onSubscriptionChanged);
+
+    _initializeAnalytics();
   }
 
   @override
@@ -118,28 +120,42 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       return;
     }
 
-    if (!_premiumCheckoutInProgress) {
+    if (isGuest == true) {
       return;
     }
 
+    // Restore the last verified entitlement when offline.
     if (!_network.isOnline) {
-      if (!mounted) return;
+      _loadSubscription(forceRefresh: true);
 
-      setState(() {
-        _premiumCheckoutInProgress = false;
-      });
+      if (_premiumCheckoutInProgress || _premiumPaymentVerificationPending) {
+        if (!mounted) return;
 
-      SnackbarHelper.showInfo(
-        context,
-        _hasPremiumAccess
-            ? 'Premium is unlocked. Reconnect to verify any recent payment.'
-            : 'Reconnect to verify your Premium payment.',
-      );
+        setState(() {
+          _premiumCheckoutInProgress = false;
+        });
+
+        SnackbarHelper.showInfo(
+          context,
+          'Reconnect to verify your Premium payment.',
+        );
+      }
 
       return;
     }
 
-    _verifyPremiumAfterPayment();
+    // If this screen initiated checkout, verify that payment.
+    if (_premiumCheckoutInProgress || _premiumPaymentVerificationPending) {
+      _verifyPremiumAfterPayment();
+      return;
+    }
+
+    // Important:
+    // Premium may have been activated from Budget or another
+    // screen while Analytics remained mounted in the IndexedStack.
+    // Always refresh the subscription when the app resumes,
+    // even if Analytics did not initiate the checkout.
+    _loadSubscription(forceRefresh: true);
   }
 
   void _onAnalyticsDataChanged() {
@@ -162,12 +178,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   Future<void> _loadSubscription({bool forceRefresh = false}) async {
     if (isGuest == true) return;
 
-    if (_subscriptionLoading && !forceRefresh) {
-      return;
-    }
+    if (_subscriptionLoading) {
+      if (forceRefresh) {
+        _subscriptionRefreshQueued = true;
+      }
 
-    if (!_network.isOnline) {
-      await _subscriptionController.restoreOfflinePremiumAccess();
       return;
     }
 
@@ -178,89 +193,153 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     }
 
     try {
-      await _subscriptionController.loadSubscription(
-        forceRefresh: forceRefresh,
-      );
+      if (!_network.isOnline) {
+        await _subscriptionController.restoreOfflinePremiumAccess();
+      } else {
+        await _subscriptionController.loadSubscription(
+          forceRefresh: forceRefresh,
+        );
+      }
     } catch (e) {
       debugPrint('Analytics: failed to load subscription: $e');
+
+      // If connectivity was lost during the request,
+      // restore the last locally available entitlement.
+      if (!_network.isOnline) {
+        try {
+          await _subscriptionController.restoreOfflinePremiumAccess();
+        } catch (restoreError) {
+          debugPrint(
+            'Analytics: offline Premium restoration failed: '
+            '$restoreError',
+          );
+        }
+      }
     } finally {
+      final refreshAgain = _subscriptionRefreshQueued;
+      _subscriptionRefreshQueued = false;
+
       if (mounted) {
         setState(() {
           _subscriptionLoading = false;
         });
       }
+
+      if (refreshAgain && mounted && _network.isOnline) {
+        await _loadSubscription(forceRefresh: true);
+      }
     }
   }
 
   Future<void> _reloadAnalyticsFromCache() async {
+    if (!mounted || isGuest == true) return;
+
+    if (_analyticsRequestInProgress) {
+      _cacheReloadPending = true;
+      return;
+    }
+
+    final requestPeriod = selectedPeriod;
+
     try {
       final analytics = await analyticsRepository.getCachedAnalytics();
 
       final processed = await analyticsService.processAnalyticsData(
         analytics: analytics,
-        period: selectedPeriod,
+        period: requestPeriod,
       );
 
       if (!mounted) return;
 
+      // A network request or period change may have started
+      // while the cache was being read.
+      if (_analyticsRequestInProgress || selectedPeriod != requestPeriod) {
+        _cacheReloadPending = true;
+        return;
+      }
+
       setState(() {
         summary = processed;
         isLoading = false;
+        _isOffline = !_network.isOnline;
         _analyticsError = null;
       });
 
       debugPrint('Analytics: local analytics cache reloaded successfully.');
     } catch (e) {
-      debugPrint('Analytics: failed to reload analytics from local cache: $e');
+      debugPrint('Analytics: failed to reload local cache: $e');
     }
   }
 
   Future<void> _initializeAnalytics() async {
-    final guest = await SessionService.isGuest();
-
-    if (!mounted) return;
-
-    setState(() {
-      isGuest = guest;
-    });
-
-    await _loadCachedAnalytics();
-
-    if (!mounted) return;
-
-    if (!guest && !_network.isOnline) {
-      await _subscriptionController.restoreOfflinePremiumAccess();
+    try {
+      final guest = await SessionService.isGuest();
 
       if (!mounted) return;
-    }
 
-    if (guest) {
       setState(() {
-        isLoading = false;
+        isGuest = guest;
+        _isOffline = !_network.isOnline;
       });
-      return;
-    }
 
-    // If there was no cache, the skeleton remains visible until
-    // the first successful network request.
-    if (summary == null) {
-      setState(() {
-        isLoading = true;
-      });
-    } else {
-      setState(() {
-        isLoading = false;
-      });
-    }
+      if (guest) {
+        await _loadCachedAnalytics();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        setState(() {
+          isLoading = false;
+        });
+
+        return;
+      }
+
+      // Begin checking Premium access immediately.
+      // Do not await this before loading the analytics cache.
+      await _loadSubscription();
+
+      // These are independent local operations.
+      await Future.wait<void>([_loadCachedAnalytics(), loadReports()]);
+
       if (!mounted) return;
 
-      _refreshAnalyticsInBackground();
-      _loadSubscription();
-    });
+      if (!_network.isOnline) {
+        setState(() {
+          _isOffline = true;
+          isLoading = false;
 
-    loadReports();
+          if (summary == null) {
+            _analyticsError =
+                'You are offline and no cached analytics are available.';
+          }
+        });
+
+        return;
+      }
+
+      setState(() {
+        // Show the skeleton only when no usable analytics are available.
+        isLoading = summary == null;
+        _analyticsError = null;
+      });
+
+      // First fetch happens after the initial frame, without blocking
+      // the screen when cached analytics are already available.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        _refreshAnalyticsInBackground();
+      });
+    } catch (e) {
+      debugPrint('Analytics initialization failed: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+        _analyticsError = 'We couldn’t initialize analytics. Please try again.';
+      });
+    }
   }
 
   Future<void> _loadCachedAnalytics() async {
@@ -730,33 +809,47 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   Future<void> _refreshAnalytics() async {
-    if (_isOffline) {
+    if (!_network.isOnline) {
       if (!mounted) return;
+
       SnackbarHelper.showError(
         context,
         'You are offline. Your existing analytics are still available.',
       );
+
       return;
     }
-    await _loadAnalytics();
+
+    await Future.wait<void>([
+      _loadAnalytics(),
+      _loadSubscription(forceRefresh: true),
+      loadReports(),
+    ]);
   }
 
   Future<void> _retryAnalytics() async {
-    if (_isOffline) {
+    if (_isOffline || !_network.isOnline) {
       if (!mounted) return;
+
       SnackbarHelper.showError(
         context,
         'You are offline. Please reconnect and try again.',
       );
+
       return;
     }
-    await _loadAnalytics();
+
+    await _refreshAnalytics();
   }
 
   Future<void> _changeAnalyticsPeriod(AnalyticsPeriod period) async {
     if (_analyticsRequestInProgress) return;
+    if (isGuest == true) return;
 
     final previousPeriod = selectedPeriod;
+
+    // Acquire the shared lock before starting asynchronous work.
+    _analyticsRequestInProgress = true;
 
     setState(() {
       selectedPeriod = period;
@@ -778,8 +871,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
       setState(() {
         summary = processed;
+        isLoading = false;
         isRefreshingAnalytics = false;
         _isOffline = !_network.isOnline;
+        _analyticsError = null;
       });
     } catch (e) {
       debugPrint(
@@ -791,9 +886,34 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
       setState(() {
         selectedPeriod = previousPeriod;
+        isLoading = false;
         isRefreshingAnalytics = false;
+        _isOffline = !_network.isOnline;
+        _analyticsError = _network.isOnline
+            ? 'Could not load analytics for that period. Please try again.'
+            : 'You are offline. Your saved analytics are still available.';
       });
+    } finally {
+      _analyticsRequestInProgress = false;
+
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          isRefreshingAnalytics = false;
+        });
+      }
+
+      _flushPendingCacheReload();
     }
+  }
+
+  void _flushPendingCacheReload() {
+    if (!mounted || !_cacheReloadPending || _analyticsRequestInProgress) {
+      return;
+    }
+
+    _cacheReloadPending = false;
+    _reloadAnalyticsFromCache();
   }
 
   Future<void> shareExistingReport(String path) async {
@@ -812,11 +932,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   Future<void> loadReports() async {
-    final result = await ReportManagerService.loadReports();
-    if (!mounted) return;
-    setState(() {
-      reports = result;
-    });
+    try {
+      final result = await ReportManagerService.loadReports();
+
+      if (!mounted) return;
+
+      setState(() {
+        reports = result;
+      });
+    } catch (e) {
+      debugPrint('Analytics: failed to load reports: $e');
+    }
   }
 
   Future<void> deleteReport(int index) async {
@@ -917,14 +1043,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       return AppScaffold(
         showOfflineBanner: _isOffline,
         appBar: const AdaptiveAppBar(title: null),
-        body: _analyticsError != null
-            ? AnalyticsErrorState(
-                isOffline: _isOffline,
-                message: _analyticsError!,
-                isRetrying: _analyticsRequestInProgress,
-                onRetry: _retryAnalytics,
-              )
-            : buildEmptyState(context, EmptyStateType.analyticsNoData),
+        body: _buildAnalyticsUnavailableContent(
+          contentPadding: contentPadding,
+          maxContentWidth: maxContentWidth,
+          sectionSpacing: sectionSpacing,
+        ),
       );
     }
 
@@ -947,7 +1070,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       showOfflineBanner: _isOffline,
       appBar: const AdaptiveAppBar(title: null),
       body: hasNoData
-          ? buildEmptyState(context, EmptyStateType.analyticsNoData)
+          ? _buildAnalyticsUnavailableContent(
+              contentPadding: contentPadding,
+              maxContentWidth: maxContentWidth,
+              sectionSpacing: sectionSpacing,
+            )
           : RefreshIndicator(
               onRefresh: _refreshAnalytics,
               child: SingleChildScrollView(
@@ -1025,41 +1152,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         //─────────────────────────────
                         //Premium
                         //─────────────────────────────
-                        PremiumFeatureCard(
-                          feature: PremiumFeature.advancedAnalytics,
-                          isPremium: _subscriptionController.hasPremiumAccess,
-                          isLoading:
-                              _subscriptionLoading ||
-                              _premiumCheckoutInProgress ||
-                              _checkingPayment,
-                          accentColor: Colors.teal,
-                          onPressed: _openAdvancedAnalytics,
-                        ),
-
-                        SizedBox(height: sectionSpacing),
-
-                        PremiumFeatureCard(
-                          feature: PremiumFeature.spendingForecast,
-                          isPremium: _subscriptionController.hasPremiumAccess,
-                          isLoading:
-                              _subscriptionLoading ||
-                              _premiumCheckoutInProgress ||
-                              _checkingPayment,
-                          accentColor: Colors.teal,
-                          onPressed: _openSpendingForecast,
-                        ),
-
-                        SizedBox(height: sectionSpacing),
-
-                        PremiumFeatureCard(
-                          feature: PremiumFeature.historicalInsights,
-                          isPremium: _subscriptionController.hasPremiumAccess,
-                          isLoading:
-                              _subscriptionLoading ||
-                              _premiumCheckoutInProgress ||
-                              _checkingPayment,
-                          accentColor: Colors.teal,
-                          onPressed: _openHistoricalInsights,
+                        _buildPremiumFeatureCards(
+                          sectionSpacing: sectionSpacing,
                         ),
 
                         SizedBox(height: sectionSpacing),
@@ -1291,6 +1385,133 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPremiumFeatureCards({required double sectionSpacing}) {
+    final cardLoading =
+        _subscriptionLoading || _premiumCheckoutInProgress || _checkingPayment;
+
+    return Column(
+      children: [
+        PremiumFeatureCard(
+          feature: PremiumFeature.advancedAnalytics,
+          isPremium: _subscriptionController.hasPremiumAccess,
+          isLoading: cardLoading,
+          accentColor: Colors.teal,
+          onPressed: _openAdvancedAnalytics,
+        ),
+
+        SizedBox(height: sectionSpacing),
+
+        PremiumFeatureCard(
+          feature: PremiumFeature.spendingForecast,
+          isPremium: _subscriptionController.hasPremiumAccess,
+          isLoading: cardLoading,
+          accentColor: Colors.teal,
+          onPressed: _openSpendingForecast,
+        ),
+
+        SizedBox(height: sectionSpacing),
+
+        PremiumFeatureCard(
+          feature: PremiumFeature.historicalInsights,
+          isPremium: _subscriptionController.hasPremiumAccess,
+          isLoading: cardLoading,
+          accentColor: Colors.teal,
+          onPressed: _openHistoricalInsights,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnalyticsUnavailableContent({
+    required double contentPadding,
+    required double maxContentWidth,
+    required double sectionSpacing,
+  }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    final hasError = _analyticsError != null;
+
+    return RefreshIndicator(
+      onRefresh: _refreshAnalytics,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: EdgeInsets.all(contentPadding),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(
+                    ResponsiveHelper.cardPadding(context),
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: scheme.outline.withOpacity(0.08)),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        hasError
+                            ? Icons.cloud_off_rounded
+                            : Icons.analytics_outlined,
+                        size: 42,
+                        color: hasError ? scheme.error : Colors.teal,
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Text(
+                        hasError
+                            ? 'Analytics temporarily unavailable'
+                            : 'No analytics data yet',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        _analyticsError ??
+                            'Add expenses or goals to populate your analytics. Your Premium features remain available below.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          height: 1.4,
+                        ),
+                      ),
+
+                      if (hasError) ...[
+                        const SizedBox(height: 14),
+
+                        FilledButton.icon(
+                          onPressed: _retryAnalytics,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Try Again'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: sectionSpacing),
+
+                _buildPremiumFeatureCards(sectionSpacing: sectionSpacing),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
