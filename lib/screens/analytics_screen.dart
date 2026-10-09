@@ -754,8 +754,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   Future<void> _changeAnalyticsPeriod(AnalyticsPeriod period) async {
+    if (_analyticsRequestInProgress) return;
+
+    final previousPeriod = selectedPeriod;
+
+    setState(() {
+      selectedPeriod = period;
+      isRefreshingAnalytics = true;
+      _analyticsError = null;
+    });
+
     try {
-      final analytics = await analyticsRepository.getCachedAnalytics();
+      final analytics = _network.isOnline
+          ? await analyticsRepository.refreshAnalytics()
+          : await analyticsRepository.getCachedAnalytics();
 
       final processed = await analyticsService.processAnalyticsData(
         analytics: analytics,
@@ -765,16 +777,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       if (!mounted) return;
 
       setState(() {
-        selectedPeriod = period;
         summary = processed;
+        isRefreshingAnalytics = false;
+        _isOffline = !_network.isOnline;
       });
     } catch (e) {
-      debugPrint('Unable to change analytics period from cache: $e');
+      debugPrint(
+        'Analytics: failed to change period '
+        '$previousPeriod → $period: $e',
+      );
 
       if (!mounted) return;
 
       setState(() {
-        selectedPeriod = period;
+        selectedPeriod = previousPeriod;
+        isRefreshingAnalytics = false;
       });
     }
   }

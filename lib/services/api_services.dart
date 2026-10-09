@@ -424,6 +424,18 @@ class ApiService {
     throw Exception('Failed to load expenses (${response.statusCode})');
   }
 
+  static Future<Map<String, dynamic>> getAllExpenses({int page = 1}) async {
+    final endpoint = '/expenses/all?page=$page';
+
+    final response = await _request(method: 'GET', endpoint: endpoint);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Failed to load all expenses (${response.statusCode})');
+  }
+
   static Future<Map<String, dynamic>> updateExpense(
     int id,
     String title,

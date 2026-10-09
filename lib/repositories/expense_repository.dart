@@ -240,28 +240,50 @@ class ExpenseRepository extends BaseRepository {
       final ownerId = await this.ownerId;
 
       try {
-        debugPrint('ExpenseRepository: requesting expenses from API...');
+        debugPrint('ExpenseRepository: requesting all expenses from API...');
 
-        final response = await ApiService.getExpenses();
+        final allExpenses = <Map<String, dynamic>>[];
+        var page = 1;
+
+        while (true) {
+          debugPrint('ExpenseRepository: requesting expenses page $page...');
+
+          final response = await ApiService.getAllExpenses(page: page);
+
+          final pageExpenses = (response["data"] as List? ?? [])
+              .map((expense) => Map<String, dynamic>.from(expense))
+              .toList();
+
+          allExpenses.addAll(pageExpenses);
+
+          debugPrint(
+            'ExpenseRepository: page $page returned '
+            '${pageExpenses.length} expenses.',
+          );
+
+          final nextPageUrl = response["next_page_url"];
+
+          if (nextPageUrl == null || nextPageUrl.toString().isEmpty) {
+            break;
+          }
+
+          page++;
+        }
 
         final database = await db.database;
 
-        final expenses = (response["data"] as List? ?? [])
-            .map((expense) => Map<String, dynamic>.from(expense))
-            .toList();
-
         await database.transaction((txn) async {
-          // Remove only records that were already synced.
+          // Remove only server-synced records.
           //
           // Unsynced records are local/offline changes and must
-          // survive a server refresh.
+          // remain untouched.
           await txn.delete(
             "expenses",
             where: "owner_id = ? AND is_synced = 1",
             whereArgs: [ownerId],
           );
 
-          for (final expense in expenses) {
+          for (final expense in allExpenses) {
             await txn.insert(
               "expenses",
               _expenseToLocal(expense, ownerId)..["is_synced"] = 1,
@@ -272,18 +294,22 @@ class ExpenseRepository extends BaseRepository {
 
         debugPrint(
           'ExpenseRepository: cached '
-          '${expenses.length} server expenses.',
+          '${allExpenses.length} server expenses '
+          'across $page page(s).',
         );
 
         await SyncService.instance.getPendingChanges();
 
         debugPrint('ExpenseRepository: expenses refresh completed.');
 
-        return response;
+        return {"data": allExpenses, "next_page_url": null};
       } on RateLimitException {
         rethrow;
       } catch (e) {
-        debugPrint('ExpenseRepository: API refresh failed, using cache: $e');
+        debugPrint(
+          'ExpenseRepository: API refresh failed, '
+          'using cache: $e',
+        );
 
         final cached = await getAllExpensesFromLocal();
 
@@ -296,7 +322,6 @@ class ExpenseRepository extends BaseRepository {
       }
     });
   }
-
   // ---------------------------------------------------------------------------
   // CREATE EXPENSE
   // ---------------------------------------------------------------------------

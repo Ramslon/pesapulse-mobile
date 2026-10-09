@@ -8,7 +8,6 @@ import '../widgets/budget/spending_analytics_section.dart';
 import '../widgets/budget/financial_health_section.dart';
 import '../widgets/budget/budget_header.dart';
 import '../widgets/budget/budget_status_bar.dart';
-import '../widgets/empty_state_helper.dart';
 import '../widgets/budget_loading_skeleton.dart';
 import '../widgets/budget/budget_section_header.dart';
 import '../widgets/budget/budget_fab.dart';

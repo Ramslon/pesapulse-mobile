@@ -90,8 +90,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
   bool get hasNoExpenses => expenses.isEmpty;
 
-  bool _isFetchingMore = false;
-
   bool get hasNoFilteredResults =>
       expenses.isNotEmpty && filteredExpenses.isEmpty;
 
@@ -223,18 +221,9 @@ class ExpenseListContentState extends State<ExpenseListContent>
 
     SyncEvents.instance.expensesRefresh.addListener(_handleExpensesRefresh);
 
-    _initialFetchExpenses();
+    _loadSelectedPeriod();
 
     widget.onRefreshReady?.call(refreshExpenses);
-
-    scrollController.addListener(() {
-      if (scrollController.position.pixels ==
-              scrollController.position.maxScrollExtent &&
-          !_isFetchingMore &&
-          expenseController.hasMore) {
-        _loadMoreExpenses();
-      }
-    });
   }
 
   void _handleExpensesRefresh() {
@@ -248,20 +237,17 @@ class ExpenseListContentState extends State<ExpenseListContent>
   }
 
   Future<void> _loadSelectedPeriod({bool showSuccessMessage = false}) async {
-    if (_isLoadingHistoricalPeriod) return;
+    if (_isLoadingHistoricalPeriod || !mounted) return;
 
     setState(() {
       _isLoadingHistoricalPeriod = true;
       isLoading = true;
-      expenses.clear();
-      filteredExpenses.clear();
     });
 
     try {
       final loadedExpenses = <Map<String, dynamic>>[];
-
-      int page = 1;
-      bool hasMore = true;
+      var page = 1;
+      var hasMore = true;
 
       while (hasMore) {
         final response = await expenseRepository.getExpenses(
@@ -270,28 +256,23 @@ class ExpenseListContentState extends State<ExpenseListContent>
           year: _selectedPeriod.year,
         );
 
-        final pageExpenses = (response["data"] as List? ?? [])
+        final pageExpenses = (response['data'] as List? ?? [])
             .map((expense) => Map<String, dynamic>.from(expense))
             .toList();
 
         loadedExpenses.addAll(pageExpenses);
 
-        final nextPageUrl = response["next_page_url"];
-
+        final nextPageUrl = response['next_page_url'];
         hasMore = nextPageUrl != null && nextPageUrl.toString().isNotEmpty;
 
-        if (hasMore) {
-          page++;
-        }
+        if (hasMore) page++;
       }
 
       if (!mounted) return;
 
       setState(() {
         expenses = loadedExpenses;
-
         filterExpenses();
-
         isLoading = false;
         _isLoadingHistoricalPeriod = false;
       });
@@ -303,18 +284,41 @@ class ExpenseListContentState extends State<ExpenseListContent>
         );
       }
     } catch (e) {
-      if (!mounted) return;
+      debugPrint('ExpenseListContent: remote period load failed: $e');
 
-      setState(() {
-        isLoading = false;
-        _isLoadingHistoricalPeriod = false;
-      });
+      try {
+        final localExpenses = await expenseRepository.getExpensesFromLocal(
+          month: _selectedPeriod.month,
+          year: _selectedPeriod.year,
+        );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Unable to load $_selectedPeriodLabel expenses: $e'),
-        ),
-      );
+        if (!mounted) return;
+
+        setState(() {
+          expenses = localExpenses;
+          filterExpenses();
+          isLoading = false;
+          _isLoadingHistoricalPeriod = false;
+        });
+
+        if (showSuccessMessage) {
+          SnackbarHelper.showSuccess(
+            context,
+            'Showing saved expenses for $_selectedPeriodLabel',
+          );
+        }
+      } catch (cacheError) {
+        if (!mounted) return;
+
+        setState(() {
+          isLoading = false;
+          _isLoadingHistoricalPeriod = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to load expenses: $cacheError')),
+        );
+      }
     }
   }
 
@@ -355,25 +359,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
     await _loadSelectedPeriod();
   }
 
-  Future<void> _loadMoreExpenses() async {
-    if (_isFetchingMore || !expenseController.hasMore) return;
-
-    _isFetchingMore = true;
-
-    try {
-      final newExpenses = await expenseController.fetchExpenses();
-
-      if (!mounted) return;
-
-      setState(() {
-        expenses.addAll(newExpenses);
-        filterExpenses();
-      });
-    } finally {
-      _isFetchingMore = false;
-    }
-  }
-
   Future<void> _reloadExpensesFromLocal() async {
     try {
       final localExpenses = await expenseRepository.getExpensesFromLocal(
@@ -399,85 +384,8 @@ class ExpenseListContentState extends State<ExpenseListContent>
     }
   }
 
-  Future<void> _initialFetchExpenses() async {
-    try {
-      debugPrint('ExpenseListContent: requesting current month expenses...');
-
-      final newExpenses = await expenseController.fetchExpenses();
-
-      if (!mounted) return;
-
-      setState(() {
-        expenses = newExpenses;
-
-        filterExpenses();
-
-        isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        isLoading = false;
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
-  }
-
-  Future<void> fetchExpenses({bool append = true}) async {
-    try {
-      final newExpenses = await expenseController.fetchExpenses();
-
-      if (!mounted) return;
-
-      setState(() {
-        if (append) {
-          expenses.addAll(newExpenses);
-        } else {
-          expenses = newExpenses;
-        }
-
-        filterExpenses();
-        isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        isLoading = false;
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
-  }
-
   Future<void> refreshExpenses() async {
-    if (_isLoadingHistoricalPeriod) return;
-
-    if (!_isCurrentPeriod) {
-      await _loadSelectedPeriod(showSuccessMessage: true);
-
-      return;
-    }
-
-    setState(() {
-      isLoading = true;
-      expenses.clear();
-      filteredExpenses.clear();
-    });
-
-    expenseController.resetPagination();
-
-    await fetchExpenses(append: false);
-
-    if (!mounted) return;
-
-    SnackbarHelper.showSuccess(context, "Expenses updated");
+    await _loadSelectedPeriod(showSuccessMessage: true);
   }
 
   void filterExpenses() {
@@ -754,14 +662,6 @@ class ExpenseListContentState extends State<ExpenseListContent>
             ),
 
             _buildExpenseList(),
-
-            if (_isCurrentPeriod && expenseController.hasMore)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(compact ? 14 : 20),
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-              ),
           ],
         ),
       ),

@@ -219,7 +219,17 @@ class AnalyticsService {
 
     return expenses.where((expense) {
       try {
-        final date = DateTime.parse(expense['created_at'].toString());
+        final dateValue = expense["expense_date"];
+
+        if (dateValue == null) {
+          return false;
+        }
+
+        final date = DateTime.tryParse(dateValue.toString());
+
+        if (date == null) {
+          return false;
+        }
 
         return !date.isBefore(startDate) && date.isBefore(endDate);
       } catch (_) {
