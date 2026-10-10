@@ -21,7 +21,6 @@ import '../widgets/analytics/reports_center_card.dart';
 import '../widgets/analytics/export_reports_section.dart';
 import '../widgets/analytics/report_details_dialog.dart';
 import '../widgets/analytics/analytics_period_selector.dart';
-import '../widgets/analytics/analytics_error_state.dart';
 import '../widgets/analytics/analytics_refresh_error_banner.dart';
 import '../widgets/premium/premium_feature_card.dart';
 import '../widgets/premium/premium_feature_guard.dart';
