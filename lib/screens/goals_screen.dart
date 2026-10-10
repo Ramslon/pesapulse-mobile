@@ -217,8 +217,8 @@ class _GoalsScreenState extends State<GoalsScreen>
       });
 
       if (!guest) {
-        // Start subscription verification immediately.
-        _loadSubscription();
+        // Restore cached access immediately and refresh the server entitlement.
+        _loadSubscription(forceRefresh: true);
       }
 
       await goalsController.initialize(forceRefresh: forceRefresh);
@@ -257,24 +257,7 @@ class _GoalsScreenState extends State<GoalsScreen>
 
   Future<void> _loadSubscription({bool forceRefresh = false}) async {
     if (isGuest) return;
-
-    if (_subscriptionLoading && !forceRefresh) {
-      return;
-    }
-
-    // Offline:
-    // restore the last server-confirmed Premium entitlement
-    // instead of attempting an API request.
-    if (!_network.isOnline) {
-      await subscriptionController.restoreOfflinePremiumAccess();
-
-      debugPrint(
-        'GoalsScreen: offline subscription state restored. '
-        'hasPremiumAccess=${subscriptionController.hasPremiumAccess}',
-      );
-
-      return;
-    }
+    if (_subscriptionLoading && !forceRefresh) return;
 
     if (mounted) {
       setState(() {
@@ -283,19 +266,48 @@ class _GoalsScreenState extends State<GoalsScreen>
     }
 
     try {
+      // Restore the user's locally cached Premium entitlement first.
+      // This works even when the device currently has internet access.
+      await subscriptionController.restoreOfflinePremiumAccess();
+
+      if (!mounted) return;
+
+      debugPrint(
+        'GoalsScreen: cached Premium access restored: '
+        '${subscriptionController.hasPremiumAccess}',
+      );
+
+      // If offline, use the cached entitlement and stop here.
+      if (!_network.isOnline) {
+        return;
+      }
+
+      // Verify the current entitlement with the backend.
       await subscriptionController.loadSubscription(forceRefresh: forceRefresh);
+
+      if (!mounted) return;
 
       debugPrint(
         'GoalsScreen: subscription refreshed. '
-        'isPremium=${subscriptionController.isPremium}',
+        'isPremium=${subscriptionController.isPremium}, '
+        'hasPremiumAccess=${subscriptionController.hasPremiumAccess}',
       );
     } catch (e) {
-      debugPrint('GoalsScreen: failed to load subscription: $e');
+      debugPrint('GoalsScreen: subscription refresh failed: $e');
 
-      // If connectivity dropped while the request was running,
-      // restore the last confirmed local entitlement.
-      if (!_network.isOnline) {
+      // Use the cached entitlement even if the device reports that
+      // it is online but the subscription request fails.
+      try {
         await subscriptionController.restoreOfflinePremiumAccess();
+
+        debugPrint(
+          'GoalsScreen: fallback Premium access: '
+          '${subscriptionController.hasPremiumAccess}',
+        );
+      } catch (cacheError) {
+        debugPrint(
+          'GoalsScreen: cached Premium restoration failed: $cacheError',
+        );
       }
     } finally {
       if (mounted) {
